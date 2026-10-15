@@ -95,3 +95,6 @@
 @media (max-width: 400px) {
   .cardFacts dd { font-size: 22px; }
 }
+
+.fitnessApps { scroll-margin-top: 100px; }
+.fitnessApps .rowValue { white-space: normal; overflow-wrap: anywhere; }

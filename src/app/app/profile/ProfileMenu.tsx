@@ -88,11 +88,9 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
         </ul>
       </section>
 
-      {/* Only apps that really connect are listed. An existing connection always shows, so members can disconnect
-          even after Strava is switched off. */}
-      {(strava.configured || strava.connection) && (
-      <section aria-labelledby="pm-apps">
-        <h2 id="pm-apps" className={s.groupTitle}>Connected apps</h2>
+      {/* Keep connection status discoverable even before configuration. Disconnect remains available. */}
+      <section id="fitness-apps" className={s.fitnessApps} aria-labelledby="pm-apps">
+        <h2 id="pm-apps" className={s.groupTitle}>Fitness apps</h2>
         <ul className={s.group}>
           <li>
               {strava.connection ? (
@@ -100,11 +98,11 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
                   <span className={`${s.rowIcon} ${s.strava}`}><Icon name="arrow" size="sm" /></span>
                   <span className={s.rowText}>
                     <span className={s.rowLabel}>Strava</span>
-                    <span className={s.rowValue}>Connected{strava.connection.display_name ? ` as ${strava.connection.display_name}` : ''} · workouts import automatically</span>
+                    <span className={s.rowValue}>Connected{strava.connection.display_name ? ` as ${strava.connection.display_name}` : ''} · {strava.configured ? 'workouts import automatically' : 'sync currently unavailable'}</span>
                   </span>
                   <Icon name="next" size="sm" className={s.chev} />
                 </button>
-              ) : (
+              ) : strava.configured ? (
                 <a className={s.row} href="/api/strava/connect">
                   <span className={`${s.rowIcon} ${s.strava}`}><Icon name="arrow" size="sm" /></span>
                   <span className={s.rowText}>
@@ -113,11 +111,20 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
                   </span>
                   <Icon name="next" size="sm" className={s.chev} />
                 </a>
+              ) : (
+                <div className={s.row}>
+                  <span className={`${s.rowIcon} ${s.strava}`}><Icon name="arrow" size="sm" /></span>
+                  <span className={s.rowText}>
+                    <span className={s.rowLabel}>Strava</span>
+                    <span className={s.rowValue}>Connection is currently unavailable. Review your recorded workouts on Today.</span>
+                  </span>
+                </div>
               )}
           </li>
         </ul>
+      <p className="fine-print">Strava imports workout duration and calories. <Link href="/app#activity">Open activity</Link> to log or review workouts.</p>
+      {isAdmin && !strava.configured && <p className="note">Strava needs its server credentials and the Connected apps → Strava feature switch enabled before members can connect.</p>}
       </section>
-      )}
 
       {/* Ratings stay listed (and deletable) even after Meal feedback is switched off, as long as some exist. */}
       {prefs.ratings && (

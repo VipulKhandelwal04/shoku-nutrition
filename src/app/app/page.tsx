@@ -23,6 +23,7 @@ export default async function TodayPage({ searchParams }: PageProps<'/app'>) {
       workouts={{
         workouts,
         manual: isOn(flags, 'workouts', 'manual'),
+        compare: isOn(flags, 'compare'),
         lightBase: isOn(flags, 'workouts', 'light_base'),
         timeline: isOn(flags, 'workouts', 'timeline'),
         week: isOn(flags, 'workouts', 'week'),

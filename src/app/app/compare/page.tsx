@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireOnboarded } from '@/lib/auth';
-import { getAiAssist, getEntries, getFlags, getWeekPlans } from '@/lib/data/queries';
+import { getAiAssist, getEntries, getFlags, getWeekPlans, getWorkouts } from '@/lib/data/queries';
+import { activityEnergy } from '@/lib/activity-energy';
+import { EnergyComparison } from '@/components/app/activity/EnergyComparison';
 import { isOn } from '@/lib/flags';
 import { GOALS, MEALS, groupStatus, planCheck, recommend, shiftDate, totals, type Entry, type PlanItem, type PlanItemStatus } from '@/lib/nutrition';
 import { FoodTile, Icon } from '@/components/ui/Icon';
@@ -55,20 +57,27 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const body = bodyOf(profile);
   const rec = body ? recommend(body) : null;
 
+  const energyKeys = period === 'week' ? weekKeys(today) : [day];
+  const [periodEntries, periodWorkouts] = await Promise.all([
+    getEntries(energyKeys[0], energyKeys.at(-1)!),
+    isOn(flags, 'workouts') ? getWorkouts(energyKeys[0], energyKeys.at(-1)!) : [],
+  ]);
+  const energy = activityEnergy(energyKeys, periodEntries, periodWorkouts);
+
   // ---- Entries for the period ----
   let entries: Entry[];
   let dayEntries: Entry[];
   let countedDays = 0;
   if (period === 'week') {
     const keys = weekKeys(today);
-    const rows = await getEntries(keys[0], today);
+    const rows = periodEntries;
     const summaries = summariseDays(keys, rows);
     const avg = averageDay(summaries);
     entries = avg.entries;
     countedDays = avg.days;
     dayEntries = summaries[summaries.length - 1].entries;
   } else {
-    entries = toEntries(await getEntries(day, day));
+    entries = toEntries(periodEntries);
     dayEntries = entries;
   }
   const dayOpen = period === 'day' && day === today;
@@ -276,8 +285,8 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
       <DeviceTimeZone current={tz} />
       <header className={ins.intro}>
         <div>
-          <h1>Your plate vs your plan</h1>
-          <p>What you ate against your daily targets.</p>
+          <h1>Food, activity &amp; your plan</h1>
+          <p>Compare what you eat, your recorded workouts and your daily targets.</p>
         </div>
         <nav className={s.controls} aria-label="Choose the day">
           <div className={s.periodSeg}>
@@ -295,6 +304,8 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
           )}
         </nav>
       </header>
+
+      {isOn(flags, 'workouts') && <EnergyComparison key={`${period}-${day}`} days={energy} />}
 
       <div className={s.layout}>
         <div className="stack">

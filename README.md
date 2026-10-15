@@ -7,6 +7,7 @@ plate is missing, and build a streak one counted day (3+ meals) at a time.
 
 - **Public site:** splash with rotating fitness quotes, feature tour, Google sign-in
 - **App:** onboarding, Today, Diary, Compare (food groups first, then nutrients and your plan), Progress, Profile + data export
+- **Activity:** Today → Activity & fitness apps for manual workouts and Strava connect/sync; Compare → Food & activity plots intake against recorded workout calories by day or week. Fitness-app availability stays visible in Profile even before configuration.
 - **AI Assist** (Gemini, admin-toggleable): photo → meal, plain-words logging, a tailored plan, a daily coach line.
   Every result is a suggestion you confirm.
 - **Admin:** food catalogue, splash quotes + tour, users and roles, AI Assist switch, limits and usage
