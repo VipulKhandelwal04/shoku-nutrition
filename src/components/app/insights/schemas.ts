@@ -1,6 +1,6 @@
 // Validation shared by the onboarding and profile server actions. Ranges mirror isValidProfile and the DB checks.
 import { z } from 'zod';
-import { RESTRICTION_SLUGS } from './insights';
+import { RESTRICTION_SLUGS } from '../../../lib/restrictions';
 
 export const TARGET_RANGES = {
   kcal: { min: 800, max: 6000, unit: 'kcal', label: 'Calories' },

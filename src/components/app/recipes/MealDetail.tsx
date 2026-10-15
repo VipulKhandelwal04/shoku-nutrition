@@ -6,12 +6,10 @@ import { useToast } from '@/components/ui/Toast';
 import type { RecipeCard } from '@/lib/ai/candidates';
 import { deleteEntries } from '@/lib/data/diary';
 import { logRecipe } from '@/lib/data/recipes';
-import type { Meal } from '@/lib/nutrition';
+import { DIET_LABEL, DIET_TONE, type Meal } from '@/lib/nutrition';
 import s from './recipes.module.css';
+import { fmt, qty } from '@/lib/format';
 
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
-const qty = (n: number) => (Math.round(n * 100) / 100).toString();
-const DIET = { veg: 'Veg', egg: 'Egg', nonveg: 'Non-veg' } as const;
 const STEP = 0.5;
 
 /**
@@ -63,7 +61,7 @@ function Detail({ recipe, meal, day, why, canLog, source, onLogged }: {
     <div className={s.detail}>
       <p className={s.meta}>
         <span className="chip">{recipe.cuisine}</span>
-        <span className={`chip ${recipe.diet === 'veg' ? 'ok' : recipe.diet === 'egg' ? 'warn' : 'accent'}`}>{DIET[recipe.diet]}</span>
+        <span className={`chip ${DIET_TONE[recipe.diet]}`}>{DIET_LABEL[recipe.diet]}</span>
         <span>Makes {recipe.servings} {recipe.servings === 1 ? 'serving' : 'servings'}</span>
       </p>
 

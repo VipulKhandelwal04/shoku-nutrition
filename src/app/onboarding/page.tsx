@@ -1,6 +1,6 @@
 import { requireProfile } from '@/lib/auth';
 import { DeviceTimeZone } from '@/components/app/insights/DeviceTimeZone';
-import { RESTRICTION_SLUGS, type Restriction } from '@/components/app/insights/insights';
+import { RESTRICTION_SLUGS, type Restriction } from '@/lib/restrictions';
 import { userToday } from '@/components/app/insights/server';
 import { OnboardingFlow, type Draft } from './OnboardingFlow';
 

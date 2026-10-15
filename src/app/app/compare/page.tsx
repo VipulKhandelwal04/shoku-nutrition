@@ -1,16 +1,16 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireOnboarded } from '@/lib/auth';
-import { getAiAssist, getEntries, getFlags, getFoods } from '@/lib/data/queries';
+import { getAiAssist, getEntries, getFlags, getWeekPlans } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
-import { GOALS, MEALS, buildPlan, groupStatus, planCheck, recommend, shiftDate, totals, type Entry, type Food, type Plan, type PlanItem, type PlanItemStatus } from '@/lib/nutrition';
+import { GOALS, MEALS, groupStatus, planCheck, recommend, shiftDate, totals, type Entry, type PlanItem, type PlanItemStatus } from '@/lib/nutrition';
 import { FoodTile, Icon } from '@/components/ui/Icon';
 import { CompareRow } from '@/components/app/insights/CompareRow';
 import { DeviceTimeZone } from '@/components/app/insights/DeviceTimeZone';
 import { LogButton } from '@/components/app/insights/LogButton';
 import {
-  averageDay, bmiBand, groupContributions, bodyOf, energySplit, filterPlan, friendlyDay, groupsOnTrack, nextUp, nutrientStatus,
-  parseDayParam, parseStoredPlan, pickTargets, summariseDays, toEntries, unitFor, weekKeys,
+  averageDay, bmiBand, groupContributions, bodyOf, energySplit, friendlyDay, groupsOnTrack, nextUp, nutrientStatus,
+  parseDayParam, pickTargets, summariseDays, toEntries, unitFor, weekKeys,
 } from '@/components/app/insights/insights';
 import { getStoredPlan, userToday } from '@/components/app/insights/server';
 import ins from '@/components/app/insights/insights.module.css';
@@ -19,16 +19,16 @@ import { GoalCard } from './GoalCard';
 import { PlanTunerEntry } from './PlanTunerEntry';
 import { WeekPlan, type WeekDayView, type WeekItem } from './WeekPlan';
 import { WeekPlanner } from '@/components/ai/WeekPlanner';
-import { buildWeek, isoWeekday, planKcal } from '@/lib/ai/plan';
-import { getActiveRecipes, getWeekPlans } from '@/lib/data/queries';
-import { matchRecipe, mealCandidates, recipeCard } from '@/lib/ai/candidates';
+import { buildWeek, isoWeekday, keepEligible, parseStoredPlan, planKcal } from '@/lib/ai/plan';
+import { matchRecipe, recipeCard } from '@/lib/ai/candidates';
+import { memberDayPlan, memberSuggestions, trainingDaysFor } from '@/lib/ai/member';
+import { createClient } from '@/lib/supabase/server';
 import { RecipeButton } from '@/components/app/recipes/MealDetail';
 import s from './compare.module.css';
+import { fmt, qty } from '@/lib/format';
 
 export const metadata = { title: 'Compare' };
 
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
-const qty = (n: number) => (Math.round(n * 100) / 100).toString();
 const PLAN_CHIP: Record<PlanItemStatus, { label: string; tone: string }> = {
   done: { label: 'Done', tone: 'ok' }, partly: { label: 'Partly', tone: '' }, more: { label: 'More', tone: 'accent' }, next: { label: 'Next', tone: '' },
 };
@@ -47,8 +47,9 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const weekOn = isOn(flags, 'week', 'view');
   const planView = weekOn && sp.plan === 'week' ? 'week' : 'day';
 
-  const [foods, ai, storedPlan] = await Promise.all([getFoods(), getAiAssist(), getStoredPlan()]);
-  const foodsById = new Map<string, Food>(foods.map(f => [f.id, f]));
+  // Hard rules only (diet, restrictions) plus recipes when Meal detail is on: the same candidates every surface uses.
+  const [member, ai, storedPlan, savedDays] = await Promise.all([memberSuggestions(profile, { recipes: true }), getAiAssist(), getStoredPlan(), getWeekPlans()]);
+  const { set, foodsById } = member;
   const targets = profile.targets!; // requireOnboarded guarantees targets
   const goal = profile.goal ?? 'fit';
   const body = bodyOf(profile);
@@ -76,28 +77,31 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const t = totals(entries);
   const empty = entries.length === 0;
 
-  // ---- Plan: saved (AI Assist-tailored) plan if any, otherwise the deterministic template ----
-  const saved = parseStoredPlan(storedPlan, foodsById);
-  const plan = filterPlan(saved ?? buildPlan(targets, goal, profile.diet, foodsById), foodsById, profile.diet, profile.restrictions ?? []);
+  // ---- Plan: a day saved in the week plan wins; otherwise the saved (AI-tailored) day plan, or the template ----
+  const dayPlan = memberDayPlan(profile, member, storedPlan);
+  /** The saved week-plan day for a date's weekday, eligible foods only; null when that weekday isn't saved. */
+  const savedFor = (key: string) => {
+    const own = parseStoredPlan(savedDays.get(isoWeekday(key)), foodsById);
+    return own ? keepEligible(own, set.eligible) : null;
+  };
+  const savedToday = savedFor(day);
+  const plan = savedToday ?? dayPlan;
+  const saved = !!parseStoredPlan(storedPlan, foodsById);
   const check = planCheck(plan, dayEntries, foodsById);
-  // Recipes the member can have (all ingredients pass their rules); a plan meal that mostly is one opens it.
-  const recipesOn = isOn(flags, 'recipes', 'detail');
-  const recipes = recipesOn
-    ? mealCandidates(foods, { diet: profile.diet, restrictions: profile.restrictions ?? [], recipes: await getActiveRecipes() }).recipes
-    : [];
+  // A plan meal that mostly is one of the member's recipes opens it (recipes are present only when the flag is on).
   const recipeFor = (items: { foodId: string }[]) => {
-    const r = recipes.length ? matchRecipe(items.map(i => i.foodId), recipes) : null;
+    const r = set.recipes.length ? matchRecipe(items.map(i => i.foodId), set.recipes) : null;
     return r ? recipeCard(r, foodsById) : undefined;
   };
   const canLogRecipe = isOn(flags, 'recipes', 'log');
-  const week = planView === 'week' ? await weekView(plan) : null;
+  const week = planView === 'week' ? await weekView() : null;
 
   /** Seven days from today: a saved weekday wins over the generated day; each meal lists its swap options. */
-  async function weekView(dayPlan: Plan): Promise<WeekDayView[]> {
-    const eligible = mealCandidates(foods, { diet: profile.diet, restrictions: profile.restrictions ?? [] }).candidates.map(c => c.food);
-    const generated = buildWeek(dayPlan, { eligible, targetKcal: targets.kcal });
-    // Saved days always show (and can be reset) even while editing is switched off.
-    const savedDays = await getWeekPlans();
+  async function weekView(): Promise<WeekDayView[]> {
+    const trainingDays = await trainingDaysFor(await createClient(), today);
+    const generated = buildWeek(dayPlan, {
+      eligible: set.candidates.map(c => c.food), targetKcal: targets.kcal, trainingDays, startWeekday: isoWeekday(today),
+    });
     const toItems = (items: PlanItem[]): WeekItem[] => items.flatMap(i => {
       const f = foodsById.get(i.foodId);
       return f ? [{ foodId: f.id, name: f.name, unit: unitFor(i.q, f.unit), q: i.q, kcal: Math.round(f.kcal * i.q) }] : [];
@@ -106,9 +110,9 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
     return generated.map((g, i) => {
       const key = shiftDate(today, i);
       const weekday = isoWeekday(key);
-      const stored = savedDays.get(weekday);
-      const own = stored ? parseStoredPlan(stored, foodsById) : null;
-      const plan = own ? filterPlan(own, foodsById, profile.diet, profile.restrictions ?? []) : g.plan;
+      // Saved days always show (and can be reset) even while editing is switched off.
+      const own = savedFor(key);
+      const plan = own ?? g.plan;
       const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(`${key}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
       const meals = MEALS.map(meal => {
         // Every distinct version of this meal across the generated week, starting after the current one, so
@@ -119,7 +123,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
         const alternatives = [...versions.slice(at + 1), ...versions.slice(0, Math.max(0, at))].filter(v => sig(v) !== sig(plan[meal]));
         return { meal, items: toItems(plan[meal]), alternatives: alternatives.map(toItems), recipe: recipeFor(plan[meal]) };
       });
-      return { key, label, weekday, kcal: planKcal(plan, foodsById), saved: !!own, plan, meals };
+      return { key, label, weekday, kcal: planKcal(plan, foodsById), saved: !!own, training: g.training, plan, meals };
     });
   }
   // Keep the page's period/day when switching between Day and Week plans.
@@ -218,7 +222,8 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
             {period === 'week' ? 'Today against your plan' : `${dayLabel} against your plan`} · {check.done} of {check.count} items done
           </p>
           <p className="fine-print">
-            {saved ? 'Your saved plan, tailored with AI Assist. Check each item before you log it.' : `A ${profile.diet === 'veg' ? 'veg' : profile.diet === 'egg' ? 'eggetarian' : 'non-veg'} day built on ICMR-NIN’s plate, scaled to ${fmt(targets.kcal)} kcal.`}
+            {savedToday ? `Your saved ${new Date(`${day}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'long' })} from your week plan. Check each item before you log it.`
+              : saved ? 'Your saved plan, tailored with AI Assist. Check each item before you log it.' : `A ${profile.diet === 'veg' ? 'veg' : profile.diet === 'egg' ? 'eggetarian' : 'non-veg'} day built on ICMR-NIN’s plate, scaled to ${fmt(targets.kcal)} kcal.`}
             {(profile.restrictions ?? []).length > 0 && ' Foods that clearly clash with your restrictions are left out.'}
           </p>
         </div>

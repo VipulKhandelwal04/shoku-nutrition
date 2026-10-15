@@ -48,6 +48,12 @@ export const GOALS: Record<Goal, { label: string; blurb: string }> = {
   fit: { label: 'Stay fit', blurb: 'Eat to match what you burn.' },
   muscle: { label: 'Build muscle', blurb: 'A small surplus with more protein.' },
 };
+/** A member's goal as words; no goal yet reads as "Stay fit". */
+export const goalLabel = (goal: Goal | null | undefined) => GOALS[goal ?? 'fit'].label;
+
+/** Short diet names and the chip tone each uses (green veg, amber egg, pink non-veg). */
+export const DIET_LABEL: Record<Diet, string> = { veg: 'Veg', egg: 'Egg', nonveg: 'Non-veg' };
+export const DIET_TONE: Record<Diet, 'ok' | 'warn' | 'accent'> = { veg: 'ok', egg: 'warn', nonveg: 'accent' };
 
 export const ACTIVITY: Record<Activity, { label: string; factor: number }> = {
   sedentary: { label: 'Mostly sitting', factor: 1.2 },
@@ -292,7 +298,8 @@ export type RecipeNutrition = {
   missing: string[];
 };
 
-const DIET_RANK: Record<Diet, number> = { veg: 0, egg: 1, nonveg: 2 };
+/** veg < egg < nonveg: how much a diet allows. */
+export const DIET_RANK: Record<Diet, number> = { veg: 0, egg: 1, nonveg: 2 };
 
 /** Recipe nutrition is always computed: ingredients × quantity, then ÷ servings. Never typed in. */
 export function recipeNutrition(ingredients: RecipeIngredient[], servings: number, foodsById: Map<string, Food>): RecipeNutrition {

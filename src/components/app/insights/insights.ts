@@ -2,7 +2,7 @@
 // Relative imports on purpose: vitest runs without the `@/` alias.
 import {
   MEALS, dayCounts, isValidProfile, planCheck, shiftDate, totals,
-  type BodyProfile, type Diet, type Entry, type Food, type GroupKey, type GroupStatus, type Macros, type Meal, type Plan, type PlanItem, type Targets,
+  type BodyProfile, type Diet, type Entry, type Food, type GroupKey, type GroupStatus, type Macros, type Meal, type Plan, type Targets,
 } from '../../../lib/nutrition';
 import type { DayRow, EntryRow, Profile, WorkoutRow } from '../../../lib/types';
 
@@ -81,78 +81,15 @@ export function averageDay(summaries: DaySummary[]): { entries: Entry[]; days: n
 
 // ---------- Food style and restrictions ----------
 
-export const RESTRICTIONS = [
-  { slug: 'jain', label: 'Jain' },
-  { slug: 'no-onion-garlic', label: 'No onion-garlic' },
-  { slug: 'lactose-free', label: 'Lactose-free' },
-  { slug: 'nut-allergy', label: 'Nut allergy' },
-  { slug: 'gluten-free', label: 'Gluten-free' },
-  { slug: 'diabetic-friendly', label: 'Diabetic-friendly' },
-] as const;
-export type Restriction = (typeof RESTRICTIONS)[number]['slug'];
-export const RESTRICTION_SLUGS = RESTRICTIONS.map(r => r.slug) as [Restriction, ...Restriction[]];
-
 export const DIETS: { key: Diet; label: string; blurb: string }[] = [
   { key: 'veg', label: 'Veg', blurb: 'No meat, fish or eggs' },
   { key: 'egg', label: 'Eggetarian', blurb: 'Veg plus eggs' },
   { key: 'nonveg', label: 'Non-veg', blurb: 'Everything on the menu' },
 ];
 
-const DIET_RANK: Record<Diet, number> = { veg: 0, egg: 1, nonveg: 2 };
-
-// Keyword screens. A best-effort filter for suggestions, never a guarantee: recipes vary from kitchen to kitchen.
-const KEYWORDS: Record<Restriction, string[]> = {
-  jain: ['onion', 'garlic', 'potato', 'aloo', 'carrot', 'beet', 'radish', 'mooli', 'ginger', 'adrak', 'pyaz', 'lehsun', 'sweet potato', 'shakarkandi'],
-  'no-onion-garlic': ['onion', 'garlic', 'pyaz', 'lehsun'],
-  'lactose-free': ['milk', 'doodh', 'paneer', 'curd', 'dahi', 'yogurt', 'whey', 'chai', 'buttermilk', 'chaas', 'lassi', 'ghee', 'cheese', 'kheer', 'raita'],
-  'nut-allergy': ['almond', 'badam', 'peanut', 'moongphali', 'cashew', 'kaju', 'walnut', 'akhrot', 'pista', 'nut'],
-  'gluten-free': ['wheat', 'atta', 'roti', 'chapati', 'paratha', 'bread', 'naan', 'poori', 'puri', 'rava', 'sooji', 'semolina', 'upma', 'maida', 'dalia', 'oats', 'pasta', 'biscuit', 'barley'],
-  'diabetic-friendly': ['sweetened', 'sugar', 'sweet', 'jalebi', 'ladoo', 'laddu', 'halwa', 'gulab', 'juice', 'soda', 'cola', 'kheer', 'mithai', 'barfi', 'honey', 'jaggery'],
-};
-
-/** Whether a food suits the user's diet and restrictions, for suggestions only. */
-export function foodFits(food: Pick<Food, 'name' | 'aliases' | 'diet' | 'groups'>, diet: Diet, restrictions: readonly string[]): boolean {
-  const jain = restrictions.includes('jain');
-  if (DIET_RANK[food.diet] > (jain ? 0 : DIET_RANK[diet])) return false;
-  const text = `${food.name} ${food.aliases ?? ''}`.toLowerCase();
-  for (const r of restrictions) {
-    const words = KEYWORDS[r as Restriction];
-    if (words?.some(w => new RegExp(`\\b${w}`).test(text))) return false;
-  }
-  if (restrictions.includes('lactose-free') && (food.groups?.milk ?? 0) > 0) return false;
-  if (restrictions.includes('nut-allergy') && (food.groups?.nuts ?? 0) > 0) return false;
-  return true;
-}
-
 // ---------- Plan ----------
 
 /** Validates a stored user_plans.plan (jsonb) against the catalogue. Returns null when unusable. */
-export function parseStoredPlan(raw: unknown, foodsById: Map<string, Food>): Plan | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const src = raw as Record<string, unknown>;
-  const plan = {} as Plan;
-  let count = 0;
-  for (const meal of MEALS) {
-    const list = Array.isArray(src[meal]) ? (src[meal] as unknown[]) : [];
-    plan[meal] = list.flatMap((it): PlanItem[] => {
-      if (!it || typeof it !== 'object') return [];
-      const { foodId, q, flex } = it as Record<string, unknown>;
-      if (typeof foodId !== 'string' || !foodsById.has(foodId) || typeof q !== 'number' || !(q > 0) || q > 100) return [];
-      return [{ foodId, q, flex: flex === true }];
-    });
-    count += plan[meal].length;
-  }
-  return count ? plan : null;
-}
-
-/** Drops plan items that clash with the user's diet or restrictions. */
-export function filterPlan(plan: Plan, foodsById: Map<string, Food>, diet: Diet, restrictions: readonly string[]): Plan {
-  return Object.fromEntries(MEALS.map(m => [m, plan[m].filter(i => {
-    const f = foodsById.get(i.foodId);
-    return !!f && foodFits(f, diet, restrictions);
-  })])) as Plan;
-}
-
 export type Suggestion = { foodId: string; name: string; unit: string; icon: string; meal: Meal; quantity: number; kcal: number; fills: GroupKey; fillsLabel: string };
 
 /**

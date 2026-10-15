@@ -44,7 +44,9 @@ const rows: Row[] = [
   ['biryani', 'Chicken biryani', 'Indian meals', 'plate', 300, 490, 23, 62, 17, 3, 'nonveg', 'plate', 'briyani rice', { cer: 60, pul: 40, oil: 10 }],
   ['khichdi', 'Moong dal khichdi', 'Indian meals', 'bowl', 200, 235, 9, 39, 5, 4, 'veg', 'bowl', 'kichdi rice lentils', { cer: 35, pul: 20, oil: 4 }],
   ['paratha', 'Aloo paratha', 'Breakfast', 'medium', 100, 260, 6, 39, 9, 4, 'veg', 'roti', 'potato parantha', { cer: 50, veg: 40, oil: 8 }],
-  ['oil', 'Cooking oil', 'Cooking', 'teaspoon', 5, 45, 0, 0, 5, 0, 'veg', 'glass', 'ghee olive sunflower mustard', { oil: 5 }],
+  ['oil', 'Cooking oil', 'Cooking', 'teaspoon', 5, 45, 0, 0, 5, 0, 'veg', 'glass', 'olive sunflower mustard groundnut', { oil: 5 }],
+  // Ghee is its own food (dairy), so lactose-free members can still have dishes cooked in oil.
+  ['ghee', 'Ghee', 'Cooking', 'teaspoon', 5, 45, 0, 0, 5, 0, 'veg', 'glass', 'desi ghee clarified butter', { oil: 5 }],
 ];
 
 export const SEED_FOODS: Food[] = rows.map(([id, name, category, unit, grams, kcal, p, c, f, fibre, diet, icon, aliases, groups]) => ({

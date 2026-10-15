@@ -1,7 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { recommend, type Targets } from '@/lib/nutrition';
-import { createClient } from '@/lib/supabase/server';
+import { SESSION_ENDED, actionUser } from '@/lib/auth';
 import type { Profile } from '@/lib/types';
 import { pickTargets, sameTargets } from '@/components/app/insights/insights';
 import { bodySchema, firstIssue, type BodyInput } from '@/components/app/insights/schemas';
@@ -18,13 +18,12 @@ export type SaveProfileResult =
 export async function saveProfile(input: BodyInput): Promise<SaveProfileResult> {
   const parsed = bodySchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: SESSION_ENDED };
   const d = parsed.data;
-  const { data, error } = await supabase.from('profiles').update({
+  const { data, error } = await session.supabase.from('profiles').update({
     goal: d.goal, sex: d.sex, age: d.age, height_cm: d.height, weight_kg: d.weight, activity: d.activity, diet: d.diet, restrictions: d.restrictions,
-  }).eq('id', auth.user.id).select('targets').single();
+  }).eq('id', session.user.id).select('targets').single();
   if (error) return { ok: false, error: 'Couldn’t save your profile. Try again.' };
   const recommended = pickTargets(recommend(d));
   revalidatePath('/app', 'layout');
@@ -54,10 +53,9 @@ export async function saveRememberFeedback(on: boolean): Promise<ActionResult> {
 }
 
 async function updatePrefs(patch: Record<string, unknown>, failMsg: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { ok: false, error: 'Your session ended. Sign in again.' };
-  const { error } = await supabase.from('profiles').update(patch).eq('id', auth.user.id);
+  const session = await actionUser();
+  if (!session) return { ok: false, error: SESSION_ENDED };
+  const { error } = await session.supabase.from('profiles').update(patch).eq('id', session.user.id);
   if (error) return { ok: false, error: failMsg };
   revalidatePath('/app', 'layout');
   return { ok: true, data: undefined };

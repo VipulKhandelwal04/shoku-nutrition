@@ -4,6 +4,7 @@
 import { DEFAULT_CUISINE, cuisineOf, recipeNutrition, type Diet, type Food, type Macros, type RecipeIngredient } from '../nutrition';
 import type { CuisinePrefs } from '../preferences';
 import type { FeedbackSummary } from './feedback';
+import { foodFits } from '../restrictions';
 import { dietAllows, isExcluded, parseExclusions, type Exclusions } from './plan';
 
 /** What a member's settings and request say about the foods they may be offered. */
@@ -40,11 +41,11 @@ export type CandidateSet = {
   /** Eligible foods the member liked / rated "not for me", in candidate order. */
   liked: Food[];
   disliked: Food[];
-  /** Recipes whose ingredients all passed the hard rules (diet, restrictions, "no X"). */
+  /** Recipes whose every ingredient passed the hard rules; preferred cuisines first. */
   recipes: Recipe[];
 };
 
-/** Cooking fat doesn't make a dish: ignored when matching a meal to a recipe, and only diet applies to it. */
+/** Cooking fat doesn't make a dish: ignored when matching a meal to a recipe. */
 const MINOR_INGREDIENTS = new Set(['oil']);
 
 /** A preferred cuisine's foods get this weight; everything else stays at 1. */
@@ -69,17 +70,26 @@ export function mealCandidates(foods: Food[], rules: CandidateRules): CandidateS
   const exclusions = parseExclusions(rules.restrictions, rules.request ?? '');
   const preferred = preferredCuisines(rules.cuisines);
   const want = new Set(preferred.map(c => c.toLowerCase()));
+  const isPreferred = (cuisine: string) => want.has(cuisine.toLowerCase());
+  // Hard rules: diet; profile restrictions by their keyword screens (foodFits) and by name ("no X" phrases); and any
+  // "no X" in the request.
   const candidates = foods
-    .filter(f => dietAllows(rules.diet, f.diet) && !isExcluded(f, exclusions))
+    .filter(f => dietAllows(rules.diet, f.diet) && foodFits(f, rules.diet, rules.restrictions) && !isExcluded(f, exclusions))
     .map(food => ({
       food,
-      weight: (want.has(cuisineOf(food).toLowerCase()) ? PREFERRED_WEIGHT : 1) * (rules.feedback?.factor.get(food.id) ?? 1),
+      weight: (isPreferred(cuisineOf(food)) ? PREFERRED_WEIGHT : 1) * (rules.feedback?.factor.get(food.id) ?? 1),
     }))
     .map((c, i) => ({ c, i }))
     .sort((a, b) => b.c.weight - a.c.weight || a.i - b.i)
     .map(x => x.c);
-  const isPreferred = (f: Food) => want.has(cuisineOf(f).toLowerCase());
-  const preferredCount = candidates.filter(c => isPreferred(c.food)).length;
+  const eligibleIds = new Set(candidates.map(c => c.food.id));
+  // Recipes count only when every ingredient is eligible; preferred cuisines first, otherwise as given.
+  const recipes = (rules.recipes ?? [])
+    .filter(r => r.ingredients.length > 0 && r.ingredients.every(i => eligibleIds.has(i.foodId)))
+    .map((r, i) => ({ r, i, w: isPreferred(r.cuisine) ? PREFERRED_WEIGHT : 1 }))
+    .sort((a, b) => b.w - a.w || a.i - b.i)
+    .map(x => x.r);
+  const preferredCount = candidates.filter(c => isPreferred(cuisineOf(c.food))).length + recipes.filter(r => isPreferred(r.cuisine)).length;
   const fb = (f: Food) => rules.feedback?.factor.get(f.id) ?? 1;
   return {
     candidates,
@@ -89,11 +99,7 @@ export function mealCandidates(foods: Food[], rules: CandidateRules): CandidateS
     thin: preferred.length > 0 && preferredCount < THIN_CUISINE,
     liked: candidates.filter(c => fb(c.food) > 1).map(c => c.food),
     disliked: candidates.filter(c => fb(c.food) < 1).map(c => c.food),
-    recipes: (rules.recipes ?? []).filter(r => r.ingredients.length > 0 && r.ingredients.every(i =>
-      candidates.some(c => c.food.id === i.foodId)
-      // Cooking oil only has to fit the diet: its "ghee" search alias would otherwise rule out every recipe for a
-      // lactose-free member. Members cook with the fat that suits them; the main ingredients carry the rules.
-      || (MINOR_INGREDIENTS.has(i.foodId) && foods.some(f => f.id === i.foodId && dietAllows(rules.diet, f.diet))))),
+    recipes,
   };
 }
 

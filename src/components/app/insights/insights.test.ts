@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { buildPlan, groupStatus, recommend, type Entry, type Food, type Meal } from '../../../lib/nutrition';
 import { SEED_FOODS } from '../../../lib/seed-foods';
 import {
-  averageDay, bmiBand, bodyOf, energySplit, filterPlan, foodFits, groupContributions, nextUp, nutrientStatus,
-  parseDayParam, parseStoredPlan, sameTargets, summariseDays, todayIn, weekKeys, weekStats,
+  averageDay, bmiBand, bodyOf, energySplit, groupContributions, nextUp, nutrientStatus,
+  parseDayParam, sameTargets, summariseDays, todayIn, weekKeys, weekStats,
   USUAL_MEAL_MINUTES, clockIn, clockLabel, dayTimeline, parseClock, workoutWeek,
 } from './insights';
 import type { WorkoutRow } from '../../../lib/types';
@@ -32,46 +32,6 @@ describe('dates', () => {
     expect(todayIn(null, t)).toBe('2026-10-16');
     expect(todayIn('America/New_York', t)).toBe('2026-10-15');
     expect(todayIn('Not/AZone', t)).toBe('2026-10-16');
-  });
-});
-
-describe('diet and restrictions', () => {
-  it('respects food style', () => {
-    expect(foodFits(food('chicken'), 'veg', [])).toBe(false);
-    expect(foodFits(food('egg'), 'egg', [])).toBe(true);
-    expect(foodFits(food('chicken'), 'egg', [])).toBe(false);
-    expect(foodFits(food('chicken'), 'nonveg', [])).toBe(true);
-  });
-  it('screens restrictions by keyword and food group', () => {
-    expect(foodFits(food('paratha'), 'veg', ['jain'])).toBe(false); // aloo
-    expect(foodFits(food('egg'), 'nonveg', ['jain'])).toBe(false); // jain is veg
-    expect(foodFits(food('curd'), 'veg', ['lactose-free'])).toBe(false);
-    expect(foodFits(food('chai'), 'veg', ['lactose-free'])).toBe(false);
-    expect(foodFits(food('almonds'), 'veg', ['nut-allergy'])).toBe(false);
-    expect(foodFits(food('chapati'), 'veg', ['gluten-free'])).toBe(false);
-    expect(foodFits(food('rice'), 'veg', ['gluten-free'])).toBe(true);
-    expect(foodFits(food('chai'), 'veg', ['diabetic-friendly'])).toBe(false); // sweetened
-    expect(foodFits(food('dal'), 'veg', ['jain', 'gluten-free', 'diabetic-friendly'])).toBe(true);
-  });
-  it('filters a plan to what fits', () => {
-    const plan = filterPlan(buildPlan({ kcal: 2000 }, 'fit', 'veg', byId), byId, 'veg', ['lactose-free', 'gluten-free']);
-    const ids = Object.values(plan).flat().map(i => i.foodId);
-    expect(ids).not.toContain('milk');
-    expect(ids).not.toContain('chapati');
-    expect(ids).toContain('dal');
-  });
-});
-
-describe('stored plan', () => {
-  it('keeps valid items and drops unknown foods or bad quantities', () => {
-    const plan = parseStoredPlan({ Breakfast: [{ foodId: 'oats', q: 1, flex: true }, { foodId: 'ghost', q: 1 }], Lunch: [{ foodId: 'dal', q: -1 }], Dinner: 'x' }, byId);
-    expect(plan?.Breakfast).toEqual([{ foodId: 'oats', q: 1, flex: true }]);
-    expect(plan?.Lunch).toEqual([]);
-    expect(plan?.Dinner).toEqual([]);
-  });
-  it('returns null for empty or junk plans', () => {
-    expect(parseStoredPlan(null, byId)).toBeNull();
-    expect(parseStoredPlan({ Breakfast: [] }, byId)).toBeNull();
   });
 });
 

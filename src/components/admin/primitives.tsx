@@ -15,7 +15,7 @@ export function Switch({ pressed, onChange, label, hideLabel, disabled, describe
 }) {
   return (
     <button type="button" className={s.switch} aria-pressed={pressed} onClick={() => onChange(!pressed)} disabled={disabled} aria-describedby={describedBy}>
-      <span className={s.track} aria-hidden="true" />
+      <span className="toggle-track" aria-hidden="true" />
       {hideLabel ? (
         <>
           <span className="sr-only">{label}</span>

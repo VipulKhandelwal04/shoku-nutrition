@@ -39,8 +39,7 @@ export function friendlyDate(day: string, opts: { weekday?: boolean } = {}): str
   return new Date(`${day}T12:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...(opts.weekday ? { weekday: 'short' } : {}) });
 }
 
-export const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
-export const dec = (n: number) => String(Math.round(n * 100) / 100);
+export { fmt, qty as dec } from '@/lib/format';
 
 export const MEAL_IMG: Record<Meal, string> = {
   Breakfast: '/img/breakfast.webp',

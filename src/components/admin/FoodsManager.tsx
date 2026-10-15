@@ -1,6 +1,6 @@
 'use client';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { cuisineOf } from '@/lib/nutrition';
+import { DIET_LABEL, DIET_TONE, cuisineOf } from '@/lib/nutrition';
 import { FoodTile, Icon } from '@/components/ui/Icon';
 import { setFoodActive } from '@/lib/admin/actions';
 import { DIETS } from '@/lib/admin/schemas';
@@ -9,7 +9,6 @@ import s from './admin.module.css';
 import { FoodSheet } from './FoodSheet';
 import { Switch, useAdminAction } from './primitives';
 
-export const DIET_LABEL: Record<(typeof DIETS)[number], string> = { veg: 'Veg', egg: 'Egg', nonveg: 'Non-veg' };
 type Status = 'all' | 'active' | 'inactive';
 
 export function FoodsManager({ foods }: { foods: FoodRow[] }) {
@@ -138,7 +137,7 @@ export function FoodsManager({ foods }: { foods: FoodRow[] }) {
                   <td className={s.num}>{Number(f.p)} g</td>
                   <td className={s.num}>{Number(f.c)} g</td>
                   <td className={s.num}>{Number(f.f)} g</td>
-                  <td><span className={`chip ${f.diet === 'veg' ? 'ok' : f.diet === 'egg' ? 'warn' : 'accent'}`}>{DIET_LABEL[f.diet]}</span></td>
+                  <td><span className={`chip ${DIET_TONE[f.diet]}`}>{DIET_LABEL[f.diet]}</span></td>
                   <td>
                     <Switch pressed={f.active} hideLabel label={`${f.name} active`} disabled={pending} onChange={() => toggle(f)} />
                   </td>

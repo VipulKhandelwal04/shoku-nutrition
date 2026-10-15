@@ -11,13 +11,13 @@ import type { RecipeCard } from '@/lib/ai/candidates';
 import { resetWeekDay, restoreWeekDay, saveWeekDay } from '@/lib/data/week';
 import { MEALS, type Meal, type Plan } from '@/lib/nutrition';
 import s from './compare.module.css';
+import { fmt, qty } from '@/lib/format';
 
 export type WeekItem = { foodId: string; name: string; unit: string; q: number; kcal: number };
 export type WeekMealView = { meal: Meal; items: WeekItem[]; alternatives: WeekItem[][]; recipe?: RecipeCard };
-export type WeekDayView = { key: string; label: string; weekday: number; kcal: number; saved: boolean; plan: Plan; meals: WeekMealView[] };
+/** One day card. `training`: a usual training day (the day was fuelled with more protein and carbs). */
+export type WeekDayView = { key: string; label: string; weekday: number; kcal: number; saved: boolean; training: boolean; plan: Plan; meals: WeekMealView[] };
 
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
-const qty = (n: number) => (Math.round(n * 100) / 100).toString();
 const line = (items: WeekItem[]) => items.map(i => `${i.name} ${qty(i.q)} ${i.unit}`).join(' · ');
 
 export function WeekPlan({ days, today, target, canEdit, canLogRecipe = false }: { days: WeekDayView[]; today: string; target: number; canEdit: boolean; canLogRecipe?: boolean }) {
@@ -59,6 +59,7 @@ export function WeekPlan({ days, today, target, canEdit, canLogRecipe = false }:
             <details className={s.weekDay} open={i === 0}>
               <summary>
                 <span className={s.weekLabel}>{d.label}</span>
+                {d.training && <span className="chip">Training</span>}
                 {d.saved && <span className="chip accent">Saved</span>}
                 <span className={s.weekKcal}>{fmt(d.kcal)} <small>kcal</small></span>
               </summary>

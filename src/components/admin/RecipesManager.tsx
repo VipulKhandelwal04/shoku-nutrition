@@ -4,13 +4,12 @@ import { Sheet } from '@/components/ui/Sheet';
 import { FoodTile, Icon } from '@/components/ui/Icon';
 import { createRecipe, deleteRecipe, setRecipeActive, updateRecipe } from '@/lib/admin/actions';
 import { MAX_INGREDIENTS, MAX_STEPS, type FieldErrors } from '@/lib/admin/schemas';
-import { DEFAULT_CUISINE, cuisineOf, recipeNutrition, type Food } from '@/lib/nutrition';
+import { DEFAULT_CUISINE, DIET_LABEL, DIET_TONE, cuisineOf, recipeNutrition, type Food } from '@/lib/nutrition';
 import type { FoodRow, RecipeRow } from '@/lib/types';
 import s from './admin.module.css';
 import { ConfirmDialog, Switch, useAdminAction } from './primitives';
+import { fmt } from '@/lib/format';
 
-const DIET_LABEL = { veg: 'Veg', egg: 'Egg', nonveg: 'Non-veg' } as const;
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
 /** Admin → Recipes: author recipes from catalogue foods. Members don't see recipes yet. */
 export function RecipesManager({ recipes, foods }: { recipes: RecipeRow[]; foods: FoodRow[] }) {
@@ -83,7 +82,7 @@ export function RecipesManager({ recipes, foods }: { recipes: RecipeRow[]; foods
                     <td className={s.num}>{r.servings}</td>
                     <td className={s.num}>{fmt(n.perServing.kcal)}</td>
                     <td className={s.num}>{fmt(n.perServing.p)} g</td>
-                    <td><span className={`chip ${n.diet === 'veg' ? 'ok' : n.diet === 'egg' ? 'warn' : 'accent'}`}>{DIET_LABEL[n.diet]}</span></td>
+                    <td><span className={`chip ${DIET_TONE[n.diet]}`}>{DIET_LABEL[n.diet]}</span></td>
                     <td><Switch pressed={r.active} hideLabel label={`${r.name} active`} disabled={pending} onChange={() => toggle(r)} /></td>
                     <td>
                       <div className={s.actions}>

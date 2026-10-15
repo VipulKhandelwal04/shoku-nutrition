@@ -4,7 +4,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { FoodTile, Icon, type IconName } from '@/components/ui/Icon';
 import { createFood, deleteFood, setFoodActive, updateFood } from '@/lib/admin/actions';
 import { DIETS, FOOD_ICONS, slugify, type FieldErrors } from '@/lib/admin/schemas';
-import { GROUPS, type GroupKey, DEFAULT_CUISINE, cuisineOf } from '@/lib/nutrition';
+import { DEFAULT_CUISINE, DIET_LABEL, GROUPS, cuisineOf, type GroupKey } from '@/lib/nutrition';
 import type { FoodRow } from '@/lib/types';
 import s from './admin.module.css';
 import { ConfirmDialog, Switch, useAdminAction } from './primitives';
@@ -29,7 +29,6 @@ function toDraft(f: FoodRow | null): Draft {
 
 const omit = (o: FieldErrors, key: string): FieldErrors => Object.fromEntries(Object.entries(o).filter(([k]) => k !== key));
 
-const DIET_LABEL: Record<Draft['diet'], string> = { veg: 'Veg', egg: 'Egg', nonveg: 'Non-veg' };
 const MACROS: { key: NumKey; label: string; unit: string }[] = [
   { key: 'kcal', label: 'Calories', unit: 'kcal' },
   { key: 'p', label: 'Protein', unit: 'g' },

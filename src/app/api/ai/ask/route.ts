@@ -3,18 +3,15 @@ import { askOutput, askRequest, type AskContext, type AskResponse } from '@/lib/
 import { generateJson } from '@/lib/ai/gemini';
 import { guardAi, recordUsage } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson, todayIst } from '@/lib/ai/http';
-import { candidateLines, cuisineBrief, feedbackBrief, matchRecipe, mealCandidates, recipeCard, recipeLines } from '@/lib/ai/candidates';
+import { candidateLines, matchRecipe, recipeCard, recipeLines } from '@/lib/ai/candidates';
+import { memberSuggestions } from '@/lib/ai/member';
 import { ASK_SYSTEM } from '@/lib/ai/prompts';
-import { getActiveRecipes, getFeedbackForSuggestions, getFlags, getFoods } from '@/lib/data/queries';
-import { isOn } from '@/lib/flags';
-import { OPEN_CUISINES, cuisinePrefsOf } from '@/lib/preferences';
-import { GOALS, MEALS, totals } from '@/lib/nutrition';
+import { DIET_LABEL, MEALS, totals } from '@/lib/nutrition';
 import type { EntryRow, Profile, WorkoutRow } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const DIET_LABEL: Record<string, string> = { veg: 'Vegetarian', egg: 'Vegetarian + egg', nonveg: 'Eats everything' };
 
 /**
  * POST { question (≤ 300 chars), day, useWorkouts? } → { ok: true, data: AskResponse }.
@@ -39,16 +36,8 @@ export async function POST(request: Request) {
   if (!profile?.targets) return fail(409, 'Finish setting up your goal first, then Ask Shoku can tailor ideas.');
   if (eErr || wErr) return fail(500, 'Couldn’t read your day. Try again.');
 
-  const flags = await getFlags();
-  const cuisines = isOn(flags, 'cuisines', 'ask') ? cuisinePrefsOf(profile) : OPEN_CUISINES;
-  const feedback = await getFeedbackForSuggestions(flags, profile);
-  const withRecipes = isOn(flags, 'recipes', 'detail');
-  const foods = await getFoods();
-  const set = mealCandidates(foods, {
-    diet: profile.diet, restrictions: profile.restrictions ?? [], request: question, cuisines, feedback,
-    recipes: withRecipes ? await getActiveRecipes() : [],
-  });
-  const fbBrief = feedbackBrief(set, feedback);
+  const member = await memberSuggestions(profile, { surface: 'ask', request: question });
+  const { set } = member;
   if (set.candidates.length < 4) return fail(422, 'Too few foods fit that question. Loosen one condition and ask again.');
 
   const dayEntries = (entries ?? []) as Pick<EntryRow, 'meal' | 'food' | 'quantity'>[];
@@ -64,13 +53,13 @@ export async function POST(request: Request) {
     workoutsUse,
     eatenKcal: Math.round(eaten.kcal), targetKcal: profile.targets.kcal,
     eatenProtein: Math.round(eaten.p), targetProtein: profile.targets.p,
-    diet: DIET_LABEL[profile.diet] ?? profile.diet,
+    diet: DIET_LABEL[profile.diet],
     avoiding: (profile.restrictions ?? []).slice(0, 6),
     cuisines: set.preferred,
-    feedback: !!fbBrief,
+    feedback: member.usedFeedback,
   };
   const brief = {
-    goal: profile.goal ? GOALS[profile.goal].label : 'Stay fit',
+    ...member.brief,
     diet: profile.diet,
     today: isToday,
     nextMeal: isToday ? nextMeal(hourIst(), logged) : 'any',
@@ -80,8 +69,6 @@ export async function POST(request: Request) {
     // Left out entirely (not an empty list) when the member chose not to share workouts, so the model doesn't
     // read "no workouts" as a rest day.
     ...(workoutsUse === 'used' ? { workouts: dayWorkouts.map(w => ({ what: w.label, type: w.kind, minutes: w.minutes, kcal_burned: w.kcal, from: w.source })) } : {}),
-    ...(cuisineBrief(set) ? { cuisines: cuisineBrief(set) } : {}),
-    ...(fbBrief ? { feedback: fbBrief } : {}),
   };
   const catalogue = candidateLines(set);
 
@@ -98,10 +85,9 @@ export async function POST(request: Request) {
       temperature: 0.6,
       signal: request.signal,
     });
-    const foodsById = new Map(foods.map(f => [f.id, f]));
     const ideas = repairIdeas(out.ideas.slice(0, MAX_IDEAS + 2), set.eligible).map(idea => {
       const match = matchRecipe(idea.items.map(i => i.foodId), set.recipes);
-      return match ? { ...idea, recipe: recipeCard(match, foodsById) } : idea;
+      return match ? { ...idea, recipe: recipeCard(match, member.foodsById) } : idea;
     });
     const answer = out.answer.replace(/\s+/g, ' ').trim().slice(0, 320);
     if (!answer && !ideas.length) return fail(502, 'Ask Shoku couldn’t find an answer this time. Try rewording.');

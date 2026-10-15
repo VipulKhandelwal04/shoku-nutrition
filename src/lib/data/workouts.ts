@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { ACTIVITY, WORKOUT_PRESETS, recommend, type Activity, type Targets } from '../nutrition';
 import { FLAG_OFF, isOn } from '../flags';
-import { createClient } from '../supabase/server';
+import { actionUser } from '../auth';
 import { getFlags } from './queries';
 import type { Profile, WorkoutRow } from '../types';
 import type { ActionResult } from './diary';
@@ -23,19 +23,15 @@ const addSchema = z.object({
   startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Pick a valid time').optional(),
 });
 
-async function session() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  return { supabase, user: data.user };
-}
 
 export async function addWorkout(input: z.input<typeof addSchema>): Promise<ActionResult<{ id: string }>> {
   const flags = await getFlags();
   if (!isOn(flags, 'workouts', 'manual')) return { ok: false, error: FLAG_OFF };
   const parsed = addSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the workout details.' };
-  const { supabase, user } = await session();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase, user } = session;
   const w = parsed.data;
   const { data, error } = await supabase.from('workouts')
     .insert({
@@ -52,8 +48,9 @@ export async function addWorkout(input: z.input<typeof addSchema>): Promise<Acti
 /** Manual workouts are deleted; imported ones are hidden so the next sync doesn't bring them back. */
 export async function removeWorkout(id: string): Promise<ActionResult<{ restore: WorkoutRow }>> {
   if (!z.uuid().safeParse(id).success) return { ok: false, error: 'Couldn’t find that workout.' };
-  const { supabase, user } = await session();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase } = session;
   const { data: row } = await supabase.from('workouts').select('*').eq('id', id).maybeSingle<WorkoutRow>();
   if (!row) return { ok: false, error: 'Couldn’t find that workout.' };
   const { error } = row.source === 'manual'
@@ -66,8 +63,9 @@ export async function removeWorkout(id: string): Promise<ActionResult<{ restore:
 
 /** Undo for removeWorkout. */
 export async function restoreWorkout(row: WorkoutRow): Promise<ActionResult> {
-  const { supabase, user } = await session();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase, user } = session;
   const { error } = row.source === 'manual'
     ? await supabase.from('workouts').insert({
       id: row.id, user_id: user.id, day: row.day, kind: row.kind, label: row.label, minutes: row.minutes, kcal: row.kcal,
@@ -85,8 +83,9 @@ export async function restoreWorkout(row: WorkoutRow): Promise<ActionResult> {
  */
 export async function switchToLightBase(): Promise<ActionResult<{ previous: { activity: Activity; targets: Targets } }>> {
   if (!isOn(await getFlags(), 'workouts', 'light_base')) return { ok: false, error: FLAG_OFF };
-  const { supabase, user } = await session();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase, user } = session;
   const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<Profile>();
   if (!p?.targets || !p.activity || !p.sex || !p.age || !p.height_cm || !p.weight_kg || !p.goal) {
     return { ok: false, error: 'Finish your goal and body details first.' };
@@ -101,8 +100,9 @@ export async function switchToLightBase(): Promise<ActionResult<{ previous: { ac
 
 export async function restoreBase(previous: { activity: Activity; targets: Targets }): Promise<ActionResult> {
   if (!(previous.activity in ACTIVITY)) return { ok: false, error: 'Couldn’t restore that.' };
-  const { supabase, user } = await session();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase, user } = session;
   const { error } = await supabase.from('profiles').update({ activity: previous.activity, targets: previous.targets }).eq('id', user.id);
   if (error) return { ok: false, error: 'Couldn’t restore your targets. Try again.' };
   revalidatePath('/app', 'layout');
@@ -113,8 +113,9 @@ export async function restoreBase(previous: { activity: Activity; targets: Targe
 export async function getWorkoutWeek(end: string): Promise<ActionResult<{ workouts: WorkoutRow[] }>> {
   if (!isOn(await getFlags(), 'workouts', 'week')) return { ok: false, error: FLAG_OFF };
   if (!day.safeParse(end).success) return { ok: false, error: 'Pick a valid date.' };
-  const { supabase, user } = await session();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase } = session;
   const from = new Date(`${end}T12:00:00Z`);
   from.setUTCDate(from.getUTCDate() - 6);
   const { data, error } = await supabase.from('workouts').select('*').eq('hidden', false)

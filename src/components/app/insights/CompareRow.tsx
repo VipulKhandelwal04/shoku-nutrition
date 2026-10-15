@@ -1,7 +1,7 @@
 import { CHIP, type ChipStatus } from './insights';
 import s from './insights.module.css';
+import { fmt } from '@/lib/format';
 
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
 export function StatusChip({ status }: { status: ChipStatus }) {
   const c = CHIP[status];
