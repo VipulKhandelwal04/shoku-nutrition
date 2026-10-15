@@ -1,0 +1,28 @@
+/* Shared insight pieces: comparison rows, status chips, one-tap log rows, page intro. */
+.intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 28px; }
+.intro p { color: var(--muted); margin-top: 10px; max-width: 56ch; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-text); margin-bottom: 10px; }
+
+.row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.label { font-size: 14px; font-weight: 600; min-width: 0; }
+.bar { position: relative; height: 10px; background: var(--surface-3); border-radius: 9px; }
+.fill { height: 100%; border-radius: 9px; background: var(--line-2); transition: width .5s var(--ease); }
+.fill[data-status='hit'] { background: var(--ok); }
+.fill[data-status='low'] { background: var(--warn); }
+.fill[data-status='over'] { background: var(--accent); }
+.fill[data-status='so-far'] { background: var(--text-2); opacity: .55; }
+.mark { position: absolute; top: -5px; bottom: -5px; width: 3px; background: var(--text); border-radius: 2px; transform: translateX(-1.5px); }
+.nums { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.nums b { font-family: var(--display); color: var(--text); font-size: 19px; font-weight: 700; }
+
+.suggest { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.suggestItem { display: flex; align-items: center; gap: 14px; padding: 10px 10px 10px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 18px; }
+.suggestText { flex: 1; min-width: 0; }
+.suggestText strong { display: block; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggestText small { display: block; font-size: 12px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fill { transition: none; }
+}

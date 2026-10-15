@@ -1,0 +1,74 @@
+.wrap { position: relative; min-width: 0; }
+.track {
+  padding: 4px 2px 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 2px;
+  scrollbar-width: none;
+  border-radius: var(--radius);
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(420px, 82vw);
+  gap: 16px;
+}
+.track::-webkit-scrollbar { display: none; }
+.track:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.slide {
+  scroll-snap-align: start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+}
+.media { position: relative; aspect-ratio: 4 / 3; background: var(--surface-2); }
+.media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(var(--scrim), 0) 45%, rgba(var(--scrim), .85) 100%);
+}
+.img { object-fit: cover; width: 100%; height: 100%; position: absolute; inset: 0; }
+.num {
+  position: absolute;
+  z-index: 1;
+  left: 20px;
+  bottom: 10px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 64px;
+  line-height: .9;
+  color: var(--accent);
+}
+.copy { padding: 18px 22px 24px; display: grid; gap: 8px; align-content: start; }
+.copy h3 {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: .95;
+  text-transform: uppercase;
+}
+.copy p { color: var(--text-2); font-size: 15px; }
+.controls { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.ctrl {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  transition: background .2s, border-color .2s;
+}
+.ctrl:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+@media (prefers-reduced-motion: no-preference) {
+  .track { scroll-behavior: smooth; }
+}

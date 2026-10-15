@@ -83,7 +83,7 @@ export async function updateEntry(input: z.input<typeof updateSchema>): Promise<
 }
 
 /** Copies a meal from one day to another (e.g. "repeat yesterday's breakfast"). */
-export async function repeatMeal(input: { fromDay: string; toDay: string; meal: string }): Promise<ActionResult<{ ids: string[] }>> {
+export async function repeatMeal(input: { fromDay: string; toDay: string; meal: string }): Promise<ActionResult<{ ids: string[]; newBadges: string[] }>> {
   const parsed = z.object({ fromDay: day, toDay: day, meal }).safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Couldn’t repeat that meal.' };
   const { supabase, user } = await userOrFail();
@@ -93,9 +93,9 @@ export async function repeatMeal(input: { fromDay: string; toDay: string; meal: 
   const rows = src.map(e => ({ user_id: user.id, day: parsed.data.toDay, meal: parsed.data.meal, food_id: e.food_id, food: e.food, quantity: e.quantity, source: 'repeat' as const }));
   const { data, error } = await supabase.from('entries').insert(rows).select('id');
   if (error) return { ok: false, error: 'Couldn’t repeat that meal. Try again.' };
-  await awardBadges(parsed.data.toDay);
+  const newBadges = await awardBadges(parsed.data.toDay);
   done();
-  return { ok: true, data: { ids: (data ?? []).map(r => r.id) } };
+  return { ok: true, data: { ids: (data ?? []).map(r => r.id), newBadges } };
 }
 
 export async function changeWater(input: { day: string; deltaMl: number }): Promise<ActionResult<{ waterMl: number }>> {

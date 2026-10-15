@@ -1,0 +1,295 @@
+import Link from 'next/link';
+import { requireOnboarded } from '@/lib/auth';
+import { getAiAssist, getEntries, getFoods } from '@/lib/data/queries';
+import { GOALS, buildPlan, groupStatus, planCheck, recommend, shiftDate, totals, type Entry, type Food, type PlanItemStatus } from '@/lib/nutrition';
+import { FoodTile, Icon } from '@/components/ui/Icon';
+import { CompareRow } from '@/components/app/insights/CompareRow';
+import { DeviceTimeZone } from '@/components/app/insights/DeviceTimeZone';
+import { LogButton } from '@/components/app/insights/LogButton';
+import {
+  averageDay, bmiBand, groupContributions, bodyOf, energySplit, filterPlan, friendlyDay, groupsOnTrack, nextUp, nutrientStatus,
+  parseDayParam, parseStoredPlan, pickTargets, summariseDays, toEntries, weekKeys,
+} from '@/components/app/insights/insights';
+import { getStoredPlan, userToday } from '@/components/app/insights/server';
+import ins from '@/components/app/insights/insights.module.css';
+import { CompareTabs } from './CompareTabs';
+import { GoalCard } from './GoalCard';
+import { PlanTunerEntry } from './PlanTunerEntry';
+import s from './compare.module.css';
+
+export const metadata = { title: 'Compare' };
+
+const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
+const qty = (n: number) => (Math.round(n * 100) / 100).toString();
+const PLAN_CHIP: Record<PlanItemStatus, { label: string; tone: string }> = {
+  done: { label: 'Done', tone: 'ok' }, partly: { label: 'Partly', tone: '' }, more: { label: 'More', tone: 'accent' }, next: { label: 'Next', tone: '' },
+};
+
+export default async function ComparePage({ searchParams }: PageProps<'/app/compare'>) {
+  const profile = await requireOnboarded('/app/compare');
+  const sp = await searchParams;
+  const { today, tz } = await userToday();
+  const period = sp.period === 'week' ? 'week' : 'day';
+  const day = period === 'week' ? today : parseDayParam(sp.day, today, today);
+  const tabParam = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab;
+  const initialTab = tabParam === 'nutrients' || tabParam === 'plan' ? tabParam : 'groups';
+
+  const [foods, ai, storedPlan] = await Promise.all([getFoods(), getAiAssist(), getStoredPlan()]);
+  const foodsById = new Map<string, Food>(foods.map(f => [f.id, f]));
+  const targets = profile.targets!; // requireOnboarded guarantees targets
+  const goal = profile.goal ?? 'fit';
+  const body = bodyOf(profile);
+  const rec = body ? recommend(body) : null;
+
+  // ---- Entries for the period ----
+  let entries: Entry[];
+  let dayEntries: Entry[];
+  let countedDays = 0;
+  if (period === 'week') {
+    const keys = weekKeys(today);
+    const rows = await getEntries(keys[0], today);
+    const summaries = summariseDays(keys, rows);
+    const avg = averageDay(summaries);
+    entries = avg.entries;
+    countedDays = avg.days;
+    dayEntries = summaries[summaries.length - 1].entries;
+  } else {
+    entries = toEntries(await getEntries(day, day));
+    dayEntries = entries;
+  }
+  const dayOpen = period === 'day' && day === today;
+  const statuses = groupStatus(entries, targets.kcal, dayOpen);
+  const onTrack = groupsOnTrack(statuses);
+  const t = totals(entries);
+  const empty = entries.length === 0;
+
+  // ---- Plan: saved (AI Assist-tailored) plan if any, otherwise the deterministic template ----
+  const saved = parseStoredPlan(storedPlan, foodsById);
+  const plan = filterPlan(saved ?? buildPlan(targets, goal, profile.diet, foodsById), foodsById, profile.diet, profile.restrictions ?? []);
+  const check = planCheck(plan, dayEntries, foodsById);
+  const suggestions = period === 'day' ? nextUp(plan, dayEntries, groupStatus(dayEntries, targets.kcal, dayOpen), foodsById) : [];
+
+  const dayLabel = friendlyDay(day, today);
+  const plateTitle = period === 'week' ? 'Your average plate' : day === today ? 'Today’s plate' : `${dayLabel}’s plate`;
+  const periodNote = period === 'week'
+    ? `Average of ${countedDays} counted ${countedDays === 1 ? 'day' : 'days'} in the last 7 (3+ meals logged)`
+    : dayOpen ? 'Day still open: gaps close as you log' : dayLabel;
+
+  const you = energySplit(t);
+  const recSplit = energySplit(rec ?? targets)!;
+
+  // ---- Panels ----
+  const emptyNote = empty ? (
+    <p className="note">
+      {period === 'week'
+        ? 'No counted days in the last 7 yet. Log 3 meals in a day and it shows up here.'
+        : dayOpen ? 'Nothing logged yet today. Log a meal and watch your plate fill up.' : 'Nothing logged for this day.'}
+    </p>
+  ) : null;
+
+  const contributions = groupContributions(entries);
+  const groupsPanel = (
+    <>
+      <p className={s.panelNote}>{periodNote} · ICMR-NIN My Plate for the Day, scaled to {fmt(targets.kcal)} kcal</p>
+      {emptyNote}
+      <ul className={s.contribList}>
+        {statuses.map(g => {
+          const items = contributions[g.key];
+          return (
+            <li key={g.key}>
+              <div className={s.contribHead}>
+                <strong>{g.label}</strong>
+                <span className="muted">{g.kind === 'limit' ? 'Up to' : 'At least'} {fmt(g.target)} {g.unit}</span>
+              </div>
+              <p className={s.contribFoods}>
+                {items.length ? items.map(c => `${c.name} ${fmt(c.amount)} ${g.unit}`).join(' · ') : 'Nothing from this group yet.'}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="fine-print">Amounts are raw-weight equivalents estimated from your portions. Custom foods don’t count toward food groups.</p>
+    </>
+  );
+
+  const fibreTarget = rec?.fibre ?? 25;
+  const nutrientsPanel = (
+    <>
+      <p className={s.panelNote}>{periodNote}</p>
+      {emptyNote}
+      <CompareRow label="Calories" eaten={t.kcal} target={targets.kcal} unit="kcal" kind="target" status={nutrientStatus(t.kcal, targets.kcal, 'target', dayOpen)} />
+      <CompareRow label="Protein" eaten={t.p} target={targets.p} unit="g" kind="atleast" status={nutrientStatus(t.p, targets.p, 'atleast', dayOpen)} />
+      <CompareRow label="Carbs" eaten={t.c} target={targets.c} unit="g" kind="target" status={nutrientStatus(t.c, targets.c, 'target', dayOpen)} />
+      <CompareRow label="Fat" eaten={t.f} target={targets.f} unit="g" kind="limit" status={nutrientStatus(t.f, targets.f, 'limit', dayOpen)} />
+      <CompareRow label="Fibre" eaten={t.fibre} target={fibreTarget} unit="g" kind="atleast" status={nutrientStatus(t.fibre, fibreTarget, 'atleast', dayOpen)} />
+    </>
+  );
+
+  const planPanel = (
+    <>
+      <div className={s.planHead}>
+        <div>
+          <p className={s.panelNote}>
+            {period === 'week' ? 'Today against your plan' : `${dayLabel} against your plan`} · {check.done} of {check.count} items done
+          </p>
+          <p className="fine-print">
+            {saved ? 'Your saved plan, tailored with AI Assist. Check each item before you log it.' : `A ${profile.diet === 'veg' ? 'veg' : profile.diet === 'egg' ? 'eggetarian' : 'non-veg'} day built on ICMR-NIN’s plate, scaled to ${fmt(targets.kcal)} kcal.`}
+            {(profile.restrictions ?? []).length > 0 && ' Foods that clearly clash with your restrictions are left out.'}
+          </p>
+        </div>
+        {ai.features.plan && (
+          <div className={s.tuner}>
+            <span className="chip accent"><Icon name="spark" size="sm" /> AI Assist</span>
+            <PlanTunerEntry />
+          </div>
+        )}
+      </div>
+      {check.rows.map(row => (
+        <div key={row.meal} className={s.meal}>
+          <h3 className={s.mealTitle}>{row.meal}</h3>
+          {row.items.length === 0 && <p className="muted">Nothing planned.</p>}
+          <ul className={s.planList}>
+            {row.items.map(i => (
+              <li key={i.foodId} className={s.planItem}>
+                <FoodTile icon={i.food.icon} />
+                <div className={s.planText}>
+                  <strong>{i.food.name}</strong>
+                  <small>{qty(i.q)} {i.food.unit} · {fmt(i.food.kcal * i.q)} kcal{i.eaten > 0 ? ` · ${qty(i.eaten)} logged` : ''}</small>
+                </div>
+                <span className={`chip ${PLAN_CHIP[i.status].tone}`}>{PLAN_CHIP[i.status].label}</span>
+                {i.left > 0 ? (
+                  <LogButton day={day} items={[{ meal: row.meal, foodId: i.foodId, quantity: i.left }]}
+                    label={`Log ${qty(i.left)} ${i.food.unit} ${i.food.name} to ${row.meal}`} done={`${i.food.name} logged to ${row.meal}.`} />
+                ) : <span className={s.addSpacer} aria-hidden="true" />}
+              </li>
+            ))}
+          </ul>
+          {row.extras.length > 0 && (
+            <p className={s.extras}>Also logged: {row.extras.map(e => e.food.name).join(', ')}</p>
+          )}
+        </div>
+      ))}
+    </>
+  );
+
+  return (
+    <div>
+      <DeviceTimeZone current={tz} />
+      <header className={ins.intro}>
+        <div>
+          <p className={ins.eyebrow}>Your plate vs recommended</p>
+          <h1>How your plate measures up.</h1>
+          <p>Your meals against your plan and the ICMR-NIN guide for Indians.</p>
+        </div>
+        <nav className={s.controls} aria-label="Choose the day">
+          <div className={s.periodSeg}>
+            <Link href="/app/compare" aria-current={period === 'day' ? 'page' : undefined}>Day</Link>
+            <Link href="/app/compare?period=week" aria-current={period === 'week' ? 'page' : undefined}>Week</Link>
+          </div>
+          {period === 'day' && (
+            <div className={s.dayNav}>
+              <Link className="btn-icon" href={`/app/compare?day=${shiftDate(day, -1)}`} aria-label="Previous day"><Icon name="back" /></Link>
+              <span className={s.dayLabel} aria-live="polite">{friendlyDay(day, today, { short: true })}</span>
+              {day < today
+                ? <Link className="btn-icon" href={`/app/compare?day=${shiftDate(day, 1)}`} aria-label="Next day"><Icon name="next" /></Link>
+                : <span className="btn-icon" aria-hidden="true" />}
+            </div>
+          )}
+        </nav>
+      </header>
+
+      <div className={s.layout}>
+        <div className="stack">
+          <section className={`panel ${s.plate}`} aria-labelledby="plate-title">
+            <div className={s.plateHead}>
+              <h2 id="plate-title">{plateTitle}</h2>
+              <span className="muted">{periodNote}</span>
+            </div>
+            {empty ? (
+              <p className={s.bigLine}><span className="display">Fresh plate.</span> {period === 'week' ? 'Your averages land here once a day counts.' : 'Start with one of these.'}</p>
+            ) : (
+              <p className={s.bigLine}>
+                <span className="display">{onTrack} of 7</span> food groups on track
+              </p>
+            )}
+            {!empty && (
+              <div className={s.groupRows}>
+                {statuses.map(g => (
+                  <CompareRow key={g.key} label={g.label} eaten={g.eaten} target={g.target} unit={g.unit} kind={g.kind} status={g.status} />
+                ))}
+              </div>
+            )}
+            {period === 'day' && (
+              <div className={s.nextUp}>
+                <h3>Next up</h3>
+                {suggestions.length ? (
+                  <ul className={ins.suggest}>
+                    {suggestions.map(x => (
+                      <li key={x.foodId} className={ins.suggestItem}>
+                        <FoodTile icon={x.icon} />
+                        <div className={ins.suggestText}>
+                          <strong>{x.name}</strong>
+                          <small>{qty(x.quantity)} {x.unit} · {fmt(x.kcal)} kcal · {x.meal} · fills {x.fillsLabel.toLowerCase()}</small>
+                        </div>
+                        <LogButton day={day} items={[{ meal: x.meal, foodId: x.foodId, quantity: x.quantity }]}
+                          label={`Log ${qty(x.quantity)} ${x.unit} ${x.name} to ${x.meal}`} done={`${x.name} logged to ${x.meal}.`} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted">{empty ? 'Your plan is empty for your food style. Log anything from Today.' : 'Every group your plan covers is on track. Nice work.'}</p>
+                )}
+              </div>
+            )}
+          </section>
+
+          <CompareTabs initial={initialTab} groups={groupsPanel} nutrients={nutrientsPanel} plan={planPanel} />
+        </div>
+
+        <aside className={`stack ${s.side}`} aria-label="Goal and sources">
+          <GoalCard goal={goal} targets={targets} recommended={rec ? pickTargets(rec) : null} bmi={rec?.bmi ?? null} bmiNote={rec ? bmiBand(rec.bmi) : null} />
+
+          <section className="panel panel-pad" aria-labelledby="split-title">
+            <h3 id="split-title" className={s.sideTitle}>Where your energy comes from</h3>
+            <SplitBar label="You" split={you} />
+            <SplitBar label={rec ? 'Recommended' : 'Your targets'} split={recSplit} />
+            <dl className={s.splitLegend}>
+              {(['p', 'c', 'f'] as const).map(k => (
+                <div key={k}>
+                  <dt><i data-k={k} aria-hidden="true" />{k === 'p' ? 'Protein' : k === 'c' ? 'Carbs' : 'Fat'}</dt>
+                  <dd><b>{you ? `${Math.round(you[k])}%` : '–'}</b> <span className="muted">vs {Math.round(recSplit[k])}%</span></dd>
+                </div>
+              ))}
+            </dl>
+            <p className="fine-print">ICMR-NIN suggests about 15% of energy from protein and up to 30% from fat.</p>
+          </section>
+
+          <section className="panel panel-pad" aria-labelledby="about-title">
+            <h3 id="about-title" className={s.sideTitle}>About these numbers</h3>
+            <p className="note">
+              Calories use the Mifflin-St Jeor estimate and your activity level, adjusted for {GOALS[goal].label.toLowerCase()}.
+              Protein uses ICMR’s 0.83 g per kg body weight (1.6 g/kg when building muscle). Fibre uses the WHO minimum of 25 g.
+              BMI uses ICMR’s cut-offs for Indian adults. These are general estimates for healthy adults: if you’re pregnant,
+              breastfeeding or managing a health condition, use targets from your doctor or dietitian.
+            </p>
+            <ul className={s.sources}>
+              <li><a href="https://www.nin.res.in/brief/Policy%20Brief%20My%20Plate%20J18%2024.pdf" target="_blank" rel="noopener noreferrer">ICMR-NIN · My Plate for the Day <Icon name="arrow" size="sm" /><span className="sr-only"> (opens in a new tab)</span></a></li>
+              <li><a href="https://nutritionconnect.org/resource-center/dietary-guidelines-indians-2024-edition-icmr-nin" target="_blank" rel="noopener noreferrer">ICMR-NIN · Dietary Guidelines for Indians 2024 <Icon name="arrow" size="sm" /><span className="sr-only"> (opens in a new tab)</span></a></li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function SplitBar({ label, split }: { label: string; split: { p: number; c: number; f: number } | null }) {
+  return (
+    <div className={s.split}>
+      <div className={s.splitLabel}><span>{label}</span>{!split && <span>No meals yet</span>}</div>
+      <div className={s.splitBar} role="img" aria-label={split ? `${label}: protein ${Math.round(split.p)}%, carbs ${Math.round(split.c)}%, fat ${Math.round(split.f)}%` : `${label}: no meals yet`}>
+        {split && (['p', 'c', 'f'] as const).map(k => <span key={k} data-k={k} style={{ width: `${split[k]}%` }} />)}
+      </div>
+    </div>
+  );
+}

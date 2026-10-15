@@ -1,0 +1,15 @@
+.status { max-width: 560px; margin: 24px auto; padding: 32px; display: grid; justify-items: start; gap: 14px; }
+.status > svg { width: 32px; height: 32px; color: var(--accent); }
+.status p { color: var(--text-2); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+
+.loading { display: grid; gap: 24px; }
+.block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); animation: pulse 1.4s ease-in-out infinite; }
+.title { height: 56px; width: min(360px, 70%); border-radius: 14px; }
+.hero { height: 420px; border-radius: var(--radius-lg); }
+.row { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 12px; }
+.card { height: 90px; }
+
+@keyframes pulse { 50% { opacity: .55; } }
+@media (max-width: 760px) { .hero { height: 460px; } .status { padding: 24px 20px; } }
+@media (prefers-reduced-motion: reduce) { .block { animation: none; } }

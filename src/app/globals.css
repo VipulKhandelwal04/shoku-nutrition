@@ -123,6 +123,9 @@ dialog.sheet[open]::backdrop { animation: fade .25s ease-out; }
   dialog.sheet { border-radius: var(--radius-lg) var(--radius-lg) 0 0; width: 100%; max-width: 560px; max-height: 92dvh; margin: auto auto 0; }
   dialog.sheet[open] { animation: sheet-up .45s cubic-bezier(.22, 1.15, .36, 1); }
   .sheet-body input, .sheet-body select { font-size: 16px; }
+}
+/* The app's bottom tab bar shows up to 1000px; keep toasts above it. */
+@media (max-width: 1000px) {
   .toast { bottom: 96px; }
 }
 @media (prefers-reduced-motion: reduce) {

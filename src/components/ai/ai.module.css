@@ -1,0 +1,109 @@
+/* AI Assist surfaces. Tokens and primitives come from globals.css. */
+
+.badge { flex-shrink: 0; }
+.badge :global(.icon) { width: 14px; height: 14px; }
+
+.body { display: grid; gap: 16px; min-width: 0; }
+.labelRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.labelText { font-size: 12px; color: var(--muted); }
+
+/* ---------- Photo ---------- */
+.photoArea { position: relative; display: grid; gap: 12px; }
+.drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 220px;
+  background: var(--surface-2); border: 1px dashed var(--line-2); border-radius: 20px; cursor: pointer; text-align: center;
+  padding: 20px; color: var(--text-2); transition: border-color .2s, background .2s;
+}
+.drop:hover { border-color: var(--accent-line); background: var(--surface-3); }
+.drop :global(.icon) { width: 40px; height: 40px; }
+.drop small { color: var(--muted); font-size: 12px; }
+.photoArea:has(input:focus-visible) .drop { outline: 2px solid var(--accent); outline-offset: 3px; }
+.preview { width: 100%; max-height: 300px; object-fit: cover; border-radius: 20px; display: block; background: var(--surface-2); }
+.loadingOverlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: rgba(var(--scrim), .72); border-radius: 20px; text-align: center; padding: 16px;
+}
+.loadingOverlay strong, .loadingInline strong { font-family: var(--display); font-size: 22px; text-transform: uppercase; letter-spacing: .03em; }
+.loadingInline { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: 52px; }
+.spinner { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--line-2); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+.spin { animation: spin .8s linear infinite; }
+
+/* ---------- Text + chips ---------- */
+.textForm { display: grid; gap: 4px; }
+.textForm :global(.field), .body form :global(.field) { margin-bottom: 12px; }
+.body textarea { resize: vertical; min-height: 96px; line-height: 1.5; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.chips :global(.pill-choice) { font-size: 13px; padding: 0 14px; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.actions :global(.btn) { flex: 1 1 160px; }
+
+.problem { background: var(--warn-soft); border: 1px solid rgba(255, 181, 71, .35); border-radius: 16px; padding: 14px 16px; display: grid; gap: 8px; }
+.problem p:first-child { color: var(--text); font-weight: 600; }
+.problem p { font-size: 13px; }
+
+/* ---------- Review list ---------- */
+.reviewHead { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+.reviewHead h3 { font-family: var(--display); font-size: 22px; text-transform: uppercase; letter-spacing: .02em; }
+.reviewHead h3:focus { outline: none; }
+.reviewHead p { font-size: 13px; margin-top: 2px; }
+.thumb { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; flex-shrink: 0; }
+
+.rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.row { background: var(--surface-2); border: 1px solid var(--line); border-radius: 18px; padding: 12px; display: grid; gap: 8px; min-width: 0; }
+.rowTop { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.rowInfo { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.rowInfo strong { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.rowInfo small { color: var(--muted); font-size: 12px; }
+.flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.flags:empty { display: none; }
+.row > :global(.btn-text) { justify-self: start; padding: 0 4px; }
+
+.controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.stepper { display: inline-flex; align-items: center; gap: 2px; background: var(--surface-3); border-radius: 999px; padding: 2px; }
+.stepper output { min-width: 84px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px; }
+.stepper output span { color: var(--muted); font-weight: 500; font-size: 12px; }
+.mealSelect { flex: 1 1 130px; width: auto; min-height: 44px; padding: 8px 12px; }
+
+.picker { display: grid; gap: 8px; }
+.pickerList { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 260px; overflow: auto; }
+.pickerItem { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 6px 8px; min-height: 52px; border-radius: 14px; }
+.pickerItem:hover { background: var(--surface-3); }
+.pickerItem span { display: grid; min-width: 0; }
+.pickerItem strong { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.pickerItem small { color: var(--muted); font-size: 12px; }
+
+.keep { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); min-height: 44px; margin-top: 8px; cursor: pointer; }
+
+.foot {
+  position: sticky; bottom: 0; z-index: 3; display: grid; gap: 10px;
+  margin: 16px -24px -24px; padding: 14px 24px 18px; background: var(--surface); border-top: 1px solid var(--line);
+}
+.total { font-size: 13px; color: var(--text-2); font-weight: 600; }
+
+/* ---------- Plan ---------- */
+.tunerButton :global(.icon) { color: var(--accent); }
+.planHead { font-family: var(--display); font-size: 24px; text-transform: uppercase; letter-spacing: .02em; }
+.planHead:focus { outline: none; }
+.planMeal { display: grid; gap: 8px; margin-top: 14px; }
+.planRow { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.planRow:last-child { border-bottom: 0; }
+.kcal { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.kcal::after { content: ' kcal'; font-size: 11px; font-weight: 500; color: var(--muted); }
+
+/* ---------- Coach ---------- */
+.coach { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 6px 6px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; min-width: 0; }
+.coach > button { margin-left: auto; }
+.coach p { flex: 1; min-width: 0; font-size: 14px; color: var(--text-2); line-height: 1.4; }
+
+@media (max-width: 420px) {
+  .coach { border-radius: 18px; flex-wrap: wrap; padding: 10px 6px 10px 14px; }
+  .coach p { flex-basis: calc(100% - 60px); order: 3; }
+  .foot { margin: 16px -24px -24px; padding: 12px 24px 16px; }
+  .stepper output { min-width: 72px; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner, .spin { animation-duration: 2.4s; }
+}

@@ -33,13 +33,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     // If a modal sheet is open, host the toast inside it so it isn't made inert by the modal.
     const openDialog = document.querySelector<HTMLDialogElement>('dialog[open]');
     const host = openDialog ?? document.body;
+    const raise = () => {
+      try {
+        if (el.matches(':popover-open')) el.hidePopover();
+        el.showPopover();
+      } catch {
+        /* popover unsupported: fixed positioning still works outside modals */
+      }
+    };
     if (el.parentElement !== host) host.appendChild(el);
-    try {
-      if (el.matches(':popover-open')) el.hidePopover();
-      el.showPopover();
-    } catch {
-      /* popover unsupported: fixed positioning still works outside modals */
-    }
+    raise();
+    if (!openDialog) return;
+    // When the sheet closes, bring the toast back to <body> so its Undo stays visible.
+    const onClose = () => {
+      document.body.appendChild(el);
+      raise();
+    };
+    openDialog.addEventListener('close', onClose, { once: true });
+    return () => openDialog.removeEventListener('close', onClose);
   }, [toast]);
 
   return (

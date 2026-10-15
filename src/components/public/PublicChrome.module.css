@@ -1,0 +1,70 @@
+.word {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: .03em;
+  line-height: 1;
+  color: var(--text);
+}
+.word span { color: var(--accent); }
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: linear-gradient(180deg, rgba(5, 5, 6, .92), rgba(5, 5, 6, .72));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+.solid { background: var(--bg); }
+.barInner {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 8px 28px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+}
+.home { display: inline-flex; align-items: center; min-height: 44px; border-radius: 8px; }
+.signIn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  transition: background .2s, border-color .2s;
+}
+.signIn:hover { background: var(--text); border-color: var(--text); color: var(--accent-ink); }
+
+.footer { border-top: 1px solid var(--line); background: #000; }
+.footInner { max-width: var(--page); margin: 0 auto; padding: 40px 28px 48px; display: grid; gap: 14px; }
+.footTop { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.footWord { font-size: 40px; }
+.footNav { display: flex; gap: 4px; }
+.footNav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.footNav a:hover { color: var(--accent); }
+.disclaimer { color: var(--text-2); font-size: 13px; }
+.small { color: var(--muted); font-size: 12px; }
+
+@media (max-width: 760px) {
+  .barInner { padding-left: 16px; padding-right: 16px; }
+  .footInner { padding: 32px 16px 40px; }
+}

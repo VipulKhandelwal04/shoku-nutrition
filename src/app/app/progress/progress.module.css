@@ -1,0 +1,67 @@
+.welcome { position: relative; isolation: isolate; overflow: hidden; min-height: 340px; display: flex; align-items: flex-end; padding: 36px; }
+.welcomeImg { object-fit: cover; object-position: 70% center; z-index: -2; }
+.welcome::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(var(--scrim), .96) 0%, rgba(var(--scrim), .82) 50%, rgba(var(--scrim), .3)); }
+.welcomeBody { max-width: 520px; }
+.welcomeBody h2 { font-size: clamp(36px, 6vw, 52px); line-height: .92; margin-bottom: 14px; text-wrap: balance; }
+.welcomeBody p { color: var(--text-2); margin-bottom: 22px; }
+
+.streak { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 32px; align-items: center; padding: 24px 28px; }
+.streakNow { display: flex; align-items: center; gap: 18px; }
+.streakNum { font-family: var(--display); font-size: 104px; font-weight: 800; line-height: .82; color: var(--accent); font-variant-numeric: tabular-nums; }
+.streakNow p { font-size: 13px; color: var(--muted); margin-top: 8px; max-width: 30ch; }
+.badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.badge { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 7px; padding: 16px 8px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--line); }
+.badgeMark { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; border: 2px dashed var(--line-2); color: var(--muted); font-family: var(--display); font-size: 24px; font-weight: 800; }
+.badgeMark :global(.icon) { fill: currentColor; stroke-width: 1.2; }
+.badge[data-got] .badgeMark { background: var(--accent); border: 0; color: var(--accent-ink); }
+.badge strong { font-family: var(--display); font-size: 18px; font-weight: 700; text-transform: uppercase; line-height: 1; }
+.badge small { font-size: 12px; color: var(--muted); }
+.badge[data-got] small { color: var(--text-2); }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stats > section { padding: 22px; }
+.stats p.muted { font-size: 13px; }
+.statBig { font-family: var(--display); font-size: 64px; font-weight: 800; line-height: 1; margin: 12px 0 6px; font-variant-numeric: tabular-nums; }
+.statBig span { font-size: 24px; color: var(--muted); }
+
+.chartPanel { padding: 24px; }
+.weekNav { display: flex; gap: 4px; }
+.chart { position: relative; display: flex; align-items: flex-end; height: 230px; gap: 12px; margin: 24px 0 34px; padding: 0 4px; }
+.col { position: relative; display: flex; flex: 1; height: 100%; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 0; }
+.bar { min-height: 3px; width: 78%; max-width: 52px; border-radius: 10px 10px 3px 3px; background: repeating-linear-gradient(135deg, var(--surface-3) 0 6px, var(--line-2) 6px 12px); }
+.bar[data-counted] { background: var(--accent); }
+.barLabel { font-family: var(--display); font-size: 16px; font-weight: 700; color: var(--text-2); margin-bottom: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.barDay { position: absolute; bottom: -26px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.barDay[data-today] { color: var(--text); }
+.targetLine { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--text-2); z-index: 1; pointer-events: none; }
+.targetLine span { position: absolute; right: 0; top: -20px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); background: var(--surface); padding: 0 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--muted); font-size: 12px; }
+.legend span { display: inline-flex; align-items: center; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 7px; }
+.legendSolid { background: var(--accent); }
+.legendStriped { background: repeating-linear-gradient(135deg, var(--surface-3) 0 3px, var(--line-2) 3px 6px); }
+.legendLine { height: 0 !important; border-top: 2px dashed var(--text-2); border-radius: 0 !important; }
+
+.briefTitle { margin-bottom: 4px; }
+.insight { display: flex; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.insight:last-child { border-bottom: 0; padding-bottom: 0; }
+.insight > :global(.icon) { color: var(--accent); margin-top: 2px; }
+.insight strong { font-size: 14px; font-weight: 600; }
+.insight p { font-size: 13px; }
+
+@media (max-width: 760px) {
+  .welcome { padding: 24px; min-height: 380px; }
+  .streak { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 20px; }
+  .streakNum { font-size: 84px; }
+  .badges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .stats > section { padding: 18px 20px; }
+  .statBig { font-size: 52px; }
+  .chartPanel { padding: 20px; }
+  .chart { gap: 6px; height: 200px; }
+  .barLabel { font-size: 13px; }
+}
+@media (max-width: 380px) {
+  .barLabel { font-size: 11px; }
+  .chart { gap: 4px; padding: 0; }
+}

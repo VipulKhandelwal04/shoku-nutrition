@@ -1,0 +1,98 @@
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+.side { position: sticky; top: 96px; }
+
+/* Day / week controls */
+.controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.periodSeg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 999px; padding: 3px; }
+.periodSeg a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); white-space: nowrap; }
+.periodSeg a:hover { color: var(--text); }
+.periodSeg a[aria-current='page'] { background: var(--text); color: var(--accent-ink); }
+.dayNav { display: inline-flex; align-items: center; gap: 2px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 999px; padding: 2px; }
+.dayLabel { min-width: 92px; text-align: center; font-family: var(--display); font-size: 18px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+
+/* Lead card */
+.plate { padding: 28px; }
+.plateHead { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 16px; flex-wrap: wrap; }
+.plateHead :global(.muted) { font-size: 13px; }
+.bigLine { margin: 18px 0 6px; font-size: 16px; color: var(--text-2); display: flex; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; }
+.bigLine :global(.display) { font-size: clamp(56px, 9vw, 88px); color: var(--text); }
+.groupRows { margin-top: 6px; }
+.nextUp { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.nextUp h3 { font-family: var(--display); font-size: 22px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; }
+
+/* Detail panel */
+.detail { min-width: 0; }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, auto)); }
+.short { display: none; }
+.panelBody { margin-top: 20px; }
+.panelNote { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.contribList { list-style: none; margin: 4px 0 16px; padding: 0; }
+.contribList li { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.contribList li:last-child { border-bottom: 0; }
+.contribHead { display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; }
+.contribHead strong { font-weight: 600; }
+.contribHead span { font-size: 12px; }
+.contribFoods { font-size: 13px; color: var(--text-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+/* Plan */
+.planHead { display: flex; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 6px; }
+.planHead > div:first-child { flex: 1 1 260px; min-width: 0; }
+.tuner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.meal { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.meal:last-child { border-bottom: 0; padding-bottom: 0; }
+.mealTitle { font-family: var(--display); font-size: 20px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+.planList { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.planItem { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.planText { flex: 1; min-width: 0; }
+.planText strong { display: block; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.planText small { display: block; font-size: 12px; color: var(--muted); }
+.addSpacer { width: 44px; flex-shrink: 0; }
+.extras { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+/* Side column */
+.goalCard { padding: 24px; }
+.goalCard h2 { font-size: 40px; line-height: .92; margin-top: 6px; }
+.goalChips { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 10px; }
+.targetTable { width: 100%; border-collapse: collapse; margin-top: 18px; font-variant-numeric: tabular-nums; }
+.targetTable th, .targetTable td { text-align: right; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.targetTable thead th { border-top: 0; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 0; }
+.targetTable th[scope='row'] { text-align: left; font-weight: 600; color: var(--text-2); }
+.targetTable td { font-family: var(--display); font-size: 18px; font-weight: 700; }
+.targetTable td small { font-family: var(--body); font-size: 11px; font-weight: 500; color: var(--muted); }
+.targetTable tr[data-diff='true'] td:last-child { color: var(--accent-text); }
+.bmiLine { font-size: 13px; color: var(--text-2); margin-top: 14px; }
+.goalActions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-top: 18px; }
+.goalActions :global(.btn-text) { align-self: flex-start; }
+.match { display: flex; align-items: center; gap: 8px; color: var(--ok); font-size: 13px; font-weight: 600; min-height: 44px; }
+.sideTitle { margin-bottom: 4px; }
+
+.split { margin-top: 14px; }
+.splitLabel { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+.splitBar { display: flex; gap: 2px; height: 14px; border-radius: 8px; overflow: hidden; background: var(--surface-3); }
+.splitBar span { display: block; height: 100%; }
+.splitBar [data-k='p'], .splitLegend [data-k='p'] { background: var(--protein); }
+.splitBar [data-k='c'], .splitLegend [data-k='c'] { background: var(--carbs); }
+.splitBar [data-k='f'], .splitLegend [data-k='f'] { background: var(--fat); }
+.splitLegend { display: grid; gap: 10px; margin: 18px 0 14px; }
+.splitLegend > div { display: flex; justify-content: space-between; font-size: 13px; font-variant-numeric: tabular-nums; }
+.splitLegend dt { display: flex; align-items: center; }
+.splitLegend dd { margin: 0; }
+.splitLegend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
+.sources { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 4px; }
+.sources a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13px; font-weight: 600; }
+
+@media (max-width: 1020px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; }
+}
+@media (max-width: 760px) {
+  .plate { padding: 20px; }
+  .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .seg button { padding: 0 6px; }
+}
+@media (max-width: 420px) {
+  .long { display: none; }
+  .short { display: inline; }
+  .seg button { font-size: 11px; letter-spacing: .04em; }
+  .controls { width: 100%; justify-content: space-between; }
+}

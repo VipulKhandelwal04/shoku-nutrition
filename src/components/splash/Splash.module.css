@@ -1,0 +1,117 @@
+/* Launch splash. Auto-fades by CSS alone (no-JS fallback) a little after the JS timer would. */
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  animation: auto-out .5s ease-in 3.4s forwards;
+}
+.root[data-seen='1'] { display: none; }
+.root[data-phase='leaving'] {
+  animation: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.03);
+  transition: opacity .45s var(--ease), transform .45s var(--ease), visibility 0s linear .45s;
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.glow {
+  position: absolute;
+  inset: auto -20% -45% -20%;
+  height: 80%;
+  background: radial-gradient(closest-side, rgba(255, 63, 108, .28), transparent 70%);
+  pointer-events: none;
+}
+.inner {
+  position: relative;
+  width: min(760px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 28px;
+  text-align: center;
+}
+.word {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(64px, 16vw, 148px);
+  line-height: .82;
+  letter-spacing: .02em;
+  animation: rise .7s var(--ease) both;
+}
+.word span { color: var(--accent); }
+.quotes { min-height: 3.4em; }
+.quote { margin: 0; animation: rise .7s var(--ease) .18s both; }
+.quote p {
+  font-family: var(--display);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: clamp(26px, 5.4vw, 46px);
+  line-height: 1;
+  color: var(--text);
+  text-wrap: balance;
+}
+.quote cite {
+  display: block;
+  margin-top: 12px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bar {
+  width: min(220px, 60vw);
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .14);
+  overflow: hidden;
+}
+.bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  animation: fill 2.6s linear both;
+}
+
+.skip {
+  position: absolute;
+  z-index: 2;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  background: rgba(255, 255, 255, .06);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.skip:hover { background: rgba(255, 255, 255, .14); }
+
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+@keyframes fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes auto-out { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .word, .quote { animation: fade-in .2s ease-out both; }
+  .bar span { animation: none; transform: none; }
+  .root { animation-duration: .2s; }
+  .root[data-phase='leaving'] { transform: none; transition: opacity .2s ease-out, visibility 0s linear .2s; }
+}
+@keyframes fade-in { from { opacity: 0; } }

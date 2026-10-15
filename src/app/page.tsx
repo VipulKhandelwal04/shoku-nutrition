@@ -1,4 +1,259 @@
-// Placeholder: the public workstream replaces this with the splash + home tour.
-export default function Home() {
-  return <main className="page"><h1>Katori</h1></main>;
+// Public home: splash → Cult-style landing with a feature tour → sign in to unlock.
+// Always renders: if Supabase isn't configured or a query fails, built-in content is used instead.
+import type { Metadata } from 'next';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Splash } from '@/components/splash/Splash';
+import { TourCarousel } from '@/components/public/TourCarousel';
+import { Footer, TopBar } from '@/components/public/PublicChrome';
+import { FALLBACK_QUOTES, FALLBACK_SLIDES, type QuoteLite, type SlideLite } from '@/components/public/content';
+import { Icon, type IconName } from '@/components/ui/Icon';
+import { getUser } from '@/lib/auth';
+import { getAiAssist, getQuotes, getTourSlides } from '@/lib/data/queries';
+import { BADGES, GROUPS } from '@/lib/nutrition';
+import styles from '@/components/public/Home.module.css';
+
+const siteUrl = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+  } catch {
+    return new URL('http://localhost:3000');
+  }
+})();
+
+export const metadata: Metadata = {
+  metadataBase: siteUrl,
+  title: { absolute: 'Katori · Eat like you train' },
+  description:
+    'A nutrition tracker built for Indian plates. Log rotis, dal and curd in seconds, snap your plate, and see your day against India’s My Plate guide. Sign in with Google.',
+  openGraph: {
+    title: 'Katori · Eat like you train',
+    description: 'Log Indian meals in seconds, see your plate against India’s My Plate guide, and stack days that count.',
+    type: 'website',
+    siteName: 'Katori',
+    images: [{ url: '/img/hero.webp', alt: 'A thali of Indian food on a dark table' }],
+  },
+  twitter: { card: 'summary_large_image', title: 'Katori · Eat like you train', images: ['/img/hero.webp'] },
+};
+
+async function safe<T>(load: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await load();
+  } catch {
+    return fallback;
+  }
+}
+
+const STEPS = [
+  { title: 'Sign in with Google', body: 'One tap. No forms, no passwords to remember.' },
+  { title: 'Set your goal', body: 'Lose, maintain or build. Katori turns it into a daily target for calories, protein and food groups.' },
+  { title: 'Log, see, adjust', body: 'Tap your usuals, see what your plate is missing, and pick the next katori with intent.' },
+] as const;
+
+const AI_FEATURES: { icon: IconName; title: string; body: string; soon: string }[] = [
+  { icon: 'camera', title: 'Snap your plate', body: 'Take a photo. AI Assist suggests the dishes and portions it sees.', soon: 'Take a photo and get suggested dishes and portions.' },
+  { icon: 'type', title: 'Type it in plain words', body: '“2 rotis, dal, a bowl of curd.” It becomes entries you can edit.', soon: 'Write “2 rotis, dal, a bowl of curd” and get entries to edit.' },
+  { icon: 'sliders', title: 'A plan tailored to you', body: 'A day of meals shaped by your goal, diet and the foods you eat.', soon: 'A day of meals shaped by your goal, diet and usual foods.' },
+  { icon: 'spark', title: 'A daily coach line', body: 'One short, kind nudge about what would round out your day.', soon: 'One short, kind nudge about what would round out your day.' },
+];
+
+export default async function Home() {
+  const [user, quoteRows, slideRows, ai] = await Promise.all([
+    safe(() => getUser(), null),
+    safe(() => getQuotes(), []),
+    safe(() => getTourSlides(), []),
+    safe(() => getAiAssist(), null),
+  ]);
+
+  const quotes: QuoteLite[] = quoteRows.length ? quoteRows.map(q => ({ text: q.text, author: q.author })) : FALLBACK_QUOTES;
+  const slides: SlideLite[] = slideRows.length ? slideRows.map(s => ({ id: s.id, title: s.title, body: s.body, image_url: s.image_url })) : FALLBACK_SLIDES;
+  const aiLive = ai?.available ?? false;
+  const signedIn = !!user;
+  const bandQuote = quotes[new Date().getUTCDate() % quotes.length];
+
+  const primary = signedIn ? (
+    <Link href="/app" className="btn accent big">
+      Open Katori <Icon name="arrow" size="sm" />
+    </Link>
+  ) : (
+    <Link href="/login" className="btn accent big">
+      <span className={styles.gIcon}><Icon name="google" size="sm" /></span>
+      Continue with Google
+    </Link>
+  );
+
+  return (
+    <>
+      <Splash quotes={quotes} />
+      <TopBar signedIn={signedIn} />
+
+      <main id="main">
+        {/* ---------- Hero ---------- */}
+        <section className={styles.hero} aria-labelledby="hero-title">
+          <Image src="/img/hero.webp" alt="" fill priority sizes="100vw" className={styles.heroPhoto} />
+          <div className={styles.heroInner}>
+            <p className={styles.kicker}>Nutrition for Indian plates</p>
+            <h1 id="hero-title" className={styles.heroTitle}>
+              Eat like
+              <br />
+              you <span>train.</span>
+            </h1>
+            <p className={styles.heroSub}>
+              Rotis, dal, sabzi, curd. Log your real food in seconds, see what your plate is missing, and stack days that count.
+            </p>
+            <div className={styles.heroActions}>
+              {primary}
+              <a href="#tour" className={styles.ghost}>
+                Take the tour <Icon name="down" size="sm" />
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Tour ---------- */}
+        <section id="tour" className={styles.section} aria-labelledby="tour-title">
+          <div className={styles.head}>
+            <p className={styles.eyebrow}>The tour</p>
+            <h2 id="tour-title" className={styles.h2}>What Katori does for you</h2>
+            <p className={styles.lede}>Swipe, use the arrows, or focus the slides and press ← →.</p>
+          </div>
+          <TourCarousel slides={slides} />
+        </section>
+
+        {/* ---------- How it works ---------- */}
+        <section className={styles.section} aria-labelledby="how-title">
+          <div className={styles.head}>
+            <p className={styles.eyebrow}>How it works</p>
+            <h2 id="how-title" className={styles.h2}>Three steps. Then just eat.</h2>
+          </div>
+          <ol className={styles.steps}>
+            {STEPS.map((s, i) => (
+              <li key={s.title} className={styles.step}>
+                <span className={styles.stepNum} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* ---------- AI Assist ---------- */}
+        <section className={styles.section} aria-labelledby="ai-title">
+          <div className={styles.aiPanel}>
+            <div className={styles.aiHead}>
+              <span className={`chip ${aiLive ? 'accent' : ''}`}>
+                <Icon name="spark" size="sm" /> {aiLive ? 'Suggestions you confirm' : 'Rolling out'}
+              </span>
+              <h2 id="ai-title" className={styles.h2}>
+                AI Assist{aiLive ? null : <span className={styles.soft}> (rolling out)</span>}
+              </h2>
+              <p className={styles.lede}>
+                {aiLive
+                  ? 'Shortcuts for the busy days. Everything AI Assist gives you is a suggestion: you check it, edit it, and only then is it saved.'
+                  : 'We’re switching AI Assist on gradually. Katori works fully without it, and when it reaches you, every result will be a suggestion you check before it’s saved.'}
+              </p>
+            </div>
+            <ul className={styles.aiGrid}>
+              {AI_FEATURES.map(f => (
+                <li key={f.title} className={styles.aiCard}>
+                  <span className={styles.aiIcon}><Icon name={f.icon} /></span>
+                  <h3>{f.title}</h3>
+                  <p>{aiLive ? f.body : f.soon}</p>
+                </li>
+              ))}
+            </ul>
+            <p className={styles.aiNote}>
+              <Icon name="info" size="sm" /> AI can get dishes and portions wrong. Values are estimates, so give them a quick look.
+            </p>
+          </div>
+        </section>
+
+        {/* ---------- Plate vs plan ---------- */}
+        <section className={`${styles.section} ${styles.split}`} aria-labelledby="plate-title">
+          <div className={styles.plateCopy}>
+            <p className={styles.eyebrow}>Plate vs plan</p>
+            <h2 id="plate-title" className={styles.h2}>Not just calories. Food groups.</h2>
+            <p className={styles.lede}>
+              Katori reads your day against <strong>ICMR-NIN’s My Plate for the Day</strong>, India’s own guide, scaled to your target.
+              While the day is open, gaps read “so far”. Nobody gets scolded at lunch.
+            </p>
+          </div>
+          <div className={styles.plateCard}>
+            <div className={styles.plateTop}>
+              <span className="label">My Plate guide · reference day</span>
+              <span className="label">2,000 kcal</span>
+            </div>
+            <ul className={styles.groups}>
+              {GROUPS.map(g => (
+                <li key={g.key}>
+                  <span className={styles.gName}>{g.label}</span>
+                  <span className={styles.gAmt}>
+                    {g.grams}
+                    <small>{g.unit}</small>
+                  </span>
+                  <span className={`chip ${g.kind === 'atleast' ? 'ok' : ''}`}>{g.kind === 'atleast' ? 'Reach' : 'Up to'}</span>
+                </li>
+              ))}
+            </ul>
+            <p className={styles.plateFoot}>Raw-weight amounts from the guide. Katori scales them to your own calorie target.</p>
+          </div>
+        </section>
+
+        {/* ---------- Streaks ---------- */}
+        <section className={`${styles.section} ${styles.split} ${styles.streak}`} aria-labelledby="streak-title">
+          <div className={styles.streakVisual} aria-hidden="true">
+            <div className={styles.dots}>
+              <span><Icon name="check" /></span>
+              <span><Icon name="check" /></span>
+              <span><Icon name="check" /></span>
+            </div>
+            <p className={styles.equals}>= day counts</p>
+          </div>
+          <div>
+            <p className={styles.eyebrow}>Streaks &amp; badges</p>
+            <h2 id="streak-title" className={styles.h2}>3 meals logged = the day counts.</h2>
+            <p className={styles.lede}>
+              No perfect macros required. Log any three meals and the day joins your streak. Missed one? Start the next. No guilt, no red marks.
+            </p>
+            <ul className={styles.badges}>
+              {BADGES.map(b => (
+                <li key={b.id}>
+                  <Icon name="star" size="sm" />
+                  <span>
+                    <strong>{b.name}</strong> {b.blurb}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* ---------- Quote band ---------- */}
+        <section className={styles.band} aria-label="Quote">
+          <figure>
+            <blockquote>
+              <p>{bandQuote.text}</p>
+            </blockquote>
+            {bandQuote.author ? <figcaption>{bandQuote.author}</figcaption> : null}
+          </figure>
+        </section>
+
+        {/* ---------- Final CTA ---------- */}
+        <section className={styles.final} aria-labelledby="final-title">
+          <Image src="/img/dinner.webp" alt="" fill sizes="100vw" className={styles.finalPhoto} />
+          <div className={styles.finalInner}>
+            <h2 id="final-title" className={styles.finalTitle}>
+              Your next meal
+              <br />
+              is a <span>rep.</span>
+            </h2>
+            <p className={styles.heroSub}>{signedIn ? 'Pick up where you left off.' : 'Sign in with Google and log your first meal in under a minute.'}</p>
+            <div className={styles.heroActions}>{primary}</div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </>
+  );
 }
