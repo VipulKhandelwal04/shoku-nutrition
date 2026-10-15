@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Katori
 
-## Getting Started
+A nutrition tracker for Indian plates. Log rotis, dal, sabzi and curd in seconds, see which food groups your
+plate is missing, and build a streak one counted day (3+ meals) at a time.
 
-First, run the development server:
+- **Public site:** splash with rotating fitness quotes, feature tour, Google sign-in
+- **App:** onboarding, Today, Diary, Compare (food groups first, then nutrients and your plan), Progress, Profile + data export
+- **AI Assist** (Gemini, admin-toggleable): photo → meal, plain-words logging, a tailored plan, a daily coach line.
+  Every result is a suggestion you confirm.
+- **Admin:** food catalogue, splash quotes + tour, users and roles, AI Assist switch, limits and usage
+
+Nutrition values are estimates. Katori does not give medical advice.
+
+## Stack
+
+Next.js 16 (App Router) · Supabase (Postgres + RLS, Google OAuth, Storage) · Gemini via `@google/genai` · Vercel.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Run locally
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in your Supabase URL + publishable key (and GEMINI_API_KEY for AI Assist)
+npx supabase link --project-ref <your-ref>
+npx supabase db push         # applies supabase/migrations
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Make yourself admin before your first sign-in (SQL editor):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sql
+insert into private.admin_emails (email) values ('you@example.com');
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Checks
 
-## Learn More
+```bash
+npm run typecheck && npm test && npx eslint . && npx next build
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Photo credits: see [CREDITS.md](CREDITS.md).
