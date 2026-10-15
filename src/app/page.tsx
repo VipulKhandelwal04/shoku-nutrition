@@ -1,5 +1,6 @@
 // Public home: splash → landing with a feature tour → sign in with Google.
 // Always renders: if Supabase isn't configured or a query fails, built-in content is used instead.
+import { BrandIcon } from '@/components/brand/Brand';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: { absolute: 'Shoku · Meal by meal' },
   description:
-    'Shoku (食) is Japanese for a meal. A food diary for Indian plates: log rotis, dal and curd in seconds and see your day against India’s My Plate guide.',
+    'Shoku is Japanese for a meal. A food diary for Indian plates: log rotis, dal and curd in seconds and see your day against India’s My Plate guide.',
   openGraph: {
     title: 'Shoku · Meal by meal',
     description: 'A food diary for Indian plates. Log a meal in seconds and see which food groups your day is missing.',
@@ -92,7 +93,7 @@ export default async function Home() {
         <section className={styles.hero} aria-labelledby="hero-title">
           <Image src="/img/hero.webp" alt="" fill loading="eager" fetchPriority="high" quality={60} sizes="100vw" className={styles.heroPhoto} />
           <div className={styles.heroInner}>
-            <p className={styles.kicker}><span lang="ja">食</span> shoku · Japanese for a meal</p>
+            <p className={styles.kicker}><BrandIcon size={22} /> shoku · Japanese for a meal</p>
             <h1 id="hero-title" className={styles.heroTitle}>
               Meal by
               <br />

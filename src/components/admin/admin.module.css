@@ -3,9 +3,10 @@
 /* ---------- Shell ---------- */
 .shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100dvh; }
 .side { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 24px; padding: 24px 16px; border-right: 1px solid var(--line); background: var(--bg); }
-.brand { display: flex; align-items: baseline; gap: 8px; padding: 0 10px; color: var(--text); }
+.brand { display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--text); }
+.brandIcon { width: 30px; height: 30px; }
 .brand:hover { color: var(--text); }
-.brandName { font-family: var(--display); font-size: 28px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; line-height: 1; }
+.brandName { font-size: 26px; letter-spacing: .02em; }
 .brandTag { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .navLink { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 12px; color: var(--text-2); font-size: 14px; font-weight: 600; transition: background .15s, color .15s; }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { AskShoku, type AskOptions } from '@/components/ai/AskShoku';
+import { BrandIcon, Wordmark } from '@/components/brand/Brand';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import s from './shell.module.css';
 
@@ -50,8 +51,8 @@ export function AppChrome({ user, ask = null, hide = [], children }: { user: She
       <header className={s.topbar}>
         <div className={s.topbarInner}>
           <Link href="/app" className={s.brand} aria-label="Shoku, today">
-            <span className={s.brandMark} aria-hidden="true" lang="ja">食</span>
-            <span className={s.brandName}>Shoku</span>
+            <BrandIcon size={36} className={s.brandMark} />
+            <Wordmark className={s.brandName} />
           </Link>
           {ask && <AskShoku options={ask} />}
           <nav className={s.topLinks} aria-label="Main">

@@ -1,5 +1,5 @@
 'use client';
-// Myntra-style launch splash: the SHOKU wordmark over 食 with a rotating quote.
+// Myntra-style launch splash: the SHOKU wordmark over the outlined kettlebell-bowl mark, with a rotating quote.
 // Shows once per browser session, is skippable, and respects reduced motion. Signature is fixed.
 //
 // How it stays safe:
@@ -8,6 +8,7 @@
 //   overlay at once if this session already saw it. No flash, no hydration error (suppressHydrationWarning).
 // - If JS never loads, a CSS animation fades the overlay out on its own, so it can never block the page.
 // - The visual overlay is aria-hidden: screen readers go straight to the page. Only the Skip button is exposed.
+import { BrandOutline } from '@/components/brand/Brand';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Quote } from '@/lib/types';
 import { FALLBACK_QUOTES } from '@/components/public/content';
@@ -107,7 +108,7 @@ export function Splash({ quotes, storageKey = 'shoku-splash' }: { quotes: Pick<Q
         Skip<span className="sr-only"> intro</span>
       </button>
       <div className={styles.overlay} aria-hidden="true" onClick={leave}>
-        <span className={styles.kanji} lang="ja">食</span>
+        <BrandOutline className={styles.kanji} />
         <div className={styles.inner}>
           <p className={styles.word}>
             SH<span>O</span>KU

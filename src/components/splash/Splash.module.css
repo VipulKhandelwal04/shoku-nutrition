@@ -26,15 +26,13 @@
   cursor: pointer;
 }
 .kanji {
-  /* 食 (shoku): "food, a meal". The name itself is the backdrop, set large and quiet. */
+  /* The kettlebell-bowl mark, outlined, as a large and quiet backdrop. */
   position: absolute;
-  right: -3vw;
-  bottom: -4vh;
-  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif;
-  font-size: min(64vh, 82vw);
-  line-height: 1;
-  color: transparent;
-  -webkit-text-stroke: 1.5px rgba(255, 63, 108, .26);
+  right: -6vw;
+  bottom: -6vh;
+  width: min(72vh, 92vw);
+  height: min(72vh, 92vw);
+  color: rgba(255, 63, 108, .26);
   pointer-events: none;
   user-select: none;
 }

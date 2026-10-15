@@ -1,4 +1,5 @@
 'use client';
+import { BrandIcon, Wordmark } from '@/components/brand/Brand';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -33,7 +34,8 @@ export function AdminNav({ name, email }: { name: string; email: string | null }
     <>
       <aside className={s.side}>
         <Link href="/admin" className={s.brand} aria-label="Shoku admin home">
-          <span className={s.brandName}>Shoku</span>
+          <BrandIcon size={30} className={s.brandIcon} />
+            <Wordmark className={s.brandName} />
           <span className={s.brandTag}>Admin</span>
         </Link>
         <nav aria-label="Admin" className={s.nav}>{links()}</nav>
@@ -49,7 +51,8 @@ export function AdminNav({ name, email }: { name: string; email: string | null }
       <header className={s.mobileTop}>
         <div className={s.mobileBar}>
           <Link href="/admin" className={s.brand} aria-label="Shoku admin home">
-            <span className={s.brandName}>Shoku</span>
+            <BrandIcon size={30} className={s.brandIcon} />
+            <Wordmark className={s.brandName} />
             <span className={s.brandTag}>Admin</span>
           </Link>
           <span className={s.mobileWho} title={email ?? undefined}>{name}</span>

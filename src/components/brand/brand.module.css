@@ -1,0 +1,12 @@
+.icon { display: block; flex-shrink: 0; border-radius: 22%; }
+.word {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: .03em;
+  line-height: 1;
+  color: var(--text);
+  white-space: nowrap;
+}
+.word span { color: var(--accent); }
+.lockup { display: inline-flex; align-items: center; gap: 10px; }
