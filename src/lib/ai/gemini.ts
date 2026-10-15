@@ -102,7 +102,10 @@ export async function generateJson<T>(
         if (opts.signal?.aborted) throw new AiCancelled();
         if (deadline.aborted || isAbort(err)) throw new AiTimeout();
         const status = err instanceof ApiError ? err.status : 0;
-        if (status === 400 && thinking && /thinking/i.test(String((err as Error).message))) {
+        // Not every model takes thinkingLevel, and some reject it with a bare "invalid argument" (seen on the
+        // flash-lite fallback). Any 400 while it is on: drop it once and ask the same model again.
+        if (status === 400 && thinking) {
+          console.warn(`[ai] ${models[m]} 400 with thinkingLevel; retrying without it: ${upstreamReason(err)}`);
           thinking = false;
           attempt--;
           continue;
