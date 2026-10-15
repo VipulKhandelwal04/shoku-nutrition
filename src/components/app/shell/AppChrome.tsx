@@ -31,7 +31,7 @@ function canOptimise(url: string) {
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? 'K') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  return ((parts[0]?.[0] ?? 'S') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 
 export function AppChrome({ user, children }: { user: ShellUser; children: ReactNode }) {
@@ -43,7 +43,7 @@ export function AppChrome({ user, children }: { user: ShellUser; children: React
       <header className={s.topbar}>
         <div className={s.topbarInner}>
           <Link href="/app" className={s.brand} aria-label="Shoku, today">
-            <span className={s.brandMark} aria-hidden="true">K</span>
+            <span className={s.brandMark} aria-hidden="true" lang="ja">食</span>
             <span className={s.brandName}>Shoku</span>
           </Link>
           <nav className={s.topLinks} aria-label="Main">

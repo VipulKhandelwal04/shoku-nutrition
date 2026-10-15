@@ -29,8 +29,7 @@ export default async function ProfilePage() {
     <div>
       <header className={ins.intro}>
         <div>
-          <p className={ins.eyebrow}>Make it yours</p>
-          <h1>Your targets. Your call.</h1>
+          <h1>Your targets</h1>
           <p>Edit your goal, body details and daily targets. Download your data any time.</p>
         </div>
       </header>

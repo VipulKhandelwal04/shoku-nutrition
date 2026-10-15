@@ -5,7 +5,7 @@
 .topbarInner { max-width: var(--page); height: 100%; margin: auto; padding: 0 max(28px, env(safe-area-inset-right)) 0 max(28px, env(safe-area-inset-left)); display: flex; align-items: center; gap: 20px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text); border-radius: 12px; }
 .brand:hover { color: var(--text); }
-.brandMark { width: 36px; height: 36px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-family: var(--display); font-size: 24px; font-weight: 800; }
+.brandMark { width: 36px; height: 36px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif; font-size: 22px; font-weight: 600; line-height: 1; }
 .brandName { font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .topLinks { display: flex; gap: 4px; margin-left: auto; }
 .topLinks a { display: inline-flex; align-items: center; font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 0 16px; min-height: 44px; border-radius: 999px; transition: color .2s, background .2s; }

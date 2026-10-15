@@ -177,8 +177,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
       <DeviceTimeZone current={tz} />
       <header className={ins.intro}>
         <div>
-          <p className={ins.eyebrow}>Your plate vs recommended</p>
-          <h1>How your plate measures up.</h1>
+          <h1>Your plate vs the guide</h1>
           <p>Your meals against your plan and the ICMR-NIN guide for Indians.</p>
         </div>
         <nav className={s.controls} aria-label="Choose the day">

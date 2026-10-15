@@ -46,8 +46,7 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
       <DeviceTimeZone current={tz} />
       <header className={ins.intro}>
         <div>
-          <p className={ins.eyebrow}>Consistency looks good on you</p>
-          <h1>Meal by meal</h1>
+          <h1>Progress</h1>
           <p>{MEALS_FOR_A_COUNTED_DAY} meals logged and the day counts. No need to close anything.</p>
         </div>
       </header>
