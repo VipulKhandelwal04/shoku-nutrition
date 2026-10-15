@@ -6,7 +6,7 @@ describe('Strava activity → workout', () => {
   it('uses Strava calories when present', async () => {
     const { toWorkout } = await import('./strava');
     const w = toWorkout({ id: 1, name: 'Morning Run', sport_type: 'Run', moving_time: 1800, start_date_local: '2026-10-15T06:30:00Z', calories: 410 }, 70);
-    expect(w).toMatchObject({ day: '2026-10-15', sport: 'run', minutes: 30, kcal: 410, kcal_source: 'device', external_id: '1' });
+    expect(w).toMatchObject({ day: '2026-10-15', start_time: '06:30', sport: 'run', minutes: 30, kcal: 410, kcal_source: 'device', external_id: '1' });
   });
   it('uses ride kilojoules as kcal when calories are missing', async () => {
     const { toWorkout } = await import('./strava');

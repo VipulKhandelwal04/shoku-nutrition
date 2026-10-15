@@ -4,7 +4,8 @@ import { useEffect, useId, useMemo, useRef, useState, useTransition, type FormEv
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
-import { addWorkout, removeWorkout, restoreWorkout, restoreBase, switchToLightBase } from '@/lib/data/workouts';
+import { addWorkout, getWorkoutWeek, removeWorkout, restoreWorkout, restoreBase, switchToLightBase } from '@/lib/data/workouts';
+import { clockLabel, parseClock, weekKeys, workoutWeek } from '@/components/app/insights/insights';
 import { ACTIVITY, EXERCISE_CREDIT, WORKOUT_PRESETS, estimateBurn, exerciseCredit, type Activity } from '@/lib/nutrition';
 import type { ConnectionStatus, WorkoutRow } from '@/lib/types';
 import { fmt } from './clientDate';
@@ -15,6 +16,9 @@ export type WorkoutsData = {
   /** Feature flags: logging by hand and the light-base suggestion. */
   manual: boolean;
   lightBase: boolean;
+  /** Feature flags: "When?" + Today timeline, and "See week". */
+  timeline: boolean;
+  week: boolean;
   strava: { configured: boolean; connection: ConnectionStatus | null };
   weightKg: number;
   activity: Activity | null;
@@ -37,6 +41,9 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
   const toast = useToast();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [weekOpen, setWeekOpen] = useState(false);
+  // Each opening remounts its sheet, so the form and the week start fresh.
+  const [opened, setOpened] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [pending, start] = useTransition();
   const list = data.workouts.filter(w => w.day === day);
@@ -103,7 +110,10 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
               <span className={s.workoutIcon}><Icon name={w.source === 'strava' ? 'arrow' : iconFor(w.kind)} size="sm" /></span>
               <span className={s.workoutText}>
                 <strong>{w.label}</strong>
-                <small>{w.minutes} min · {w.source === 'strava' ? 'Strava' : w.kcal_source === 'device' ? 'from your watch' : 'estimate'}</small>
+                <small>
+                  {data.timeline && parseClock(w.start_time) !== null ? `${clockLabel(parseClock(w.start_time)!)} · ` : ''}
+                  {w.minutes} min · {w.source === 'strava' ? 'Strava' : w.kcal_source === 'device' ? 'from your watch' : 'estimate'}
+                </small>
               </span>
               <span className={s.workoutKcal}>{fmt(w.kcal)}<small> kcal</small></span>
               <button type="button" className="btn-icon" aria-label={`Remove ${w.label}`} disabled={pending} onClick={() => remove(w)}>
@@ -114,10 +124,17 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
         </ul>
       )}
 
-      {data.manual && (
-        <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>
-          <Icon name="plus" size="sm" /> Log a workout
-        </button>
+      {(data.manual || data.week) && (
+        <div className={s.workoutActions}>
+          {data.manual && (
+            <button type="button" className="btn-secondary" onClick={() => { setOpened(n => n + 1); setOpen(true); }}>
+              <Icon name="plus" size="sm" /> Log a workout
+            </button>
+          )}
+          {data.week && (
+            <button type="button" className="btn-text" onClick={() => { setOpened(n => n + 1); setWeekOpen(true); }}>See week <Icon name="next" size="sm" /></button>
+          )}
+        </div>
       )}
 
       {doubleCount && (
@@ -143,17 +160,26 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
         </div>
       )}
 
-      {data.manual && <WorkoutSheet open={open} onClose={() => setOpen(false)} day={day} weightKg={data.weightKg} />}
+      {data.manual && <WorkoutSheet key={`log-${opened}`} open={open} onClose={() => setOpen(false)} day={day} isToday={isToday} weightKg={data.weightKg} askTime={data.timeline} />}
+      {data.week && <WeekSheet key={`week-${opened}`} open={weekOpen} onClose={() => setWeekOpen(false)} end={day} isToday={isToday} />}
     </section>
   );
 }
 
-function WorkoutSheet({ open, onClose, day, weightKg }: { open: boolean; onClose: () => void; day: string; weightKg: number }) {
+/** Now on the device clock, as HH:MM, for "When?" on today's log. */
+function nowHHMM() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function WorkoutSheet({ open, onClose, day, isToday, weightKg, askTime }: { open: boolean; onClose: () => void; day: string; isToday: boolean; weightKg: number; askTime: boolean }) {
   const toast = useToast();
   const ids = useId();
   const [kind, setKind] = useState<string>('hiit');
   const [minutes, setMinutes] = useState('45');
   const [watchKcal, setWatchKcal] = useState('');
+  // "When?" starts at the current time on today; other days start blank. The sheet remounts on each opening.
+  const [when, setWhen] = useState(() => (isToday ? nowHHMM() : ''));
   const [error, setError] = useState('');
   const [pending, start] = useTransition();
   const preset = WORKOUT_PRESETS.find(p => p.kind === kind)!;
@@ -166,9 +192,13 @@ function WorkoutSheet({ open, onClose, day, weightKg }: { open: boolean; onClose
     e.preventDefault();
     if (!Number.isInteger(mins) || mins < 1 || mins > 600) { setError('Minutes: a whole number from 1 to 600.'); return; }
     if (device !== null && (!Number.isFinite(device) || device < 0 || device > 5000)) { setError('Watch calories: 0 to 5,000 kcal.'); return; }
+    if (askTime && when && parseClock(when) === null) { setError('Pick a time, or leave “When?” empty.'); return; }
     setError('');
     start(async () => {
-      const r = await addWorkout({ day, kind, label: preset.label, minutes: mins, kcal, kcalSource: device !== null ? 'device' : 'estimate' });
+      const r = await addWorkout({
+        day, kind, label: preset.label, minutes: mins, kcal, kcalSource: device !== null ? 'device' : 'estimate',
+        ...(askTime && when ? { startTime: when.slice(0, 5) } : {}),
+      });
       if (!r.ok) { setError(r.error); return; }
       toast(`Logged ${preset.label.toLowerCase()} · ${fmt(kcal)} kcal.`, {
         undo: async () => { const u = await removeWorkout(r.data.id); return u; },
@@ -201,6 +231,13 @@ function WorkoutSheet({ open, onClose, day, weightKg }: { open: boolean; onClose
             <input id={`${ids}-k`} type="number" inputMode="numeric" min={0} max={5000} placeholder={`≈ ${fmt(estimate)}`} value={watchKcal} onChange={e => setWatchKcal(e.target.value)} aria-describedby={`${ids}-kh`} />
             <p className="field-help" id={`${ids}-kh`}>Use your watch’s <b>active</b> calories if you have them.</p>
           </div>
+          {askTime && (
+            <div className="field">
+              <label htmlFor={`${ids}-w`}>When? <span className="muted">(optional)</span></label>
+              <input id={`${ids}-w`} type="time" value={when} onChange={e => setWhen(e.target.value)} aria-describedby={`${ids}-wh`} />
+              <p className="field-help" id={`${ids}-wh`}>When you started. It places the workout on your timeline.</p>
+            </div>
+          )}
         </div>
         <p className={s.workoutPreview} aria-live="polite">
           <b>{fmt(kcal)} kcal</b> burned · <b>+{fmt(exerciseCredit(kcal))}</b> to the day’s target
@@ -209,6 +246,65 @@ function WorkoutSheet({ open, onClose, day, weightKg }: { open: boolean; onClose
         <p className="error-text" role="alert">{error}</p>
         <button type="submit" className="btn accent full" disabled={pending} aria-busy={pending || undefined}>{pending ? 'Saving…' : 'Log workout'}</button>
       </form>
+    </Sheet>
+  );
+}
+
+const longDay = (key: string) => new Date(`${key}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' });
+
+/** Workouts this week: each session with its source, minutes and kcal, plus the week's totals. */
+function WeekSheet({ open, onClose, end, isToday }: { open: boolean; onClose: () => void; end: string; isToday: boolean }) {
+  const ids = useId();
+  const [state, setState] = useState<{ kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'done'; workouts: WorkoutRow[] }>({ kind: 'loading' });
+
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    getWorkoutWeek(end)
+      .then(r => { if (live) setState(r.ok ? { kind: 'done', workouts: r.data.workouts } : { kind: 'error', message: r.error }); })
+      .catch(() => { if (live) setState({ kind: 'error', message: 'Couldn’t load your week. Check your connection.' }); });
+    return () => { live = false; };
+  }, [open, end]);
+
+  const keys = weekKeys(end);
+  const week = state.kind === 'done' ? workoutWeek(keys, state.workouts) : null;
+  const byDay = state.kind === 'done' ? [...keys].reverse().map(k => ({ day: k, list: state.workouts.filter(w => w.day === k) })).filter(d => d.list.length) : [];
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Workouts this week" labelledBy={`${ids}-t`}>
+      {state.kind === 'loading' && <p className={s.subtle} role="status">Loading your week…</p>}
+      {state.kind === 'error' && <p className="error-text" role="alert">{state.message}</p>}
+      {week && (
+        <>
+          <dl className={s.weekTotals}>
+            <div><dt>Burned</dt><dd>{fmt(week.kcal)} <small>kcal</small></dd></div>
+            <div><dt>Sessions</dt><dd>{week.sessions}</dd></div>
+            <div><dt>Time</dt><dd>{fmt(week.minutes)} <small>min</small></dd></div>
+          </dl>
+          <p className={s.subtle}>The 7 days up to {isToday ? 'today' : longDay(end)}. Half of each day’s burn is added to that day’s target.</p>
+          {byDay.length === 0 ? (
+            <p className={s.emptyMeal}>No workouts in the last 7 days.</p>
+          ) : (
+            byDay.map(d => (
+              <section key={d.day} className={s.weekGroup} aria-labelledby={`${ids}-${d.day}`}>
+                <h3 className="label" id={`${ids}-${d.day}`}>{isToday && d.day === end ? 'Today' : longDay(d.day)}</h3>
+                <ul className={s.workoutList}>
+                  {d.list.map(w => (
+                    <li key={w.id} className={s.workoutRow}>
+                      <span className={s.workoutIcon}><Icon name={w.source === 'strava' ? 'arrow' : iconFor(w.kind)} size="sm" /></span>
+                      <span className={s.workoutText}>
+                        <strong>{w.label}</strong>
+                        <small>{w.minutes} min · {fmt(w.kcal)} kcal</small>
+                      </span>
+                      <span className={`chip ${w.source === 'strava' ? s.stravaChip : ''}`}>{w.source === 'strava' ? 'Strava' : 'By hand'}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))
+          )}
+        </>
+      )}
     </Sheet>
   );
 }

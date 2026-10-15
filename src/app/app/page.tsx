@@ -24,6 +24,8 @@ export default async function TodayPage({ searchParams }: PageProps<'/app'>) {
         workouts,
         manual: isOn(flags, 'workouts', 'manual'),
         lightBase: isOn(flags, 'workouts', 'light_base'),
+        timeline: isOn(flags, 'workouts', 'timeline'),
+        week: isOn(flags, 'workouts', 'week'),
         strava: { configured: isStravaConfigured() && isOn(flags, 'apps', 'strava'), connection: connections.find(c => c.provider === 'strava') ?? null },
         weightKg: Number(profile.weight_kg ?? 70),
         activity: profile.activity,

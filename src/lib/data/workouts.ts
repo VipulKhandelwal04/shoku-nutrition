@@ -19,6 +19,8 @@ const addSchema = z.object({
   minutes: z.number().int('Use whole minutes').min(1, 'At least 1 minute').max(600, 'Up to 600 minutes'),
   kcal: z.number().int().min(0).max(5000, 'Up to 5,000 kcal'),
   kcalSource: z.enum(['estimate', 'device']),
+  /** "When?": local start time on `day`, HH:MM. Optional. */
+  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Pick a valid time').optional(),
 });
 
 async function session() {
@@ -28,14 +30,19 @@ async function session() {
 }
 
 export async function addWorkout(input: z.input<typeof addSchema>): Promise<ActionResult<{ id: string }>> {
-  if (!isOn(await getFlags(), 'workouts', 'manual')) return { ok: false, error: FLAG_OFF };
+  const flags = await getFlags();
+  if (!isOn(flags, 'workouts', 'manual')) return { ok: false, error: FLAG_OFF };
   const parsed = addSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the workout details.' };
   const { supabase, user } = await session();
   if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
   const w = parsed.data;
   const { data, error } = await supabase.from('workouts')
-    .insert({ user_id: user.id, day: w.day, kind: w.kind, label: w.label, minutes: w.minutes, kcal: w.kcal, kcal_source: w.kcalSource, source: 'manual' })
+    .insert({
+      user_id: user.id, day: w.day, kind: w.kind, label: w.label, minutes: w.minutes, kcal: w.kcal, kcal_source: w.kcalSource, source: 'manual',
+      // "When?" belongs to the timeline: ignored while that feature is off.
+      ...(w.startTime && isOn(flags, 'workouts', 'timeline') ? { start_time: w.startTime } : {}),
+    })
     .select('id').single();
   if (error) return { ok: false, error: 'Couldn’t save that workout. Try again.' };
   revalidatePath('/app', 'layout');
@@ -64,7 +71,7 @@ export async function restoreWorkout(row: WorkoutRow): Promise<ActionResult> {
   const { error } = row.source === 'manual'
     ? await supabase.from('workouts').insert({
       id: row.id, user_id: user.id, day: row.day, kind: row.kind, label: row.label, minutes: row.minutes, kcal: row.kcal,
-      kcal_source: row.kcal_source, source: 'manual',
+      kcal_source: row.kcal_source, source: 'manual', start_time: row.start_time ?? null,
     })
     : await supabase.from('workouts').update({ hidden: false }).eq('id', row.id);
   if (error) return { ok: false, error: 'Couldn’t bring it back. Log it again.' };
@@ -100,4 +107,18 @@ export async function restoreBase(previous: { activity: Activity; targets: Targe
   if (error) return { ok: false, error: 'Couldn’t restore your targets. Try again.' };
   revalidatePath('/app', 'layout');
   return { ok: true, data: undefined };
+}
+
+/** Workouts this week: the 7 days ending on `end`, visible ones only. Refused while the feature is off. */
+export async function getWorkoutWeek(end: string): Promise<ActionResult<{ workouts: WorkoutRow[] }>> {
+  if (!isOn(await getFlags(), 'workouts', 'week')) return { ok: false, error: FLAG_OFF };
+  if (!day.safeParse(end).success) return { ok: false, error: 'Pick a valid date.' };
+  const { supabase, user } = await session();
+  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const from = new Date(`${end}T12:00:00Z`);
+  from.setUTCDate(from.getUTCDate() - 6);
+  const { data, error } = await supabase.from('workouts').select('*').eq('hidden', false)
+    .gte('day', from.toISOString().slice(0, 10)).lte('day', end).order('day', { ascending: false }).order('created_at');
+  if (error) return { ok: false, error: 'Couldn’t load your week. Try again.' };
+  return { ok: true, data: { workouts: (data ?? []) as WorkoutRow[] } };
 }
