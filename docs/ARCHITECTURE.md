@@ -11,8 +11,12 @@ Katori is a nutrition tracker for Indian plates with a Cult-inspired look: black
 - **Supabase**: Google OAuth, Postgres with RLS on every table, private `meal-photos` storage bucket.
   Schema: `supabase/migrations/`. Server code uses `createClient()` from `@/lib/supabase/server` (runs as the user).
   There is **no service-role key** in the app; admin powers come from RLS `is_admin()` and `admin_*` SQL functions.
-- **Gemini** via `@google/genai`, server-side only (`GEMINI_API_KEY`, model from `GEMINI_MODEL`, default
+- **AI Assist** = Gemini via `@google/genai`, server-side only (`GEMINI_API_KEY`, model from `GEMINI_MODEL`, default
   `gemini-flash-latest`). Structured JSON output; results are matched to the food catalogue and confirmed by the user.
+  AI Assist is a **feature flag**: `app_settings.ai.enabled` is the master switch admins toggle in `/admin/ai`;
+  per-feature flags (photo, text, plan, coach) and `daily_quota` sit under it. UI reads `getAiAssist()`
+  (`available`, `features`, `configured`) and hides every AI Assist entry point when off; routes re-check server-side.
+  Name it "AI Assist" in the UI (badge/label on every AI surface).
 
 ## Product flow
 1. `/` public home: splash (rotating quote from `quotes`) → Cult-style landing + feature tour (`tour_slides`) → "Continue with Google".

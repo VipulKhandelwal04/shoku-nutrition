@@ -45,7 +45,14 @@ export type Quote = { id: number; text: string; author: string | null; active: b
 export type TourSlide = { id: number; title: string; body: string; image_url: string; sort: number; active: boolean };
 
 export type AiFeature = 'photo' | 'text' | 'plan' | 'coach';
-export type AiSettings = Record<AiFeature, boolean> & { daily_quota: number };
+/**
+ * "AI Assist" (Gemini). `enabled` is the master feature flag admins toggle; the per-feature flags only apply
+ * while it is on. A feature is usable when enabled && settings[feature] && the deployment has GEMINI_API_KEY.
+ */
+export type AiSettings = { enabled: boolean; daily_quota: number } & Record<AiFeature, boolean>;
 export type FeatureSettings = { signups_open: boolean };
 
-export const DEFAULT_AI_SETTINGS: AiSettings = { photo: true, text: true, plan: true, coach: true, daily_quota: 25 };
+export const DEFAULT_AI_SETTINGS: AiSettings = { enabled: true, photo: true, text: true, plan: true, coach: true, daily_quota: 25 };
+
+/** What the UI may show for AI Assist. `configured` is false when the server has no Gemini key. */
+export type AiAssistStatus = { available: boolean; configured: boolean; features: Record<AiFeature, boolean>; dailyQuota: number };

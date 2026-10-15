@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { createClient } from '../supabase/server';
-import { DEFAULT_AI_SETTINGS, type AiSettings, type DayRow, type EntryRow, type FeatureSettings, type FoodRow, type Quote, type TourSlide } from '../types';
+import { DEFAULT_AI_SETTINGS, type AiAssistStatus, type AiSettings, type DayRow, type EntryRow, type FeatureSettings, type FoodRow, type Quote, type TourSlide } from '../types';
 
 /** Catalogue foods plus the signed-in user's custom foods (RLS decides). */
 export const getFoods = cache(async (): Promise<FoodRow[]> => {
@@ -60,6 +60,22 @@ export const getAiSettings = cache(async (): Promise<AiSettings> => {
   const supabase = await createClient();
   const { data } = await supabase.from('app_settings').select('value').eq('key', 'ai').maybeSingle();
   return { ...DEFAULT_AI_SETTINGS, ...((data?.value as Partial<AiSettings>) ?? {}) };
+});
+
+/**
+ * AI Assist status for the UI: the admin master flag, per-feature flags, and whether Gemini is configured.
+ * Components hide AI Assist entirely when `available` is false, and each entry point checks `features[x]`.
+ */
+export const getAiAssist = cache(async (): Promise<AiAssistStatus> => {
+  const s = await getAiSettings();
+  const configured = !!process.env.GEMINI_API_KEY;
+  const on = s.enabled && configured;
+  return {
+    available: on && (s.photo || s.text || s.plan || s.coach),
+    configured,
+    features: { photo: on && s.photo, text: on && s.text, plan: on && s.plan, coach: on && s.coach },
+    dailyQuota: s.daily_quota,
+  };
 });
 
 export const getFeatureSettings = cache(async (): Promise<FeatureSettings> => {

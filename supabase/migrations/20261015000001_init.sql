@@ -285,7 +285,8 @@ create policy "meal-photos: delete own" on storage.objects for delete
 
 -- ---------- Seed content ----------
 insert into public.app_settings (key, value) values
-  ('ai', '{"photo": true, "text": true, "plan": true, "coach": true, "daily_quota": 25}'::jsonb),
+  -- AI Assist: "enabled" is the master flag admins toggle; per-feature flags apply only while it is on.
+  ('ai', '{"enabled": true, "photo": true, "text": true, "plan": true, "coach": true, "daily_quota": 25}'::jsonb),
   ('features', '{"signups_open": true}'::jsonb);
 
 insert into public.quotes (text, author, sort) values
