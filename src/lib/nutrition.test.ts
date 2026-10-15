@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPlan, earnedBadges, groupStatus, MEALS, planCheck, recommend, shiftDate, streakInfo, totals, type Food } from './nutrition';
+import { buildPlan, cuisineOf, earnedBadges, groupStatus, MEALS, planCheck, recommend, shiftDate, streakInfo, totals, type Food } from './nutrition';
 import { SEED_FOODS } from './seed-foods';
 
 const byId = new Map<string, Food>(SEED_FOODS.map(f => [f.id, f]));
@@ -93,5 +93,13 @@ describe('workouts', () => {
     expect(exerciseCredit(360)).toBe(180);
     expect(exerciseCredit(0)).toBe(0);
     expect(exerciseCredit(-50)).toBe(0);
+  });
+});
+
+describe('cuisineOf', () => {
+  it('treats a food without a cuisine as Indian, and trims a set one', () => {
+    expect(cuisineOf({})).toBe('Indian');
+    expect(cuisineOf({ cuisine: '  ' })).toBe('Indian');
+    expect(cuisineOf({ cuisine: ' Thai ' })).toBe('Thai');
   });
 });

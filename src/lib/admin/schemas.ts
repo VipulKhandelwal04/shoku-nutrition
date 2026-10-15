@@ -56,6 +56,7 @@ export const foodSchema = z.object({
   id: z.string().trim().min(2, 'Id needs at least 2 characters').max(60, 'Id can be at most 60 characters').regex(SLUG_RE, 'Use lowercase letters, numbers and single hyphens (e.g. masala-dosa)'),
   name: text('Name', 1, 120),
   category: text('Category', 1, 40),
+  cuisine: text('Cuisine', 1, 40),
   unit: text('Unit', 1, 40),
   grams: num('Grams', 0, 5000, { exclusiveMin: true }),
   kcal: num('Calories', 0, 10000),

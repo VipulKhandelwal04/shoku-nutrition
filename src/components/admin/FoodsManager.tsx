@@ -1,5 +1,6 @@
 'use client';
 import { useDeferredValue, useMemo, useState } from 'react';
+import { cuisineOf } from '@/lib/nutrition';
 import { FoodTile, Icon } from '@/components/ui/Icon';
 import { setFoodActive } from '@/lib/admin/actions';
 import { DIETS } from '@/lib/admin/schemas';
@@ -14,6 +15,7 @@ type Status = 'all' | 'active' | 'inactive';
 export function FoodsManager({ foods }: { foods: FoodRow[] }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
+  const [cuisine, setCuisine] = useState('all');
   const [diet, setDiet] = useState<'all' | FoodRow['diet']>('all');
   const [status, setStatus] = useState<Status>('all');
   // Sheet identity changes per open (remounts the form fresh); `open` drives the dialog so it can close gracefully.
@@ -24,16 +26,18 @@ export function FoodsManager({ foods }: { foods: FoodRow[] }) {
   const q = useDeferredValue(query.trim().toLowerCase());
 
   const categories = useMemo(() => Array.from(new Set(foods.map(f => f.category))).sort(), [foods]);
+  const cuisines = useMemo(() => Array.from(new Set(foods.map(f => cuisineOf(f)))).sort(), [foods]);
   const rows = useMemo(
     () =>
       foods.filter(
         f =>
           (category === 'all' || f.category === category) &&
+          (cuisine === 'all' || cuisineOf(f) === cuisine) &&
           (diet === 'all' || f.diet === diet) &&
           (status === 'all' || (status === 'active' ? f.active : !f.active)) &&
           (!q || f.name.toLowerCase().includes(q) || f.id.includes(q) || f.aliases.toLowerCase().includes(q)),
       ),
-    [foods, category, diet, status, q],
+    [foods, category, cuisine, diet, status, q],
   );
   const filtered = rows.length !== foods.length;
 
@@ -53,6 +57,13 @@ export function FoodsManager({ foods }: { foods: FoodRow[] }) {
           <select id="food-cat" value={category} onChange={e => setCategory(e.target.value)}>
             <option value="all">All categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className={`field ${s.filter}`}>
+          <label htmlFor="food-cuisine-filter" className="sr-only">Cuisine</label>
+          <select id="food-cuisine-filter" value={cuisine} onChange={e => setCuisine(e.target.value)}>
+            <option value="all">All cuisines</option>
+            {cuisines.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className={`field ${s.filter}`}>
@@ -86,7 +97,7 @@ export function FoodsManager({ foods }: { foods: FoodRow[] }) {
           <div className={s.empty}>
             <strong>No matches</strong>
             <p>Nothing fits these filters.</p>
-            <button type="button" className="btn-secondary" onClick={() => { setQuery(''); setCategory('all'); setDiet('all'); setStatus('all'); }}>Clear filters</button>
+            <button type="button" className="btn-secondary" onClick={() => { setQuery(''); setCategory('all'); setCuisine('all'); setDiet('all'); setStatus('all'); }}>Clear filters</button>
           </div>
         ) : (
           <table className={s.table} style={{ minWidth: 900 }}>
@@ -97,6 +108,7 @@ export function FoodsManager({ foods }: { foods: FoodRow[] }) {
               <tr>
                 <th scope="col">Food</th>
                 <th scope="col">Category</th>
+                <th scope="col">Cuisine</th>
                 <th scope="col">Serving</th>
                 <th scope="col" className={s.num}>kcal</th>
                 <th scope="col" className={s.num}>Protein</th>
@@ -120,6 +132,7 @@ export function FoodsManager({ foods }: { foods: FoodRow[] }) {
                     </div>
                   </th>
                   <td className={s.nowrap}>{f.category}</td>
+                  <td className={s.nowrap}>{cuisineOf(f)}</td>
                   <td className={s.nowrap}>1 {f.unit} · {Number(f.grams)} g</td>
                   <td className={s.num}>{Number(f.kcal)}</td>
                   <td className={s.num}>{Number(f.p)} g</td>
@@ -141,7 +154,7 @@ export function FoodsManager({ foods }: { foods: FoodRow[] }) {
         )}
       </div>
 
-      <FoodSheet key={target.n} food={target.food} open={open} categories={categories} onClose={() => setOpen(false)} />
+      <FoodSheet key={target.n} food={target.food} open={open} categories={categories} cuisines={cuisines} onClose={() => setOpen(false)} />
     </>
   );
 }

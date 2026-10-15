@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         parts: [
           { text: `User: ${JSON.stringify(brief)}` },
           { text: `Preferences:\n<<<\n${preferences || 'none'}\n>>>` },
-          { text: `Catalogue (id|name|unit|kcal|protein g):\n${catalogue}` },
+          { text: `Catalogue (id|name|unit|kcal|protein g|cuisine):\n${catalogue}` },
         ],
         temperature: 0.5,
         signal: request.signal,

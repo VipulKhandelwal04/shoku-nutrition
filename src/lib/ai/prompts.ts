@@ -27,7 +27,7 @@ Rules:
 export const PLAN_SYSTEM = `${SAFETY}
 Task: build ONE day of meals (Breakfast, Lunch, Snacks, Dinner) for this user.
 Rules:
-- Use ONLY foodIds from the catalogue lines given (format: id|name|unit|kcal per unit|protein g per unit). Every listed food already fits the user's diet and restrictions.
+- Use ONLY foodIds from the catalogue lines given (format: id|name|unit|kcal per unit|protein g per unit|cuisine). Every listed food already fits the user's diet and restrictions.
 - servings are in each food's unit, in steps of 0.5 (0.25 only when sensible). Keep portions realistic for one person.
 - The day's total kcal must be within 10% of the calorie target. Aim for the protein target. Include vegetables, a pulse or protein source, and some dairy or fruit where the catalogue allows.
 - Follow the user's preferences where the catalogue allows (cuisine, likes, dislikes). Never include a food they said no to.
@@ -43,7 +43,7 @@ No emojis, no hashtags, no quotation marks. Return JSON { "line": "..." }.`;
 export const ASK_SYSTEM = `${SAFETY}
 Task: answer the user's question about what to eat, using their day so far, and suggest up to 3 meal ideas.
 Rules:
-- Build every idea ONLY from foodIds in the catalogue lines given (format: id|name|unit|kcal per unit|protein g per unit). Every listed food already fits the user's diet and restrictions; never mention or suggest foods outside the list.
+- Build every idea ONLY from foodIds in the catalogue lines given (format: id|name|unit|kcal per unit|protein g per unit|cuisine). Every listed food already fits the user's diet and restrictions; never mention or suggest foods outside the list.
 - servings are in each food's unit, in steps of 0.5 (0.25 only when sensible). Keep portions realistic for one person and one meal.
 - Use the context: today's workouts (more protein and carbs after hard or long sessions), what is left of the calorie and protein targets, and the meal that is next. Do not push someone past their calorie target.
 - meal is the meal the idea is for (Breakfast, Lunch, Snacks or Dinner), usually the next one in the day unless they asked for a specific meal.

@@ -48,11 +48,17 @@ describe('mealCandidates', () => {
 });
 
 describe('candidateLines', () => {
-  it('writes one id|name|unit|kcal|protein line per candidate', () => {
+  it('writes one id|name|unit|kcal|protein|cuisine line per candidate', () => {
     const set = mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [] });
     const lines = candidateLines(set).split('\n');
     expect(lines).toHaveLength(set.candidates.length);
-    expect(lines[0].split('|')).toHaveLength(5);
+    expect(lines[0].split('|')).toHaveLength(6);
     expect(lines[0].startsWith(`${set.candidates[0].food.id}|`)).toBe(true);
+  });
+
+  it('labels foods without a cuisine as Indian, and keeps a set cuisine', () => {
+    const [first] = SEED_FOODS;
+    const set = mealCandidates([first, { ...first, id: 'pesto-pasta', name: 'Pesto pasta', cuisine: 'Italian' }], { diet: 'nonveg', restrictions: [] });
+    expect(candidateLines(set).split('\n').map(l => l.split('|').pop())).toEqual(['Indian', 'Italian']);
   });
 });

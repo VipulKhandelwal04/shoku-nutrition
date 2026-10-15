@@ -4,14 +4,14 @@ import { Sheet } from '@/components/ui/Sheet';
 import { FoodTile, Icon, type IconName } from '@/components/ui/Icon';
 import { createFood, deleteFood, setFoodActive, updateFood } from '@/lib/admin/actions';
 import { DIETS, FOOD_ICONS, slugify, type FieldErrors } from '@/lib/admin/schemas';
-import { GROUPS, type GroupKey } from '@/lib/nutrition';
+import { GROUPS, type GroupKey, DEFAULT_CUISINE, cuisineOf } from '@/lib/nutrition';
 import type { FoodRow } from '@/lib/types';
 import s from './admin.module.css';
 import { ConfirmDialog, Switch, useAdminAction } from './primitives';
 
 type NumKey = 'grams' | 'kcal' | 'p' | 'c' | 'f' | 'fibre';
 type Draft = {
-  id: string; name: string; category: string; unit: string; aliases: string;
+  id: string; name: string; category: string; cuisine: string; unit: string; aliases: string;
   diet: FoodRow['diet']; icon: (typeof FOOD_ICONS)[number]; active: boolean;
 } & Record<NumKey, string> & { groups: Record<GroupKey, string> };
 
@@ -19,10 +19,10 @@ const str = (n: number | undefined | null) => (n === undefined || n === null ? '
 
 function toDraft(f: FoodRow | null): Draft {
   const groups = Object.fromEntries(GROUPS.map(g => [g.key, str(f?.groups?.[g.key])])) as Record<GroupKey, string>;
-  if (!f) return { id: '', name: '', category: '', unit: '', aliases: '', diet: 'veg', icon: 'bowl', active: true, grams: '', kcal: '', p: '', c: '', f: '', fibre: '', groups };
+  if (!f) return { id: '', name: '', category: '', cuisine: DEFAULT_CUISINE, unit: '', aliases: '', diet: 'veg', icon: 'bowl', active: true, grams: '', kcal: '', p: '', c: '', f: '', fibre: '', groups };
   const icon = (FOOD_ICONS as readonly string[]).includes(f.icon) ? (f.icon as Draft['icon']) : 'bowl';
   return {
-    id: f.id, name: f.name, category: f.category, unit: f.unit, aliases: f.aliases ?? '', diet: f.diet, icon, active: f.active,
+    id: f.id, name: f.name, category: f.category, cuisine: cuisineOf(f), unit: f.unit, aliases: f.aliases ?? '', diet: f.diet, icon, active: f.active,
     grams: str(f.grams), kcal: str(f.kcal), p: str(f.p), c: str(f.c), f: str(f.f), fibre: str(f.fibre), groups,
   };
 }
@@ -38,7 +38,7 @@ const MACROS: { key: NumKey; label: string; unit: string }[] = [
   { key: 'fibre', label: 'Fibre', unit: 'g' },
 ];
 
-export function FoodSheet({ food, open, categories, onClose }: { food: FoodRow | null; open: boolean; categories: string[]; onClose: () => void }) {
+export function FoodSheet({ food, open, categories, cuisines, onClose }: { food: FoodRow | null; open: boolean; categories: string[]; cuisines: string[]; onClose: () => void }) {
   const isNew = food === null;
   const [d, setD] = useState<Draft>(() => toDraft(food));
   const [idTouched, setIdTouched] = useState(!isNew);
@@ -135,6 +135,12 @@ export function FoodSheet({ food, open, categories, onClose }: { food: FoodRow |
               <input {...bind('category', d.category, e => set('category', e.target.value))} list="food-categories" maxLength={40} autoComplete="off" />
               <datalist id="food-categories">{categories.map(c => <option key={c} value={c} />)}</datalist>
               {err('category')}
+            </div>
+            <div className="field">
+              <label htmlFor="food-cuisine">Cuisine</label>
+              <input {...bind('cuisine', d.cuisine, e => set('cuisine', e.target.value))} list="food-cuisines" maxLength={40} autoComplete="off" placeholder="Indian, Italian, Thai…" />
+              <datalist id="food-cuisines">{cuisines.map(c => <option key={c} value={c} />)}</datalist>
+              {err('cuisine')}
             </div>
             <div className="field">
               <label htmlFor="food-unit">Serving unit</label>

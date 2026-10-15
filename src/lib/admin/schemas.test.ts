@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { aiSettingsSchema, fieldErrors, foodSchema, imageUrlSchema, quoteSchema, slugify, tourSlideSchema } from './schemas';
 
 const food = {
-  id: 'masala-dosa', name: 'Masala dosa', category: 'Breakfast', unit: 'piece', grams: '120', kcal: '250',
+  id: 'masala-dosa', name: 'Masala dosa', category: 'Breakfast', cuisine: 'Indian', unit: 'piece', grams: '120', kcal: '250',
   p: '6', c: '38', f: '8', fibre: '3', diet: 'veg', icon: 'plate', aliases: 'dosai', groups: { cer: '30', pul: '8', oil: '', milk: '0' }, active: true,
 };
 
@@ -61,6 +61,18 @@ describe('content schemas', () => {
     expect(imageUrlSchema.safeParse('http://insecure.example.com/a.jpg').success).toBe(false);
     expect(imageUrlSchema.safeParse('javascript:alert(1)').success).toBe(false);
     expect(tourSlideSchema.safeParse({ title: 'Log fast', body: 'Tap plus.', image_url: '' }).success).toBe(false);
+  });
+});
+
+describe('foodSchema cuisine', () => {
+  it('accepts and trims a cuisine', () => {
+    expect(foodSchema.parse({ ...food, cuisine: '  Italian ' }).cuisine).toBe('Italian');
+  });
+  it('rejects an empty or missing cuisine', () => {
+    expect(foodSchema.safeParse({ ...food, cuisine: '   ' }).success).toBe(false);
+    const { cuisine: _drop, ...noCuisine } = food;
+    void _drop;
+    expect(foodSchema.safeParse(noCuisine).success).toBe(false);
   });
 });
 

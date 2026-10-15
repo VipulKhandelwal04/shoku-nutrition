@@ -1,7 +1,7 @@
 // Meal candidates: the one place that decides which catalogue foods a suggestion may use, and how strongly to
 // prefer each. Every suggestion surface (Ask Shoku, Tune my plan, and later Plan my week and recipes) asks here,
 // so diet and restriction rules can't drift between features. Pure; safe to test with the seed catalogue.
-import type { Diet, Food } from '../nutrition';
+import { cuisineOf, type Diet, type Food } from '../nutrition';
 import { dietAllows, isExcluded, parseExclusions, type Exclusions } from './plan';
 
 /** What a member's settings and request say about the foods they may be offered. */
@@ -37,7 +37,7 @@ export function mealCandidates(foods: Food[], rules: CandidateRules): CandidateS
   return { candidates, eligible: new Map(candidates.map(c => [c.food.id, c.food])), exclusions };
 }
 
-/** Catalogue lines for prompts: id|name|unit|kcal per unit|protein g per unit, in candidate order. */
+/** Catalogue lines for prompts: id|name|unit|kcal per unit|protein g per unit|cuisine, in candidate order. */
 export function candidateLines(set: Pick<CandidateSet, 'candidates'>): string {
-  return set.candidates.map(({ food: f }) => [f.id, f.name, f.unit, Math.round(f.kcal), Math.round(f.p)].join('|')).join('\n');
+  return set.candidates.map(({ food: f }) => [f.id, f.name, f.unit, Math.round(f.kcal), Math.round(f.p), cuisineOf(f)].join('|')).join('\n');
 }
