@@ -1,6 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
-const { upstreamReason } = await import('./gemini');
+const { upstreamReason, jsonSchemaFor } = await import('./gemini');
+const { weekOutput } = await import('./contracts');
+
+describe('jsonSchemaFor(weekOutput)', () => {
+  // Checked against the live API (Oct 2026): days.maxItems 7 over the per-meal maxItems 8 is rejected with a bare
+  // 400 INVALID_ARGUMENT by both Flash and Flash-Lite; either limit alone is accepted.
+  it('keeps no limit on the number of days, only on foods per meal', () => {
+    const days = (jsonSchemaFor(weekOutput) as { properties: { days: { maxItems?: number; items: { properties: { Lunch: { maxItems?: number } } } } } }).properties.days;
+    expect(days.maxItems).toBeUndefined();
+    expect(days.items.properties.Lunch.maxItems).toBe(8);
+  });
+});
 
 describe('upstreamReason', () => {
   it('pulls Gemini’s status and message out of the error JSON', () => {
