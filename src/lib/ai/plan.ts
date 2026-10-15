@@ -132,3 +132,76 @@ export function repairPlan(
   }
   return { ok: true, plan, kcal, dropped, scaled };
 }
+
+// ---------- Week builder ----------
+
+/** Foods that stay put across the week: supplements, cooking fat, drinks and the vegetable side. */
+const FIXED_CATEGORIES = new Set(['Cooking', 'Drinks', 'Vegetables']);
+const FIXED_IDS = new Set(['whey']);
+/** One-pot dishes only swap with each other, never for a staple that sits beside a curry. */
+const WHOLE_DISHES = new Set(['khichdi', 'biryani']);
+/** Swap count for count (an apple for an orange), not calorie for calorie. */
+const SAME_SERVINGS = new Set(['Fruit']);
+/** Swap only within the same serving and diet (curd ↔ yogurt, chicken ↔ fish; never eggs → fish at breakfast). */
+const BY_UNIT = new Set(['Dairy', 'Protein']);
+
+/** Foods are interchangeable when they share a category and their main food group (rice ↔ chapati, dal ↔ rajma). */
+export function swapKey(f: Food): string | null {
+  if (FIXED_CATEGORIES.has(f.category) || FIXED_IDS.has(f.id)) return null;
+  if (WHOLE_DISHES.has(f.id)) return 'dish';
+  const top = Object.entries(f.groups ?? {}).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0];
+  return `${f.category}|${top && (top[1] ?? 0) > 0 ? top[0] : ''}${BY_UNIT.has(f.category) ? `|${f.unit}|${f.diet}` : ''}`;
+}
+
+export type WeekDay = { plan: Plan; kcal: number; rotated: number };
+
+/**
+ * Seven days from one day plan. Day 0 is the plan itself, unchanged. Each later day rotates every food to the next
+ * interchangeable eligible food (same category and main group), keeps roughly the same calories per item, then
+ * repairs the day to within the calorie tolerance. A day that can't be repaired falls back to the day plan.
+ * Read-only: nothing here saves.
+ */
+export function buildWeek(plan: Plan, opts: { eligible: Food[]; targetKcal: number; days?: number }): WeekDay[] {
+  const { eligible, targetKcal, days = 7 } = opts;
+  const foodsById = new Map(eligible.map(f => [f.id, f]));
+  const groups = new Map<string, Food[]>();
+  for (const f of [...eligible].sort((a, b) => a.id.localeCompare(b.id))) {
+    const k = swapKey(f);
+    if (k) groups.set(k, [...(groups.get(k) ?? []), f]);
+  }
+  const base: WeekDay = { plan, kcal: planKcal(plan, foodsById), rotated: 0 };
+  const week: WeekDay[] = [base];
+
+  for (let d = 1; d < days; d++) {
+    let rotated = 0;
+    const proposed = {} as ProposedPlan;
+    for (const meal of MEALS) {
+      const used = new Set<string>();
+      proposed[meal] = plan[meal].map(item => {
+        const orig = foodsById.get(item.foodId);
+        const options = orig ? groups.get(swapKey(orig) ?? '') ?? [] : [];
+        let pick = orig;
+        if (orig && options.length > 1) {
+          const start = options.findIndex(f => f.id === orig.id);
+          for (let k = 0; k < options.length; k++) {
+            const next = options[(start + d + k) % options.length];
+            if (!used.has(next.id)) { pick = next; break; }
+          }
+        }
+        if (!pick || !orig) return { foodId: item.foodId, servings: item.q };
+        used.add(pick.id);
+        if (pick.id === orig.id) return { foodId: orig.id, servings: item.q };
+        rotated++;
+        // Same calories as the planned item, in the new food's own servings (fruit: same count).
+        const servings = SAME_SERVINGS.has(orig.category) || pick.kcal <= 0 ? item.q : (orig.kcal * item.q) / pick.kcal;
+        return { foodId: pick.id, servings };
+      });
+    }
+    const repaired = repairPlan(proposed, { foodsById, allowed: f => foodsById.has(f.id), targetKcal });
+    if (!repaired.ok) { week.push({ ...base, rotated: 0 }); continue; }
+    // Keep each item's "flexible" marker from the day plan, matched by position.
+    for (const meal of MEALS) repaired.plan[meal].forEach((i, n) => { i.flex = plan[meal][n]?.flex ?? false; });
+    week.push({ plan: repaired.plan, kcal: repaired.kcal, rotated });
+  }
+  return week;
+}

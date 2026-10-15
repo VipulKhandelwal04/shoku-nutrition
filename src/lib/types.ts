@@ -74,6 +74,8 @@ export type WorkoutRow = {
   kcal_source: 'estimate' | 'device';
   source: 'manual' | 'strava';
   external_id: string | null;
+  /** Local start time "HH:MM[:SS]" on `day` (migration 0011); null when unknown. */
+  start_time?: string | null;
   hidden: boolean;
   created_at: string;
 };

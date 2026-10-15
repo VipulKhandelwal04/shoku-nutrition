@@ -17,6 +17,9 @@ import ins from '@/components/app/insights/insights.module.css';
 import { CompareTabs } from './CompareTabs';
 import { GoalCard } from './GoalCard';
 import { PlanTunerEntry } from './PlanTunerEntry';
+import { WeekPlan } from './WeekPlan';
+import { buildWeek } from '@/lib/ai/plan';
+import { mealCandidates } from '@/lib/ai/candidates';
 import s from './compare.module.css';
 
 export const metadata = { title: 'Compare' };
@@ -37,6 +40,9 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const day = period === 'week' ? today : parseDayParam(sp.day, today, today);
   const tabParam = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab;
   const initialTab = tabParam === 'nutrients' || tabParam === 'plan' ? tabParam : 'groups';
+  // Week view is refused (falls back to the day) while the Week plan feature is off.
+  const weekOn = isOn(flags, 'week', 'view');
+  const planView = weekOn && sp.plan === 'week' ? 'week' : 'day';
 
   const [foods, ai, storedPlan] = await Promise.all([getFoods(), getAiAssist(), getStoredPlan()]);
   const foodsById = new Map<string, Food>(foods.map(f => [f.id, f]));
@@ -71,6 +77,22 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const saved = parseStoredPlan(storedPlan, foodsById);
   const plan = filterPlan(saved ?? buildPlan(targets, goal, profile.diet, foodsById), foodsById, profile.diet, profile.restrictions ?? []);
   const check = planCheck(plan, dayEntries, foodsById);
+  const week = planView === 'week'
+    ? buildWeek(plan, { eligible: mealCandidates(foods, { diet: profile.diet, restrictions: profile.restrictions ?? [] }).candidates.map(c => c.food), targetKcal: targets.kcal })
+    : null;
+  const weekLabels = Array.from({ length: 7 }, (_, i) => {
+    const key = shiftDate(today, i);
+    return i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(`${key}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+  });
+  // Keep the page's period/day when switching between Day and Week plans.
+  const planHref = (v: 'day' | 'week') => {
+    const q = new URLSearchParams();
+    if (period === 'week') q.set('period', 'week');
+    else if (day !== today) q.set('day', day);
+    q.set('tab', 'plan');
+    if (v === 'week') q.set('plan', 'week');
+    return `/app/compare?${q}`;
+  };
   const hourNow = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone: tz ?? 'Asia/Kolkata' }).format(new Date()));
   const mealNow = hourNow < 11 ? 'Breakfast' : hourNow < 16 ? 'Lunch' : hourNow < 19 ? 'Snacks' : 'Dinner';
   const suggestions = period === 'day' ? nextUp(plan, dayEntries, groupStatus(dayEntries, targets.kcal, dayOpen), foodsById, 3, dayOpen ? mealNow : undefined) : [];
@@ -131,8 +153,21 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
     </>
   );
 
-  const planPanel = (
+  const planToggle = weekOn ? (
+    <nav className={`${s.periodSeg} ${s.planView}`} aria-label="Plan view">
+      <Link href={planHref('day')} aria-current={planView === 'day' ? 'page' : undefined} scroll={false}>Day</Link>
+      <Link href={planHref('week')} aria-current={planView === 'week' ? 'page' : undefined} scroll={false}>Week</Link>
+    </nav>
+  ) : null;
+
+  const planPanel = week ? (
     <>
+      {planToggle}
+      <WeekPlan week={week} labels={weekLabels} foodsById={foodsById} target={targets.kcal} />
+    </>
+  ) : (
+    <>
+      {planToggle}
       <div className={s.planHead}>
         <div>
           <p className={s.panelNote}>

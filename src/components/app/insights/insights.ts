@@ -4,7 +4,7 @@ import {
   MEALS, dayCounts, isValidProfile, planCheck, shiftDate, totals,
   type BodyProfile, type Diet, type Entry, type Food, type GroupKey, type GroupStatus, type Macros, type Meal, type Plan, type PlanItem, type Targets,
 } from '../../../lib/nutrition';
-import type { DayRow, EntryRow, Profile } from '../../../lib/types';
+import type { DayRow, EntryRow, Profile, WorkoutRow } from '../../../lib/types';
 
 // ---------- Dates ----------
 
@@ -286,5 +286,96 @@ export function weekStats(summaries: DaySummary[], kcalTarget: number): WeekStat
     avgProtein: avg('p'),
     water: summaries.reduce((t, s) => t + s.water, 0),
     bestDay,
+  };
+}
+
+// ---------- Today timeline and workout weeks ----------
+
+/** Where a moment falls on the member's clock: local day and minutes after midnight. */
+export type LocalClock = (iso: string) => { day: string; minutes: number };
+
+/** A LocalClock for an IANA time zone (the device's when omitted). */
+export function clockIn(timeZone?: string): LocalClock {
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  return iso => {
+    const p = Object.fromEntries(f.formatToParts(new Date(iso)).map(x => [x.type, x.value]));
+    return { day: `${p.year}-${p.month}-${p.day}`, minutes: Number(p.hour) * 60 + Number(p.minute) };
+  };
+}
+
+/** Usual meal times, for meals logged on a different day (back-filled) where the log time says nothing. */
+export const USUAL_MEAL_MINUTES: Record<Meal, number> = { Breakfast: 8 * 60, Lunch: 13 * 60, Snacks: 17 * 60, Dinner: 20 * 60 + 30 };
+
+export type TimelineItem =
+  | { kind: 'meal'; key: string; meal: Meal; at: number; timed: 'logged' | 'usual'; names: string[]; kcal: number }
+  | { kind: 'workout'; key: string; label: string; at: number; timed: 'start' | 'logged'; minutes: number; kcal: number; source: WorkoutRow['source'] };
+
+/** "HH:MM[:SS]" → minutes after midnight, or null. */
+export function parseClock(t: string | null | undefined): number | null {
+  const m = t ? /^([01]\d|2[0-3]):([0-5]\d)/.exec(t) : null;
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+/**
+ * Today so far: meals and workouts in time order. A workout uses its start time; without one it is placed by when
+ * it was recorded. A meal uses when its first food was logged, or its usual time if it was logged on another day.
+ * Ties put the workout first.
+ */
+export function dayTimeline(
+  day: string,
+  entries: Pick<EntryRow, 'meal' | 'food' | 'quantity' | 'created_at'>[],
+  workouts: Pick<WorkoutRow, 'id' | 'day' | 'label' | 'minutes' | 'kcal' | 'source' | 'start_time' | 'created_at' | 'hidden'>[],
+  clock: LocalClock,
+): TimelineItem[] {
+  const items: TimelineItem[] = [];
+  for (const meal of MEALS) {
+    const list = entries.filter(e => e.meal === meal);
+    if (!list.length) continue;
+    const first = list.map(e => e.created_at).sort()[0];
+    const local = clock(first);
+    const sameDay = local.day === day;
+    items.push({
+      kind: 'meal', key: `meal-${meal}`, meal, at: sameDay ? local.minutes : USUAL_MEAL_MINUTES[meal], timed: sameDay ? 'logged' : 'usual',
+      names: list.map(e => e.food.name.split(',')[0]), kcal: Math.round(totals(list).kcal),
+    });
+  }
+  for (const w of workouts) {
+    if (w.day !== day || w.hidden) continue;
+    const start = parseClock(w.start_time);
+    items.push({
+      kind: 'workout', key: `workout-${w.id}`, label: w.label, at: start ?? clock(w.created_at).minutes, timed: start !== null ? 'start' : 'logged',
+      minutes: w.minutes, kcal: w.kcal, source: w.source,
+    });
+  }
+  return items.sort((a, b) => a.at - b.at || (a.kind === b.kind ? 0 : a.kind === 'workout' ? -1 : 1));
+}
+
+/** Minutes after midnight → "7:05 AM". */
+export function clockLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60) % 24, m = minutes % 60;
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+export type WorkoutWeek = {
+  days: { day: string; workouts: number; minutes: number; kcal: number }[];
+  sessions: number;
+  minutes: number;
+  kcal: number;
+  bySource: { manual: number; strava: number };
+};
+
+/** Totals for a week of workouts (hidden ones never count), with one row per day of `keys`, oldest first. */
+export function workoutWeek(keys: string[], workouts: Pick<WorkoutRow, 'day' | 'minutes' | 'kcal' | 'source' | 'hidden'>[]): WorkoutWeek {
+  const shown = workouts.filter(w => !w.hidden && keys.includes(w.day));
+  const days = keys.map(day => {
+    const list = shown.filter(w => w.day === day);
+    return { day, workouts: list.length, minutes: list.reduce((n, w) => n + w.minutes, 0), kcal: list.reduce((n, w) => n + w.kcal, 0) };
+  });
+  return {
+    days,
+    sessions: shown.length,
+    minutes: days.reduce((n, d) => n + d.minutes, 0),
+    kcal: days.reduce((n, d) => n + d.kcal, 0),
+    bySource: { manual: shown.filter(w => w.source === 'manual').length, strava: shown.filter(w => w.source === 'strava').length },
   };
 }

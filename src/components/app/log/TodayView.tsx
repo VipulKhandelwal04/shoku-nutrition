@@ -9,6 +9,7 @@ import { MEALS_FOR_A_COUNTED_DAY, exerciseCredit, shiftDate, streakInfo, totals,
 import type { AiAssistStatus, DayRow, EntryRow } from '@/lib/types';
 import { fmt, friendlyDate, greeting, mealForHour, useClientToday, useLocalHour } from './clientDate';
 import { DiaryProvider, useDiary } from './DiaryProvider';
+import { TodayTimeline } from './TodayTimeline';
 import { MealCards } from './MealCards';
 import { DoneToggle, WaterPanel } from './WaterPanel';
 import { WorkoutsPanel, type WorkoutsData } from './WorkoutsPanel';
@@ -162,6 +163,7 @@ function TodayContent({ data, ai, workouts, show }: { data: LogScreenData; ai: A
             <MealCards />
             <DoneToggle />
           </section>
+          {show.workouts && workouts.timeline && <TodayTimeline workouts={workouts.workouts} />}
         </div>
         {(show.workouts || show.water) && (
           <aside className="stack">

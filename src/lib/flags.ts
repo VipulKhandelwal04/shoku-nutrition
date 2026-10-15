@@ -9,6 +9,8 @@ export const FEATURE_FLAGS = {
     children: {
       manual: { title: 'Log by hand', body: 'Members add a class, run or walk themselves.' },
       light_base: { title: 'Light-base suggestion', body: 'Offers to switch the base target to light activity so workouts aren’t counted twice.' },
+      timeline: { title: 'Today timeline', body: '“Today so far” on Today: meals and workouts in time order, with a “When?” time on logged workouts.' },
+      week: { title: 'Workouts this week', body: '“See week” in the Workouts panel: the last 7 days of workouts with the total burned.' },
     },
   },
   water: {
@@ -43,6 +45,13 @@ export const FEATURE_FLAGS = {
     children: {
       strava: { title: 'Strava', body: 'Connect Strava and import workouts. Disconnecting always stays available.' },
       upcoming: { title: 'Coming-soon apps', body: 'Lists Samsung Health, Apple Health and Garmin as coming soon.' },
+    },
+  },
+  week: {
+    title: 'Week plan',
+    body: 'A Day | Week toggle on Compare → Plan. Needs Compare and its Plan tab on.',
+    children: {
+      view: { title: 'Week view', body: 'Seven days built from the day plan, foods rotated for variety, each day kept near the calorie target. Read-only.' },
     },
   },
   cuisines: {

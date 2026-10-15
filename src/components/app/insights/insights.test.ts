@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildPlan, groupStatus, recommend, type Entry, type Food } from '../../../lib/nutrition';
+import { buildPlan, groupStatus, recommend, type Entry, type Food, type Meal } from '../../../lib/nutrition';
 import { SEED_FOODS } from '../../../lib/seed-foods';
 import {
   averageDay, bmiBand, bodyOf, energySplit, filterPlan, foodFits, groupContributions, nextUp, nutrientStatus,
   parseDayParam, parseStoredPlan, sameTargets, summariseDays, todayIn, weekKeys, weekStats,
+  USUAL_MEAL_MINUTES, clockIn, clockLabel, dayTimeline, parseClock, workoutWeek,
 } from './insights';
+import type { WorkoutRow } from '../../../lib/types';
 import { bodySchema, onboardingSchema, rangeError, targetsSchema } from './schemas';
 
 const byId = new Map<string, Food>(SEED_FOODS.map(f => [f.id, f]));
@@ -185,5 +187,74 @@ describe('schemas', () => {
     expect(rangeError('17', 18, 100, 'Age', 'years')).toBe('Age: 18–100 years');
     expect(rangeError('30.5', 18, 100, 'Age', 'years', { int: true })).toBe('Age: use a whole number');
     expect(rangeError('30', 18, 100, 'Age', 'years')).toBe('');
+  });
+});
+
+describe('dayTimeline', () => {
+  const clock = clockIn('Asia/Kolkata');
+  const food = SEED_FOODS.find(f => f.id === 'oats')!;
+  const entry = (meal: Meal, created_at: string) => ({ meal, food, quantity: 1, created_at });
+  const workout = (id: string, start_time: string | null, created_at: string, extra: Partial<WorkoutRow> = {}) => ({
+    id, day: '2026-10-15', label: id, minutes: 30, kcal: 200, source: 'manual' as const, start_time, created_at, hidden: false, ...extra,
+  });
+
+  it('orders meals and workouts by time, using a workout’s start time over when it was logged', () => {
+    const items = dayTimeline('2026-10-15', [
+      entry('Breakfast', '2026-10-15T02:50:00Z'), // 8:20 IST
+      entry('Lunch', '2026-10-15T07:15:00Z'), // 12:45 IST
+    ], [
+      workout('Run', '07:15:00', '2026-10-15T10:00:00Z'), // logged at 15:30 IST, ran at 7:15
+    ], clock);
+    expect(items.map(i => i.key)).toEqual(['workout-Run', 'meal-Breakfast', 'meal-Lunch']);
+    expect(items[0]).toMatchObject({ at: 7 * 60 + 15, timed: 'start' });
+    expect(items[1]).toMatchObject({ at: 8 * 60 + 20, timed: 'logged' });
+  });
+
+  it('places untimed workouts by when they were recorded', () => {
+    const items = dayTimeline('2026-10-15', [entry('Lunch', '2026-10-15T07:15:00Z')], [
+      workout('Class', null, '2026-10-15T12:30:00Z'), // 18:00 IST
+      workout('Walk', null, '2026-10-15T03:30:00Z'), // 9:00 IST
+    ], clock);
+    expect(items.map(i => i.key)).toEqual(['workout-Walk', 'meal-Lunch', 'workout-Class']);
+    expect(items[0]).toMatchObject({ timed: 'logged', at: 9 * 60 });
+  });
+
+  it('uses the usual time for meals logged on another day, and skips hidden or other-day workouts', () => {
+    const items = dayTimeline('2026-10-15', [
+      entry('Dinner', '2026-10-16T04:00:00Z'), // back-filled next morning
+      entry('Breakfast', '2026-10-16T04:01:00Z'),
+    ], [
+      workout('Hidden', '06:00', '2026-10-15T01:00:00Z', { hidden: true }),
+      workout('Yesterday', '06:00', '2026-10-14T01:00:00Z', { day: '2026-10-14' }),
+    ], clock);
+    expect(items.map(i => [i.key, i.at])).toEqual([['meal-Breakfast', USUAL_MEAL_MINUTES.Breakfast], ['meal-Dinner', USUAL_MEAL_MINUTES.Dinner]]);
+    expect(items.every(i => i.kind === 'meal' && i.timed === 'usual')).toBe(true);
+  });
+
+  it('puts a workout before a meal at the same minute, and labels times on a 12-hour clock', () => {
+    const items = dayTimeline('2026-10-15', [entry('Breakfast', '2026-10-15T02:30:00Z')], [workout('Yoga', '08:00', '2026-10-15T01:00:00Z')], clock);
+    expect(items.map(i => i.kind)).toEqual(['workout', 'meal']);
+    expect(clockLabel(8 * 60)).toBe('8:00 AM');
+    expect(clockLabel(0)).toBe('12:00 AM');
+    expect(clockLabel(12 * 60 + 5)).toBe('12:05 PM');
+    expect(parseClock('7:5')).toBeNull();
+  });
+});
+
+describe('workoutWeek', () => {
+  it('totals sessions, minutes and kcal per day and for the week, ignoring hidden and out-of-week workouts', () => {
+    const keys = weekKeys('2026-10-15');
+    const w = (day: string, minutes: number, kcal: number, source: 'manual' | 'strava' = 'manual', hidden = false) => ({ day, minutes, kcal, source, hidden });
+    const week = workoutWeek(keys, [
+      w('2026-10-15', 30, 250), w('2026-10-15', 45, 400, 'strava'), w('2026-10-11', 60, 300, 'strava'),
+      w('2026-10-12', 20, 150, 'manual', true), w('2026-10-01', 90, 900),
+    ]);
+    expect(week.days).toHaveLength(7);
+    expect(week.days[6]).toEqual({ day: '2026-10-15', workouts: 2, minutes: 75, kcal: 650 });
+    expect(week.days.find(d => d.day === '2026-10-12')).toMatchObject({ workouts: 0, kcal: 0 });
+    expect(week).toMatchObject({ sessions: 3, minutes: 135, kcal: 950, bySource: { manual: 1, strava: 2 } });
+  });
+  it('an empty week is all zeros', () => {
+    expect(workoutWeek(weekKeys('2026-10-15'), [])).toMatchObject({ sessions: 0, minutes: 0, kcal: 0 });
   });
 });

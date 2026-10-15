@@ -97,8 +97,10 @@ export function toWorkout(a: Detail, weightKg: number) {
   // Strava's own calories when present; rides report mechanical work, and kJ of work ≈ kcal burned.
   const device = a.calories && a.calories > 0 ? a.calories : a.kilojoules && a.kilojoules > 0 ? a.kilojoules : 0;
   const kcal = Math.min(5000, Math.round(device > 0 ? device : estimateBurn(met, weightKg, minutes)));
+  // start_date_local is the athlete's wall-clock time with a misleading "Z"; read its date and time as written.
+  const time = /^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})/.exec(a.start_date_local)?.[1] ?? null;
   return {
-    day: a.start_date_local.slice(0, 10), kind: 'strava', label: (a.name || 'Strava activity').slice(0, 80),
+    day: a.start_date_local.slice(0, 10), start_time: time, kind: 'strava', label: (a.name || 'Strava activity').slice(0, 80),
     minutes, kcal, kcal_source: device > 0 ? 'device' : 'estimate', source: 'strava', external_id: String(a.id),
     sport: kind,
   } as const;
@@ -136,7 +138,7 @@ export async function sync(supabase: SupabaseClient, userId: string, weightKg: n
     const detail = await api<Detail>(token, `/activities/${a.id}`).catch(() => a as Detail);
     const w = toWorkout(detail, weightKg);
     const { error } = await supabase.from('workouts').upsert(
-      { user_id: userId, day: w.day, kind: w.sport, label: w.label, minutes: w.minutes, kcal: w.kcal, kcal_source: w.kcal_source, source: 'strava', external_id: w.external_id },
+      { user_id: userId, day: w.day, start_time: w.start_time, kind: w.sport, label: w.label, minutes: w.minutes, kcal: w.kcal, kcal_source: w.kcal_source, source: 'strava', external_id: w.external_id },
       { onConflict: 'user_id,source,external_id', ignoreDuplicates: true },
     );
     if (!error) imported++;

@@ -229,3 +229,32 @@
   .workoutFields { grid-template-columns: minmax(0, 1fr); }
 }
 .rateBtn { width: 100%; }
+
+/* ---------- Workouts: actions and the week sheet ---------- */
+.workoutActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.weekTotals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; }
+.weekTotals div { padding: 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); min-width: 0; }
+.weekTotals dt { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.weekTotals dd { margin: 4px 0 0; font-family: var(--display); font-size: 26px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.weekTotals small { font-family: var(--body); font-size: 12px; color: var(--muted); font-weight: 600; }
+.weekGroup { display: grid; gap: 8px; margin-top: 16px; }
+.stravaChip { background: rgba(252, 82, 0, .14); color: #ff8a4d; }
+
+/* ---------- Today so far ---------- */
+.timeline { padding: 16px 18px; }
+.timelineList { list-style: none; margin: 0; padding: 0; display: grid; }
+.timelineItem { position: relative; display: grid; grid-template-columns: 74px 32px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0; }
+.timelineItem:not(:last-child)::after { content: ''; position: absolute; left: calc(74px + 10px + 15px); top: 40px; bottom: -8px; width: 2px; background: var(--line); }
+.timelineTime { font-family: var(--display); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 6px; white-space: nowrap; }
+.timelineTime small { display: block; font-family: var(--body); font-size: 11px; font-weight: 500; color: var(--muted); }
+.timelineDot { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); color: var(--text-2); }
+.timelineItem[data-kind='workout'] .timelineDot { background: var(--accent-soft); color: var(--accent-text); }
+.timelineText { display: grid; gap: 2px; min-width: 0; padding-top: 4px; }
+.timelineText strong { font-size: 15px; }
+.timelineText small { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+@media (max-width: 400px) {
+  .timelineItem { grid-template-columns: 62px 28px minmax(0, 1fr); gap: 8px; }
+  .timelineItem:not(:last-child)::after { left: calc(62px + 8px + 13px); top: 36px; }
+  .timelineDot { width: 28px; height: 28px; }
+  .weekTotals dd { font-size: 22px; }
+}
