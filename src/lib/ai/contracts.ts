@@ -71,11 +71,13 @@ export type WeekDayResult = {
 };
 export type WeekResponse = { days: WeekDayResult[]; note: string | null; trainingDays: number[]; cuisines: string[]; feedback: boolean };
 
+// No maxItems on `days`: Gemini (Flash and Flash-Lite) rejects a list limit nested over the per-meal limits with a
+// bare 400 INVALID_ARGUMENT. repairWeek only reads weekdays 1–7, so extra days are ignored anyway.
 export const weekOutput = z.object({
   days: z.array(z.object({
     weekday: z.number().describe('1 = Monday … 7 = Sunday'),
     Breakfast: planMeal, Lunch: planMeal, Snacks: planMeal, Dinner: planMeal,
-  })).max(7),
+  })),
   note: z.string().describe('One short sentence on how the week is shaped'),
 });
 
