@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MEALS, buildPlan, type Food } from '../nutrition';
 import { SEED_FOODS } from '../seed-foods';
-import { PLAN_TOLERANCE, buildWeek, dietAllows, isExcluded, parseExclusions, planKcal, repairPlan, swapKey, type ProposedPlan } from './plan';
+import { PLAN_TOLERANCE, buildWeek, dietAllows, isExcluded, isoWeekday, parseExclusions, planKcal, repairPlan, swapKey, swapMeal, type ProposedPlan } from './plan';
 
 const byId = new Map<string, Food>(SEED_FOODS.map(f => [f.id, f]));
 const food = (id: string) => byId.get(id)!;
@@ -141,5 +141,45 @@ describe('buildWeek', () => {
     expect(swapKey(byId.get('chapati')!)).toBe(swapKey(byId.get('rice')!));
     expect(swapKey(byId.get('chapati')!)).not.toBe(swapKey(byId.get('dal')!));
     expect(swapKey(byId.get('whey')!)).toBeNull();
+  });
+});
+
+describe('swapMeal and isoWeekday', () => {
+  const eligible = SEED_FOODS.filter(f => dietAllows('veg', f.diet));
+  const foodsById = new Map(eligible.map(f => [f.id, f]));
+  const allowed = (f: Food) => foodsById.has(f.id);
+  const day = buildPlan({ kcal: 2000 }, 'fit', 'veg', foodsById);
+  const within = (kcal: number) => Math.abs(kcal - 2000) <= 2000 * PLAN_TOLERANCE;
+
+  it('applies the swap and keeps the day within the calorie tolerance', () => {
+    const r = swapMeal(day, 'Lunch', [{ foodId: 'rice', q: 1, flex: true }, { foodId: 'rajma', q: 1, flex: true }], { foodsById, allowed, targetKcal: 2000 });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan.Lunch.map(i => i.foodId)).toEqual(['rice', 'rajma']);
+    expect(r.plan.Breakfast.map(i => i.foodId)).toEqual(day.Breakfast.map(i => i.foodId));
+    expect(within(planKcal(r.plan, foodsById))).toBe(true);
+  });
+
+  it('rescales a swap that would push the day too high', () => {
+    const r = swapMeal(day, 'Dinner', [{ foodId: 'paneer-bhurji', q: 4, flex: true }, { foodId: 'chapati', q: 5, flex: true }], { foodsById, allowed, targetKcal: 2000 });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(within(r.kcal)).toBe(true);
+  });
+
+  it('drops foods the member can’t have, and never changes the day passed in', () => {
+    const before = JSON.stringify(day);
+    const r = swapMeal(day, 'Dinner', [{ foodId: 'chicken', q: 1, flex: true }, { foodId: 'chapati', q: 2, flex: true }], { foodsById, allowed, targetKcal: 2000 });
+    expect(r.ok && r.plan.Dinner.map(i => i.foodId)).toEqual(['chapati']);
+    expect(JSON.stringify(day)).toBe(before);
+  });
+
+  it('fails when the swap empties a main meal', () => {
+    expect(swapMeal(day, 'Lunch', [], { foodsById, allowed, targetKcal: 2000 }).ok).toBe(false);
+  });
+
+  it('numbers weekdays Monday 1 to Sunday 7', () => {
+    expect(isoWeekday('2026-10-12')).toBe(1); // Monday
+    expect(isoWeekday('2026-10-15')).toBe(4); // Thursday
+    expect(isoWeekday('2026-10-18')).toBe(7); // Sunday
   });
 });

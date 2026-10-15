@@ -51,7 +51,8 @@ export const FEATURE_FLAGS = {
     title: 'Week plan',
     body: 'A Day | Week toggle on Compare → Plan. Needs Compare and its Plan tab on.',
     children: {
-      view: { title: 'Week view', body: 'Seven days built from the day plan, foods rotated for variety, each day kept near the calorie target. Read-only.' },
+      view: { title: 'Week view', body: 'Seven days built from the day plan, foods rotated for variety, each day kept near the calorie target.' },
+      edit: { title: 'Edit the week', body: 'Swap a meal on any day (saved for that weekday) and log today’s planned meals in one tap. “Back to suggested” always works.' },
     },
   },
   cuisines: {

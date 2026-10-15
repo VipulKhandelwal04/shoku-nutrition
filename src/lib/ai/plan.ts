@@ -205,3 +205,27 @@ export function buildWeek(plan: Plan, opts: { eligible: Food[]; targetKcal: numb
   }
   return week;
 }
+
+// ---------- Editing the week ----------
+
+/** ISO weekday of a YYYY-MM-DD key: 1 = Monday … 7 = Sunday. */
+export function isoWeekday(key: string): number {
+  const d = new Date(`${key}T12:00:00Z`).getUTCDay();
+  return d === 0 ? 7 : d;
+}
+
+/**
+ * Replaces one meal of a day plan, then repairs the whole day to within the calorie tolerance (the other meals
+ * scale a little if needed). Foods outside `allowed` are dropped. The day passed in is never changed.
+ */
+export function swapMeal(
+  day: Plan,
+  meal: Meal,
+  items: PlanItem[],
+  opts: { foodsById: Map<string, Food>; allowed: (f: Food) => boolean; targetKcal: number },
+): RepairResult {
+  const proposed = Object.fromEntries(MEALS.map(m => [
+    m, (m === meal ? items : day[m]).map(i => ({ foodId: i.foodId, servings: i.q })),
+  ])) as ProposedPlan;
+  return repairPlan(proposed, opts);
+}

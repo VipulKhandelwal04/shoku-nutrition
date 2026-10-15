@@ -21,17 +21,18 @@ export async function GET() {
   }
 
   try {
-    const [profile, foods, plan, badges, entries, days, workouts, feedback] = await Promise.all([
+    const [profile, foods, plan, weekPlans, badges, entries, days, workouts, feedback] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('foods').select('*').eq('owner_id', user.id).order('name'),
       supabase.from('user_plans').select('plan, note, updated_at').maybeSingle(),
+      supabase.from('week_plans').select('weekday, plan, updated_at').order('weekday'),
       supabase.from('user_badges').select('badge, awarded_at'),
       all('entries', 'created_at'),
       all('days', 'day'),
       all('workouts', 'created_at'),
       all('meal_feedback', 'created_at'),
     ]);
-    for (const r of [profile, foods, plan, badges]) if (r.error) throw new Error(r.error.message);
+    for (const r of [profile, foods, plan, weekPlans, badges]) if (r.error) throw new Error(r.error.message);
 
     const body = {
       exported_at: new Date().toISOString(),
@@ -43,6 +44,7 @@ export async function GET() {
       meal_feedback: feedback,
       custom_foods: foods.data ?? [],
       meal_plan: plan.data ?? null,
+      week_plan: weekPlans.data ?? [],
       badges: badges.data ?? [],
     };
     const stamp = new Date().toISOString().slice(0, 10);
