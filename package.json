@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "seed:foods": "node scripts/gen-food-seed.ts"
+    "seed:foods": "node scripts/gen-food-seed.ts",
+    "seed:recipes": "node scripts/gen-recipe-seed.ts"
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
