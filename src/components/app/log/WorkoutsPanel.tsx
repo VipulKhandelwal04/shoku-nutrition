@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState, useTransition, type FormEvent } from 'react';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -15,6 +16,7 @@ export type WorkoutsData = {
   workouts: WorkoutRow[];
   /** Feature flags: logging by hand and the light-base suggestion. */
   manual: boolean;
+  compare?: boolean;
   lightBase: boolean;
   /** Feature flags: "When?" + Today timeline, and "See week". */
   timeline: boolean;
@@ -55,12 +57,12 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
   // Quiet background import when Today opens; the server throttles too.
   const tried = useRef(false);
   useEffect(() => {
-    if (tried.current || !isToday || !connection) return;
+    if (tried.current || !isToday || !connection || !data.strava.configured) return;
     if (connection.last_sync_at && Date.now() - new Date(connection.last_sync_at).getTime() < SYNC_AFTER_MS) return;
     tried.current = true;
     void runSync(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isToday, connection]);
+  }, [isToday, connection, data.strava.configured]);
 
   async function runSync(force: boolean) {
     setSyncing(true);
@@ -91,12 +93,12 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
   });
 
   return (
-    <section className={`panel ${s.workouts}`} aria-labelledby="workouts-h">
+    <section id="activity" className={`panel ${s.workouts}`} aria-labelledby="workouts-h">
       <div className={s.waterHeading}>
-        <h3 id="workouts-h">Workouts</h3>
+        <h2 id="workouts-h">Activity &amp; fitness apps</h2>
         <Icon name="flame" />
       </div>
-      <p className={s.waterValue} aria-live="polite">{fmt(burned)} <span>kcal burned</span></p>
+      <p className={s.waterValue} aria-live="polite">{fmt(burned)} <span>workout kcal recorded</span></p>
       <p className={s.subtle}>
         {burned > 0
           ? <>+{fmt(credit)} kcal added to {isToday ? 'today’s' : 'this day’s'} target ({Math.round(EXERCISE_CREDIT * 100)}% of the burn, since estimates run high).</>
@@ -144,7 +146,9 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
         </div>
       )}
 
-      {data.strava.configured && (
+      <div aria-label="Fitness apps">
+      <h3 className={s.fitnessTitle}>Fitness apps</h3>
+      {data.strava.configured ? (
         <div className={s.stravaLine}>
           {connection ? (
             <>
@@ -158,7 +162,14 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
             </>
           )}
         </div>
+      ) : (
+        <div className={s.stravaLine}>
+          <span><b>Strava</b> · {connection ? 'Sync is currently unavailable. Your recorded workouts are kept.' : 'Connection is currently unavailable.'}</span>
+          <Link className="btn-text" href="/app/profile#fitness-apps">Connection details</Link>
+        </div>
       )}
+      </div>
+      {data.compare && <Link className="btn-text" href={`/app/compare?day=${day}#energy`}>Compare food intake &amp; activity <Icon name="next" size="sm" /></Link>}
 
       {data.manual && <WorkoutSheet key={`log-${opened}`} open={open} onClose={() => setOpen(false)} day={day} isToday={isToday} weightKg={data.weightKg} askTime={data.timeline} />}
       {data.week && <WeekSheet key={`week-${opened}`} open={weekOpen} onClose={() => setWeekOpen(false)} end={day} isToday={isToday} />}

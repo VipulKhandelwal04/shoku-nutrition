@@ -97,6 +97,7 @@ function TodayContent({ data, ai, workouts, show }: { data: LogScreenData; ai: A
           <p className="label">{isToday ? friendlyDate(day, { weekday: true }) : 'Looking back'}</p>
           <h1>{isToday ? greeting(hour) : friendlyDate(day, { weekday: true })}</h1>
         </div>
+        {show.workouts && <a href="#activity" className="btn-secondary"><Icon name="bolt" size="sm" /> Activity &amp; fitness apps</a>}
         {!isToday && (
           <Link href="/app" className="btn-secondary">Back to today <Icon name="arrow" size="sm" /></Link>
         )}
@@ -124,6 +125,8 @@ function TodayContent({ data, ai, workouts, show }: { data: LogScreenData; ai: A
           <div className={s.coach}><CoachLine day={day} /></div>
         )}
       </div>
+
+      {show.workouts && <WorkoutsPanel day={day} isToday={isToday} data={workouts} />}
 
       <div className={s.layout}>
         <div className="stack">
@@ -165,9 +168,8 @@ function TodayContent({ data, ai, workouts, show }: { data: LogScreenData; ai: A
           </section>
           {show.workouts && workouts.timeline && <TodayTimeline workouts={workouts.workouts} />}
         </div>
-        {(show.workouts || show.water) && (
+        {show.water && (
           <aside className="stack">
-            {show.workouts && <WorkoutsPanel day={day} isToday={isToday} data={workouts} />}
             {show.water && <WaterPanel />}
           </aside>
         )}
