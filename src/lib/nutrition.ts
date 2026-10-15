@@ -240,3 +240,31 @@ export type BadgeId = (typeof BADGES)[number]['id'];
 export function earnedBadges(best: number): BadgeId[] {
   return BADGES.filter(b => best >= b.days).map(b => b.id);
 }
+
+// ---------- Workouts: calories burned ----------
+// MET values from the Compendium of Physical Activities (adult). Burn is NET of rest: (MET − 1) × kg × hours,
+// because the base calorie target already covers resting energy. Estimates, not measurements.
+export const WORKOUT_PRESETS = [
+  { kind: 'hiit', label: 'HIIT class', met: 8, icon: 'bolt' },
+  { kind: 'strength', label: 'Strength training', met: 5, icon: 'cube' },
+  { kind: 'run', label: 'Running', met: 9.8, icon: 'arrow' },
+  { kind: 'walk', label: 'Brisk walk', met: 4.3, icon: 'sun' },
+  { kind: 'cycle', label: 'Cycling', met: 7, icon: 'plate' },
+  { kind: 'yoga', label: 'Yoga', met: 3, icon: 'leaf' },
+  { kind: 'dance', label: 'Dance fitness', met: 6, icon: 'heart' },
+  { kind: 'boxing', label: 'Boxing class', met: 7.5, icon: 'flame' },
+  { kind: 'swim', label: 'Swimming', met: 6, icon: 'drop' },
+  { kind: 'sport', label: 'Sport (badminton, cricket…)', met: 5.5, icon: 'star' },
+] as const;
+export type WorkoutKind = (typeof WORKOUT_PRESETS)[number]['kind'];
+
+export function estimateBurn(met: number, weightKg: number, minutes: number): number {
+  if (!(met > 1) || !(weightKg > 0) || !(minutes > 0)) return 0;
+  return Math.round(((met - 1) * weightKg * minutes) / 60);
+}
+
+/** Share of logged burn added to the day's calorie target. Half, to absorb the error in wearable and MET estimates. */
+export const EXERCISE_CREDIT = 0.5;
+export function exerciseCredit(burnedKcal: number): number {
+  return Math.max(0, Math.round(burnedKcal * EXERCISE_CREDIT));
+}

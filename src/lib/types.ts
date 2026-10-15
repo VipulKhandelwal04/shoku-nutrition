@@ -56,3 +56,20 @@ export const DEFAULT_AI_SETTINGS: AiSettings = { enabled: true, photo: true, tex
 
 /** What the UI may show for AI Assist. `configured` is false when the server has no Gemini key. */
 export type AiAssistStatus = { available: boolean; configured: boolean; features: Record<AiFeature, boolean>; dailyQuota: number };
+
+export type WorkoutRow = {
+  id: string;
+  day: string;
+  kind: string;
+  label: string;
+  minutes: number;
+  kcal: number;
+  kcal_source: 'estimate' | 'device';
+  source: 'manual' | 'strava';
+  external_id: string | null;
+  hidden: boolean;
+  created_at: string;
+};
+
+/** Connection status for the UI. Never carries tokens. */
+export type ConnectionStatus = { provider: 'strava'; display_name: string | null; last_sync_at: string | null; connected_at: string };

@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { createClient } from '../supabase/server';
-import { DEFAULT_AI_SETTINGS, type AiAssistStatus, type AiSettings, type DayRow, type EntryRow, type FeatureSettings, type FoodRow, type Quote, type TourSlide } from '../types';
+import { DEFAULT_AI_SETTINGS, type AiAssistStatus, type AiSettings, type ConnectionStatus, type DayRow, type EntryRow, type FeatureSettings, type FoodRow, type Quote, type TourSlide, type WorkoutRow } from '../types';
 
 /** Catalogue foods plus the signed-in user's custom foods (RLS decides). */
 export const getFoods = cache(async (): Promise<FoodRow[]> => {
@@ -35,6 +35,27 @@ export async function getMealsByDay(today: string, lookback = 120): Promise<Reco
   const sets: Record<string, Set<string>> = {};
   for (const r of data ?? []) (sets[r.day] ??= new Set()).add(r.meal);
   return Object.fromEntries(Object.entries(sets).map(([d, s]) => [d, s.size]));
+}
+
+/** Visible workouts (manual + imported) between two days, inclusive. */
+export async function getWorkouts(from: string, to: string): Promise<WorkoutRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('workouts').select('*').eq('hidden', false).gte('day', from).lte('day', to).order('created_at');
+  if (error) throw new Error(`Could not load your workouts: ${error.message}`);
+  return (data ?? []) as WorkoutRow[];
+}
+
+/** The signed-in user's fitness-app connections (no tokens). Empty when none or on error. */
+export async function getConnections(): Promise<ConnectionStatus[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('my_connections');
+  if (error) return [];
+  return (data ?? []) as ConnectionStatus[];
+}
+
+/** Strava is offered only when the deployment has its OAuth app configured. */
+export function isStravaConfigured(): boolean {
+  return !!(process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET);
 }
 
 export async function getEarnedBadges(): Promise<string[]> {

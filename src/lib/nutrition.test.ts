@@ -78,3 +78,20 @@ describe('totals', () => {
     expect(totals([{ food: food('chapati'), quantity: 2 }]).kcal).toBe(208);
   });
 });
+
+describe('workouts', () => {
+  it('estimates net burn from MET, weight and minutes', async () => {
+    const { estimateBurn } = await import('./nutrition');
+    // (8 − 1) × 70 kg × 45/60 h = 367.5 → 368
+    expect(estimateBurn(8, 70, 45)).toBe(368);
+    expect(estimateBurn(1, 70, 60)).toBe(0);
+    expect(estimateBurn(8, 0, 60)).toBe(0);
+    expect(estimateBurn(8, 70, 0)).toBe(0);
+  });
+  it('credits half of the burn to the target, never negative', async () => {
+    const { exerciseCredit } = await import('./nutrition');
+    expect(exerciseCredit(360)).toBe(180);
+    expect(exerciseCredit(0)).toBe(0);
+    expect(exerciseCredit(-50)).toBe(0);
+  });
+});

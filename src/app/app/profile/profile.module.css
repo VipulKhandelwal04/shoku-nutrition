@@ -46,6 +46,10 @@
 .rowLabel { font-size: 15px; font-weight: 600; }
 .rowValue { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chev { color: var(--muted); }
+.strava { background: rgba(252, 82, 0, .14); color: #ff8a4d; }
+.sheetText { color: var(--text-2); font-size: 14px; margin-bottom: 14px; }
+.dangerBtn { background: var(--danger); color: var(--accent-ink); margin-top: 6px; }
+.dangerBtn:hover { background: #ffb0b0; color: var(--accent-ink); }
 .signOut { justify-content: flex-start; }
 .signOut .rowIcon { background: rgba(255, 138, 138, .12); color: var(--danger); }
 .signOut .rowLabel { color: var(--danger); }

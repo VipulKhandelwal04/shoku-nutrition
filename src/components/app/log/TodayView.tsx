@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { AiLogSheet, CoachLine } from '@/components/ai';
 import { FoodTile, Icon } from '@/components/ui/Icon';
-import { MEALS_FOR_A_COUNTED_DAY, shiftDate, streakInfo, totals, type Diet, type Food, type Meal, type Targets } from '@/lib/nutrition';
+import { MEALS_FOR_A_COUNTED_DAY, exerciseCredit, shiftDate, streakInfo, totals, type Diet, type Food, type Meal, type Targets } from '@/lib/nutrition';
 import type { AiAssistStatus, DayRow, EntryRow } from '@/lib/types';
 import { fmt, friendlyDate, greeting, mealForHour, useClientToday, useLocalHour } from './clientDate';
 import { DiaryProvider, useDiary } from './DiaryProvider';
 import { MealCards } from './MealCards';
 import { DoneToggle, WaterPanel } from './WaterPanel';
+import { WorkoutsPanel, type WorkoutsData } from './WorkoutsPanel';
 import s from './log.module.css';
 
 export type LogScreenData = {
@@ -46,7 +47,7 @@ export function useResolvedDay(data: Pick<LogScreenData, 'serverToday' | 'reques
 const STAPLES = ['chapati', 'dal', 'rice', 'curd', 'idli', 'banana', 'poha', 'egg', 'sabzi', 'chai'];
 const dietAllows = (diet: Diet, f: Food) => diet === 'nonveg' || f.diet === 'veg' || (diet === 'egg' && f.diet === 'egg');
 
-export function TodayView({ data, ai }: { data: LogScreenData; ai: AiAssistStatus }) {
+export function TodayView({ data, ai, workouts }: { data: LogScreenData; ai: AiAssistStatus; workouts: WorkoutsData }) {
   const { day, today } = useResolvedDay(data, '/app');
   return (
     <DiaryProvider
@@ -60,12 +61,12 @@ export function TodayView({ data, ai }: { data: LogScreenData; ai: AiAssistStatu
       days={data.days}
       mealsByDay={data.mealsByDay}
     >
-      <TodayContent data={data} ai={ai} />
+      <TodayContent data={data} ai={ai} workouts={workouts} />
     </DiaryProvider>
   );
 }
 
-function TodayContent({ data, ai }: { data: LogScreenData; ai: AiAssistStatus }) {
+function TodayContent({ data, ai, workouts }: { data: LogScreenData; ai: AiAssistStatus; workouts: WorkoutsData }) {
   const { day, isToday, today, openSearch, foodsById, quickAdd, openPortion, aiLogged } = useDiary();
   const router = useRouter();
   const hour = useLocalHour(data.serverHour);
@@ -95,7 +96,7 @@ function TodayContent({ data, ai }: { data: LogScreenData; ai: AiAssistStatus })
       </header>
 
       <div>
-        <Hero meal={meal} today={today} onLog={() => openSearch(meal)} aiPills={(showPhoto || showText) ? (
+        <Hero meal={meal} today={today} burned={workouts.workouts.filter(w => w.day === day).reduce((n, w) => n + w.kcal, 0)} onLog={() => openSearch(meal)} aiPills={(showPhoto || showText) ? (
           <div className={s.aiGroup} role="group" aria-label="AI Assist">
             <span className={s.aiBadge}><Icon name="spark" size="sm" /> AI Assist</span>
             <div className={s.aiPills}>
@@ -157,6 +158,7 @@ function TodayContent({ data, ai }: { data: LogScreenData; ai: AiAssistStatus })
           </section>
         </div>
         <aside className="stack">
+          <WorkoutsPanel day={day} isToday={isToday} data={workouts} />
           <WaterPanel />
         </aside>
       </div>
@@ -175,13 +177,16 @@ function TodayContent({ data, ai }: { data: LogScreenData; ai: AiAssistStatus })
 
 const C = 2 * Math.PI * 108;
 
-function Hero({ meal, today, onLog, aiPills }: { meal: Meal; today: string; onLog: () => void; aiPills: ReactNode }) {
+function Hero({ meal, today, burned, onLog, aiPills }: { meal: Meal; today: string; burned: number; onLog: () => void; aiPills: ReactNode }) {
   const { entries, targets, mealsByDay, isToday, day } = useDiary();
   const t = totals(entries);
-  const left = targets.kcal - t.kcal;
+  // Half of the day's logged burn is added to the target (see EXERCISE_CREDIT).
+  const credit = exerciseCredit(burned);
+  const target = targets.kcal + credit;
+  const left = target - t.kcal;
   const over = left < 0;
   const proteinLeft = targets.p - t.p;
-  const pct = targets.kcal > 0 ? Math.min(t.kcal / targets.kcal, 1) : 0;
+  const pct = target > 0 ? Math.min(t.kcal / target, 1) : 0;
   const streak = streakInfo(mealsByDay, today);
   const mealsLogged = new Set(entries.map(e => e.meal)).size;
   const toCount = Math.max(0, MEALS_FOR_A_COUNTED_DAY - mealsLogged);
@@ -213,7 +218,7 @@ function Hero({ meal, today, onLog, aiPills }: { meal: Meal; today: string; onLo
           {over ? 'kcal over' : 'kcal to go'}
         </h2>
         <p className={s.heroSub}>
-          <b>{fmt(t.kcal)}</b> of {fmt(targets.kcal)} kcal eaten · {proteinLeft > 0 ? <><b>{fmt(proteinLeft)} g</b> protein to go</> : 'protein target hit'}
+          <b>{fmt(t.kcal)}</b> of {fmt(target)} kcal eaten{credit > 0 && <> · <span className={s.heroBurn}>+{fmt(credit)} from workouts</span></>} · {proteinLeft > 0 ? <><b>{fmt(proteinLeft)} g</b> protein to go</> : 'protein target hit'}
         </p>
         <div className={s.macros}>
           {macros.map(m => {
@@ -238,7 +243,7 @@ function Hero({ meal, today, onLog, aiPills }: { meal: Meal; today: string; onLo
         </div>
       </div>
       <div className={s.heroRing}>
-        <div className={s.ringWrap} role="img" aria-label={`${fmt(t.kcal)} of ${fmt(targets.kcal)} calories eaten`}>
+        <div className={s.ringWrap} role="img" aria-label={`${fmt(t.kcal)} of ${fmt(target)} calories eaten`}>
           <svg viewBox="0 0 240 240" className={s.ring} aria-hidden="true">
             <circle className={s.ringTrack} cx="120" cy="120" r="108" />
             <circle className={s.ringProgress} cx="120" cy="120" r="108" strokeDasharray={C} strokeDashoffset={C * (1 - pct)} />

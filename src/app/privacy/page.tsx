@@ -48,6 +48,13 @@ export default function PrivacyPage() {
         coach line. Only what you submit for that request is sent. Results are suggestions: nothing is saved to your diary until you confirm it.
       </p>
 
+      <h2>Workouts and Strava</h2>
+      <p>
+        Workouts you log, and their estimated calories, are stored with your diary. If you connect <strong>Strava</strong>, Shoku reads your
+        activities (name, type, duration and calories) to count calories burned, and stores the access Strava grants so it can import new ones.
+        Shoku never posts to Strava. Disconnect any time from your profile: that revokes Shoku’s access and deletes the imported workouts.
+      </p>
+
       <h2>Your control</h2>
       <ul>
         <li>Export your data at any time from your Profile in the app.</li>

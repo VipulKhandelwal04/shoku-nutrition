@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { requireOnboarded } from '@/lib/auth';
-import { getEarnedBadges, getMealsByDay } from '@/lib/data/queries';
+import { getConnections, getEarnedBadges, getMealsByDay, isStravaConfigured } from '@/lib/data/queries';
 import { BADGES, GOALS, dayCounts, recommend, streakInfo } from '@/lib/nutrition';
 import { Icon } from '@/components/ui/Icon';
 import { DIETS, RESTRICTIONS, RESTRICTION_SLUGS, bodyOf, pickTargets, type Restriction } from '@/components/app/insights/insights';
@@ -17,7 +17,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 export default async function ProfilePage() {
   const profile = await requireOnboarded('/app/profile');
   const { today } = await userToday();
-  const [mealsByDay, badges] = await Promise.all([getMealsByDay(today, 365), getEarnedBadges()]);
+  const [mealsByDay, badges, connections] = await Promise.all([getMealsByDay(today, 365), getEarnedBadges(), getConnections()]);
 
   const body = bodyOf(profile);
   const recommended = body ? pickTargets(recommend(body)) : null;
@@ -85,6 +85,7 @@ export default async function ProfilePage() {
         targets={targets}
         recommended={recommended}
         isAdmin={profile.role === 'admin'}
+        strava={{ configured: isStravaConfigured(), connection: connections.find(c => c.provider === 'strava') ?? null }}
       />
 
       <p className={s.foot}>
