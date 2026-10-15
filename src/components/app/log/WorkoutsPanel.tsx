@@ -240,7 +240,7 @@ function WorkoutSheet({ open, onClose, day, isToday, weightKg, askTime }: { open
           )}
         </div>
         <p className={s.workoutPreview} aria-live="polite">
-          <b>{fmt(kcal)} kcal</b> burned · <b>+{fmt(exerciseCredit(kcal))}</b> to the day’s target
+          <span><b>{fmt(kcal)} kcal</b> burned · <b>+{fmt(exerciseCredit(kcal))}</b> to the day’s target</span>
           <small>{device !== null ? 'From your watch.' : `Estimate for ${weightKg} kg. Real burn varies with effort.`}</small>
         </p>
         <p className="error-text" role="alert">{error}</p>

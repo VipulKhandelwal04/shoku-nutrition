@@ -54,6 +54,10 @@ export default function PrivacyPage() {
         “not for me” unless you turn off Remember meal feedback. Your notes on meals are never sent. For Plan my week, the request also includes which weekdays you usually train (worked out from your workouts), never the workouts themselves. Results are suggestions: nothing is
         saved to your diary until you confirm it.
       </p>
+      <p>
+        When Gemini is overloaded, the same text request (never a photo) may go to <strong>Groq</strong> instead, which runs an open
+        model to answer it. It receives exactly what Gemini would have, and nothing more.
+      </p>
 
       <h2>Workouts and Strava</h2>
       <p>

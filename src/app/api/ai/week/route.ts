@@ -68,6 +68,8 @@ export async function POST(request: Request) {
         ...(set.recipes.length ? [{ text: `Recipes they can make (name|cuisine|ingredient ids):\n${recipeLines(set.recipes)}` }] : []),
       ],
       temperature: 0.6,
+      // Seven days is several times a one-day plan; the route itself may run 60 s.
+      timeoutMs: 50_000,
       signal: request.signal,
     });
     const week = repairWeek(out.days.map(d => ({ ...d, weekday: Math.round(d.weekday) })), {

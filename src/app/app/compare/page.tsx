@@ -19,7 +19,7 @@ import { GoalCard } from './GoalCard';
 import { PlanTunerEntry } from './PlanTunerEntry';
 import { WeekPlan, type WeekDayView, type WeekItem } from './WeekPlan';
 import { WeekPlanner } from '@/components/ai/WeekPlanner';
-import { buildWeek, isoWeekday, keepEligible, parseStoredPlan, planKcal } from '@/lib/ai/plan';
+import { buildWeek, isoWeekday, keepEligible, parseStoredPlan, planForDay, planKcal } from '@/lib/ai/plan';
 import { matchRecipe, recipeCard } from '@/lib/ai/candidates';
 import { memberDayPlan, memberSuggestions, trainingDaysFor } from '@/lib/ai/member';
 import { createClient } from '@/lib/supabase/server';
@@ -85,7 +85,9 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
     return own ? keepEligible(own, set.eligible) : null;
   };
   const savedToday = savedFor(day);
-  const plan = savedToday ?? dayPlan;
+  // Usual training days get their fuelled plan here too, so the Day and Week views agree.
+  const trainingDays = await trainingDaysFor(await createClient(), today);
+  const plan = savedToday ?? planForDay(dayPlan, { eligible: set.eligible, targetKcal: targets.kcal, training: trainingDays.includes(isoWeekday(day)) });
   const saved = !!parseStoredPlan(storedPlan, foodsById);
   const check = planCheck(plan, dayEntries, foodsById);
   // A plan meal that mostly is one of the member's recipes opens it (recipes are present only when the flag is on).
@@ -98,7 +100,6 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
 
   /** Seven days from today: a saved weekday wins over the generated day; each meal lists its swap options. */
   async function weekView(): Promise<WeekDayView[]> {
-    const trainingDays = await trainingDaysFor(await createClient(), today);
     const generated = buildWeek(dayPlan, {
       eligible: set.candidates.map(c => c.food), targetKcal: targets.kcal, trainingDays, startWeekday: isoWeekday(today),
     });

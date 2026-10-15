@@ -134,6 +134,13 @@ export function repairPlan(
   return { ok: true, plan, kcal, dropped, scaled };
 }
 
+/** A day plan as it should read on a given day: on a usual training day, fuelled (unchanged if it can't be). */
+export function planForDay(plan: Plan, rules: DayRules): Plan {
+  if (!rules.training) return plan;
+  const r = fitDay(toProposal(plan), rules);
+  return r.ok ? r.plan : plan;
+}
+
 // ---------- Week builder ----------
 
 /** Foods that stay put across the week: supplements, cooking fat, drinks and the vegetable side. */
@@ -269,7 +276,8 @@ export function isoWeekday(key: string): number {
 export const weekdayAfter = (start: number, offset: number) => ((start - 1 + offset) % 7) + 1;
 
 /**
- * Seven days from one day plan, starting on `startWeekday`. Day 0 is the plan itself, unchanged. Each later day
+ * Seven days from one day plan, starting on `startWeekday`. Day 0 is the plan itself (fuelled if it is a usual
+ * training day, so the Training label always means more food). Each later day
  * rotates every food to the next interchangeable eligible food (same category and main group), keeps roughly the
  * same calories per item, then is fitted with fitDay (usual training days get their boost). A day that can't be
  * fitted falls back to the day plan. Read-only: nothing here saves.
@@ -283,7 +291,8 @@ export function buildWeek(plan: Plan, opts: { eligible: Food[]; targetKcal: numb
     if (k) groups.set(k, [...(groups.get(k) ?? []), f]);
   }
   const isTraining = (d: number) => trainingDays.includes(weekdayAfter(startWeekday, d));
-  const base: WeekDay = { plan, kcal: planKcal(plan, foodsById), rotated: 0, training: isTraining(0) };
+  const first = planForDay(plan, { eligible: foodsById, targetKcal, training: isTraining(0) });
+  const base: WeekDay = { plan: first, kcal: planKcal(first, foodsById), rotated: 0, training: isTraining(0) };
   const week: WeekDay[] = [base];
 
   for (let d = 1; d < days; d++) {

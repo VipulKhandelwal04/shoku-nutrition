@@ -3,7 +3,7 @@ import { MEALS, buildPlan, type Food } from '../nutrition';
 import { SEED_FOODS } from '../seed-foods';
 import {
   PLAN_TOLERANCE, TRAINING_DAY_BOOST, buildWeek, dayTarget, dietAllows, fitDay, isExcluded, isoWeekday, keepEligible, parseExclusions, parseStoredPlan,
-  planKcal, planRows, repairPlan, repairWeek, swapKey, swapMeal, toProposal, usualTrainingDays, type ProposedPlan,
+  planForDay, planKcal, planRows, repairPlan, repairWeek, swapKey, swapMeal, toProposal, usualTrainingDays, type ProposedPlan,
 } from './plan';
 
 const byId = new Map<string, Food>(SEED_FOODS.map(f => [f.id, f]));
@@ -263,7 +263,7 @@ describe('fitDay on training days', () => {
     expect(almonds(train.plan)).toBeLessThanOrEqual(almonds(rest.plan));
   });
 
-  it('buildWeek gives usual training days the boost and leaves day one as the plan', () => {
+  it('buildWeek gives usual training days the boost and leaves day one as the plan on a rest day', () => {
     const week = buildWeek(day, { eligible: [...eligible.values()], targetKcal: 2000, trainingDays: [2], startWeekday: 1 });
     expect(week[0].plan).toBe(day);
     expect(week[1].training).toBe(true); // Tuesday
@@ -301,5 +301,20 @@ describe('plan shapes', () => {
     expect(p?.Lunch).toEqual([]);
     expect(parseStoredPlan(null, byId)).toBeNull();
     expect(parseStoredPlan({ Breakfast: [] }, byId)).toBeNull();
+  });
+});
+
+describe('planForDay', () => {
+  const eligible = new Map(SEED_FOODS.filter(f => dietAllows('veg', f.diet)).map(f => [f.id, f]));
+  const day = buildPlan({ kcal: 2000 }, 'fit', 'veg', eligible);
+  it('returns the plan untouched on a rest day and fuelled on a training day', () => {
+    expect(planForDay(day, { eligible, targetKcal: 2000 })).toBe(day);
+    const train = planForDay(day, { eligible, targetKcal: 2000, training: true });
+    expect(Math.abs(planKcal(train, eligible) - 2200)).toBeLessThanOrEqual(2200 * PLAN_TOLERANCE);
+  });
+  it('buildWeek fuels day one when today is a usual training day, so the Training label means more food', () => {
+    const week = buildWeek(day, { eligible: [...eligible.values()], targetKcal: 2000, trainingDays: [4], startWeekday: 4 });
+    expect(week[0].training).toBe(true);
+    expect(week[0].kcal).toBeGreaterThan(planKcal(day, eligible));
   });
 });
