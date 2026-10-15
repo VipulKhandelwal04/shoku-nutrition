@@ -1,13 +1,14 @@
 'use client';
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { useId, useState } from 'react';
 import { FoodTile, Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
-import { MAX_TEXT, type PlanResponse } from '@/lib/ai/contracts';
+import type { PlanResponse } from '@/lib/ai/contracts';
 import { saveAiPlan } from '@/lib/ai/actions';
 import { MEALS } from '@/lib/nutrition';
 import { AiBadge } from './AiBadge';
-import { FINAL_STATUSES, callAi, fmtQ } from './api';
+import { PrefsForm, ProblemBox, useAiRequest } from './AiRequest';
+import { fmtQ } from './api';
 import styles from './ai.module.css';
 
 const QUICK = ['More South Indian', 'No paneer', 'Jain', 'High protein', 'Quick to cook', 'Light dinner'];
@@ -33,65 +34,12 @@ export function PlanTuner({ onSaved }: { onSaved?: () => void }) {
   );
 }
 
-type Phase = 'input' | 'loading' | 'review';
-
 function PlanBody({ onUse }: { onUse: () => void }) {
   const toast = useToast();
-  const [prefs, setPrefs] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [phase, setPhase] = useState<Phase>('input');
-  const [result, setResult] = useState<PlanResponse | null>(null);
-  const [problem, setProblem] = useState<{ message: string; retry: boolean } | null>(null);
-  const [announce, setAnnounce] = useState('');
-  const ctrl = useRef<AbortController | null>(null);
-  const headRef = useRef<HTMLHeadingElement>(null);
   const id = useId();
-
-  useEffect(() => () => ctrl.current?.abort(), []);
-  useEffect(() => { if (phase === 'review') headRef.current?.focus(); }, [phase]);
-
-  const has = (chip: string) => prefs.toLowerCase().includes(chip.toLowerCase());
-  function toggle(chip: string) {
-    if (has(chip)) {
-      setPrefs(p => p.replace(new RegExp(`(,\\s*)?${chip}`, 'i'), '').replace(/^\s*,\s*/, '').trim());
-    } else {
-      setPrefs(p => (p.trim() ? `${p.trim().replace(/,$/, '')}, ${chip}` : chip).slice(0, MAX_TEXT));
-    }
-  }
-
-  async function submit(e?: FormEvent) {
-    e?.preventDefault();
-    ctrl.current?.abort();
-    const c = new AbortController();
-    ctrl.current = c;
-    setProblem(null);
-    setPhase('loading');
-    setAnnounce('Building your plan…');
-    try {
-      const res = await callAi<PlanResponse>('/api/ai/plan', { preferences: prefs.trim() }, c.signal);
-      if (c.signal.aborted) return;
-      if (!res.ok) {
-        setProblem({ message: res.error, retry: !FINAL_STATUSES.has(res.status) });
-        setPhase('input');
-        setAnnounce('');
-        return;
-      }
-      setResult(res.data);
-      setPhase('review');
-      setAnnounce(`Plan ready: about ${res.data.kcal} kcal.`);
-    } catch {
-      if (!c.signal.aborted) {
-        setProblem({ message: 'Something went wrong with AI Assist. Try again.', retry: true });
-        setPhase('input');
-      }
-    }
-  }
-
-  function cancel() {
-    ctrl.current?.abort();
-    setPhase('input');
-    setAnnounce('Cancelled.');
-  }
+  const [saving, setSaving] = useState(false);
+  const req = useAiRequest<PlanResponse>('/api/ai/plan', { loading: 'Building your plan…', ready: d => `Plan ready: about ${d.kcal} kcal.` });
+  const { phase, result, prefs, headRef, submit, setPhase, setProblem } = req;
 
   async function use() {
     if (!result || saving) return;
@@ -114,42 +62,18 @@ function PlanBody({ onUse }: { onUse: () => void }) {
 
   return (
     <div className={styles.body} aria-busy={phase === 'loading'}>
-      <p className="sr-only" role="status" aria-live="polite">{announce}</p>
+      <p className="sr-only" role="status" aria-live="polite">{req.announce}</p>
       <div className={styles.labelRow}>
         <AiBadge />
         <span className={styles.labelText}>AI suggestion: a starting point, not a prescription</span>
       </div>
 
       {phase !== 'review' && (
-        <form onSubmit={submit}>
-          <div className="field">
-            <label htmlFor={id}>How should your plan feel?</label>
-            <textarea id={id} value={prefs} onChange={e => setPrefs(e.target.value)} maxLength={MAX_TEXT} rows={3} placeholder="No paneer, more South Indian, jain" disabled={phase === 'loading'} aria-describedby={`${id}-help`} />
-            <p className="field-help" id={`${id}-help`}>We keep your diet and calorie target. {prefs.length}/{MAX_TEXT}</p>
-          </div>
-          <div className={styles.chips} role="group" aria-label="Quick preferences">
-            {QUICK.map(q => (
-              <button key={q} type="button" className="pill-choice" aria-pressed={has(q)} onClick={() => toggle(q)} disabled={phase === 'loading'}>{q}</button>
-            ))}
-          </div>
-          {phase === 'loading' ? (
-            <div className={styles.loadingInline}>
-              <span className={styles.spinner} aria-hidden="true" />
-              <strong>Building your plan…</strong>
-              <button type="button" className="btn-secondary" onClick={cancel}>Cancel</button>
-            </div>
-          ) : (
-            <button type="submit" className="btn accent full">Build my plan</button>
-          )}
-        </form>
+        <PrefsForm id={id} req={req} label="How should your plan feel?" placeholder="No paneer, more South Indian, jain"
+          help="We keep your diet and calorie target." quick={QUICK} submitLabel="Build my plan" loadingLabel="Building your plan…" />
       )}
 
-      {problem && (
-        <div className={styles.problem} role="alert">
-          <p>{problem.message}</p>
-          {problem.retry && <div className={styles.actions}><button type="button" className="btn-secondary" onClick={() => submit()}>Try again</button></div>}
-        </div>
-      )}
+      <ProblemBox problem={req.problem} onRetry={() => submit()} />
 
       {phase === 'review' && result && (
         <section aria-labelledby="ai-plan-review">

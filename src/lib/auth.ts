@@ -39,3 +39,13 @@ export async function requireAdmin(): Promise<Profile> {
   if (profile.role !== 'admin') redirect('/app');
   return profile;
 }
+
+/** For server actions: the signed-in user and a client, or null (the caller returns its own "session ended" message). */
+export async function actionUser(): Promise<{ supabase: Awaited<ReturnType<typeof createClient>>; user: NonNullable<Awaited<ReturnType<typeof getUser>>> } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  return data.user ? { supabase, user: data.user } : null;
+}
+
+/** The message every action shows when the session has ended. */
+export const SESSION_ENDED = 'Your session ended. Sign in again.';

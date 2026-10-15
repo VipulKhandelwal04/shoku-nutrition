@@ -4,14 +4,15 @@ import { ACTIVITY, GOALS, type Activity, type Diet, type Goal, type Sex, type Ta
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { applyRecommendedTargets, saveTargets } from '@/components/app/insights/actions';
-import { DIETS, RESTRICTIONS, type Restriction } from '@/components/app/insights/insights';
+import { DIETS } from '@/components/app/insights/insights';
+import { RESTRICTIONS, type Restriction } from '@/lib/restrictions';
 import { BODY_RANGES, TARGET_KEYS, TARGET_RANGES, rangeError, type TargetKey } from '@/components/app/insights/schemas';
 import { saveProfile } from './actions';
 import s from './profile.module.css';
+import { fmt } from '@/lib/format';
 
 export type BodyValues = { goal: Goal; sex: Sex | null; age: string; height: string; weight: string; activity: Activity | null; diet: Diet; restrictions: Restriction[] };
 
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
 /** `bare` renders the form without its panel and heading, for use inside a Sheet that already titles it. */
 export function BodyForm({ initial, bare = false }: { initial: BodyValues; bare?: boolean }) {

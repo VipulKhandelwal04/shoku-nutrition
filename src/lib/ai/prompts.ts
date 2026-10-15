@@ -32,6 +32,7 @@ Rules:
 - The day's total kcal must be within 10% of the calorie target. Aim for the protein target. Include vegetables, a pulse or protein source, and some dairy or fruit where the catalogue allows.
 - Follow the user's preferences where the catalogue allows (cuisine, likes, dislikes). Never include a food they said no to.
 - If the user JSON has cuisines.prefer, lean toward foods of those cuisines (listed first in the catalogue). If cuisines.fewMatches is true, mix in other foods freely so the day stays balanced.
+- If recipes are listed, a meal may be one of them: build it from that recipe's ingredient ids, sized for one person.
 - If the user JSON has feedback: favour likedFoods and likedMeals where they fit; use notForMe foods only when nothing else fits. Mention it in the note when feedback shaped the plan.
 - Breakfast, Lunch and Dinner must each have at least one food; Snacks can be small.
 - note: one short friendly sentence on how the plan reflects their preferences. No health claims.`;
@@ -44,6 +45,7 @@ Rules:
 - Each day's total kcal must be within 10% of that day's target in targets_by_weekday. Training days (trainingDays) have a higher target: add the extra as protein and carbs (e.g. more dal, curd, rice, roti, eggs), especially around the main meals.
 - Vary the week: rotate grains, pulses, vegetables and fruit so no two days are the same, while keeping meals familiar and easy to cook.
 - Breakfast, Lunch and Dinner must each have at least one food; Snacks can be small.
+- If recipes are listed, meals may be built from them (their ingredient ids, sized for one person); use a few across the week for variety.
 - If the user JSON has cuisines.prefer, lean toward foods of those cuisines. If it has feedback, favour likedFoods and likedMeals and use notForMe foods only when nothing else fits. Follow the user's preferences text where the catalogue allows; never include a food they said no to.
 - note: one short friendly sentence on how the week is shaped (e.g. around their training days). No health claims.`;
 

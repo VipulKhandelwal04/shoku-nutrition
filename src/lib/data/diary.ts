@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { BADGES, MEALS, earnedBadges, streakInfo, type Food } from '../nutrition';
+import { actionUser } from '../auth';
 import { createClient } from '../supabase/server';
 import type { EntrySource } from '../types';
 import { FLAG_OFF, isOn } from '../flags';
@@ -25,11 +26,6 @@ const addSchema = z.object({
   })).min(1).max(30),
 });
 
-async function userOrFail() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  return { supabase, user: data.user };
-}
 
 function done() {
   revalidatePath('/app', 'layout');
@@ -39,8 +35,9 @@ function done() {
 export async function addEntries(input: z.input<typeof addSchema>): Promise<ActionResult<{ ids: string[]; newBadges: string[] }>> {
   const parsed = addSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the food and portion' };
-  const { supabase, user } = await userOrFail();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again to keep logging.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again to keep logging.' };
+  const { supabase, user } = session;
 
   const ids = [...new Set(parsed.data.items.map(i => i.foodId))];
   const { data: foods, error: fErr } = await supabase.from('foods').select('*').in('id', ids);
@@ -63,8 +60,9 @@ export async function addEntries(input: z.input<typeof addSchema>): Promise<Acti
 
 export async function deleteEntries(ids: string[]): Promise<ActionResult> {
   if (!ids.length || ids.length > 30) return { ok: false, error: 'Nothing to remove' };
-  const { supabase, user } = await userOrFail();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase } = session;
   const { error } = await supabase.from('entries').delete().in('id', ids);
   if (error) return { ok: false, error: 'Couldn’t remove that. Try again.' };
   done();
@@ -75,8 +73,9 @@ const updateSchema = z.object({ id: z.string().uuid(), quantity: z.number().posi
 export async function updateEntry(input: z.input<typeof updateSchema>): Promise<ActionResult> {
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Enter a portion above 0, up to 100 servings.' };
-  const { supabase, user } = await userOrFail();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase } = session;
   const { error } = await supabase.from('entries').update({ quantity: parsed.data.quantity, meal: parsed.data.meal }).eq('id', parsed.data.id);
   if (error) return { ok: false, error: 'Couldn’t update that portion. Try again.' };
   done();
@@ -87,8 +86,9 @@ export async function updateEntry(input: z.input<typeof updateSchema>): Promise<
 export async function repeatMeal(input: { fromDay: string; toDay: string; meal: string }): Promise<ActionResult<{ ids: string[]; newBadges: string[] }>> {
   const parsed = z.object({ fromDay: day, toDay: day, meal }).safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Couldn’t repeat that meal.' };
-  const { supabase, user } = await userOrFail();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase, user } = session;
   const { data: src } = await supabase.from('entries').select('food_id, food, quantity').eq('day', parsed.data.fromDay).eq('meal', parsed.data.meal);
   if (!src?.length) return { ok: false, error: 'Nothing to repeat from that day.' };
   const rows = src.map(e => ({ user_id: user.id, day: parsed.data.toDay, meal: parsed.data.meal, food_id: e.food_id, food: e.food, quantity: e.quantity, source: 'repeat' as const }));
@@ -103,8 +103,9 @@ export async function changeWater(input: { day: string; deltaMl: number }): Prom
   if (!isOn(await getFlags(), 'water')) return { ok: false, error: FLAG_OFF };
   const parsed = z.object({ day, deltaMl: z.number().int().min(-2000).max(2000) }).safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Couldn’t update water.' };
-  const { supabase, user } = await userOrFail();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase, user } = session;
   const { data: cur } = await supabase.from('days').select('water_ml').eq('day', parsed.data.day).maybeSingle();
   const waterMl = Math.min(15000, Math.max(0, (cur?.water_ml ?? 0) + parsed.data.deltaMl));
   const { error } = await supabase.from('days').upsert({ user_id: user.id, day: parsed.data.day, water_ml: waterMl, updated_at: new Date().toISOString() });
@@ -117,8 +118,9 @@ export async function changeWater(input: { day: string; deltaMl: number }): Prom
 export async function setDayDone(input: { day: string; done: boolean }): Promise<ActionResult> {
   const parsed = z.object({ day, done: z.boolean() }).safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Couldn’t update the day.' };
-  const { supabase, user } = await userOrFail();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase, user } = session;
   const { error } = await supabase.from('days').upsert({ user_id: user.id, day: parsed.data.day, done: parsed.data.done, updated_at: new Date().toISOString() });
   if (error) return { ok: false, error: 'Couldn’t update the day. Try again.' };
   done();
@@ -138,8 +140,9 @@ const customFoodSchema = z.object({
 export async function createCustomFood(input: z.input<typeof customFoodSchema>): Promise<ActionResult<{ id: string }>> {
   const parsed = customFoodSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the food details' };
-  const { supabase, user } = await userOrFail();
-  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { supabase, user } = session;
   const id = `u-${crypto.randomUUID()}`;
   const { error } = await supabase.from('foods').insert({ id, owner_id: user.id, category: 'Custom', icon: 'bowl', fibre: 0, aliases: '', groups: {}, ...parsed.data });
   if (error) return { ok: false, error: 'Couldn’t save your food. Try again.' };

@@ -11,10 +11,10 @@ import { friendlyDay, parseDayParam, summariseDays, weekKeys, weekStats, weekday
 import { userToday } from '@/components/app/insights/server';
 import ins from '@/components/app/insights/insights.module.css';
 import s from './progress.module.css';
+import { fmt } from '@/lib/format';
 
 export const metadata = { title: 'Progress' };
 
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
 export default async function ProgressPage({ searchParams }: PageProps<'/app/progress'>) {
   const profile = await requireOnboarded('/app/progress');

@@ -2,13 +2,14 @@
 // Logging a recipe (#15): the server loads the recipe, re-checks it against the member's diet and restrictions,
 // scales its ingredients to the servings chosen and logs them through the one diary path (addEntries), so Undo works.
 import { z } from 'zod';
-import { mealCandidates, recipeItems } from '../ai/candidates';
+import { recipeItems } from '../ai/candidates';
+import { memberSuggestions } from '../ai/member';
+import { SESSION_ENDED, actionUser } from '../auth';
 import { FLAG_OFF, isOn } from '../flags';
 import { MEALS } from '../nutrition';
-import { createClient } from '../supabase/server';
 import type { Profile } from '../types';
 import { addEntries, type ActionResult } from './diary';
-import { getActiveRecipes, getFlags, getFoods } from './queries';
+import { getFlags } from './queries';
 
 const schema = z.object({
   recipeId: z.string().uuid(),
@@ -22,13 +23,12 @@ export async function logRecipe(input: z.input<typeof schema>): Promise<ActionRe
   if (!isOn(await getFlags(), 'recipes', 'log')) return { ok: false, error: FLAG_OFF };
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Pick how many servings to log.' };
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { ok: false, error: 'Your session ended. Sign in again.' };
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', auth.user.id).maybeSingle<Profile>();
-  if (!profile) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: SESSION_ENDED };
+  const { data: profile } = await session.supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle<Profile>();
+  if (!profile) return { ok: false, error: SESSION_ENDED };
 
-  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], recipes: await getActiveRecipes() });
+  const { set } = await memberSuggestions(profile, { recipes: true });
   const recipe = set.recipes.find(r => r.id === parsed.data.recipeId);
   if (!recipe) return { ok: false, error: 'That recipe isn’t available for your food style.' };
   const items = recipeItems(recipe, parsed.data.servings);

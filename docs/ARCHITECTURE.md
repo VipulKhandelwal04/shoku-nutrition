@@ -4,8 +4,10 @@ Shoku (食, Japanese for "food, a meal") is a food diary for Indian plates with 
 hot-pink accent (`--accent: #ff3f6c`), Barlow Condensed uppercase display type over Inter.
 
 **Voice:** the meal is the unit. Plain, specific, **never shaming**. The name's meaning shows up as one idea (meal by
-meal), not as Japanese decoration: 食 appears in the splash and the hero kicker only. Keep "katori" as the Indian bowl
-serving unit (catalogue, AI matching), never as the brand.
+meal), not as Japanese decoration. The mark is the kettlebell-bowl icon with the SHOKU wordmark (pink O), shown in
+every top bar; both live in `src/components/brand/Brand.tsx` (the static favicon `src/app/icon.svg` repeats the same
+shapes: change both together). Keep "katori" as the Indian bowl serving unit (catalogue, AI matching), never as the
+brand.
 
 **Copy rules (no AI slop):** no "not just X", "unlock your", "journey", "elevate", "seamless", "with intent"; no
 three-beat slogans ("Show up. Stack days."); no eyebrow label over every heading; no em dashes in UI text.
@@ -60,6 +62,11 @@ Feature styles go in co-located CSS modules inside your own folders.
 | App | `src/app/onboarding/**`, `src/app/app/**`, `src/components/app/**` |
 | AI | `src/app/api/ai/**`, `src/lib/ai/**`, `src/components/ai/**` |
 | Admin | `src/app/admin/**`, `src/components/admin/**`, `src/lib/admin/**` |
+
+Shared pure modules any workstream may import: `src/lib/**` outside `admin/` (nutrition, restrictions, flags,
+preferences, format, and `src/lib/ai/{candidates,plan,contracts}`). Suggestion surfaces get the member's eligible foods,
+recipes and soft preferences from `src/lib/ai/member.ts` (server only), so diet and restriction rules live in one place.
+Server code never imports from `src/components/**`.
 
 Contracts between workstreams (signatures fixed): `src/components/ai/index.tsx` (`AiLogSheet`, `CoachLine`,
 `PlanTuner`) and `src/components/splash/Splash.tsx` (`Splash`). Need a schema or shared-module change? Don't edit

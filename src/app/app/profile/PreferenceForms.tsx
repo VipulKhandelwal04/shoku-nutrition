@@ -94,7 +94,9 @@ export function ActivitySwitches({ initial }: { initial: { useWorkouts: boolean;
               <span className={s.switchHelp}>{r.help}</span>
             </span>
             <button type="button" role="switch" className={s.switch} aria-checked={v[r.key]} aria-labelledby={`pref-${r.key}`}
-              disabled={r.disabled} onClick={() => change({ ...v, [r.key]: !v[r.key] })} />
+              disabled={r.disabled} onClick={() => change({ ...v, [r.key]: !v[r.key] })}>
+              <span className="toggle-track" aria-hidden="true" />
+            </button>
           </li>
         ))}
       </ul>
@@ -124,7 +126,9 @@ export function RatingsList({ ratings, remember }: { ratings: FeedbackRow[]; rem
           <span className={s.rowLabel} id="pref-remember">Remember meal feedback</span>
           <span className={s.switchHelp}>Ask Shoku and Tune my plan favour what you liked and push “not for me” down. Off keeps your ratings but stops using them.</span>
         </span>
-        <button type="button" role="switch" className={s.switch} aria-checked={on} aria-labelledby="pref-remember" onClick={flip} />
+        <button type="button" role="switch" className={s.switch} aria-checked={on} aria-labelledby="pref-remember" onClick={flip}>
+          <span className="toggle-track" aria-hidden="true" />
+        </button>
       </li>
     </ul>
   );

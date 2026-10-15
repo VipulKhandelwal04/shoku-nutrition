@@ -6,16 +6,17 @@ import { BADGES, GOALS, cuisineOf, dayCounts, recommend, streakInfo } from '@/li
 import { CUISINE_CHOICES, cuisinePrefsOf, cuisineSummary } from '@/lib/preferences';
 import { Icon } from '@/components/ui/Icon';
 import { BrandIcon, Wordmark } from '@/components/brand/Brand';
-import { DIETS, RESTRICTIONS, RESTRICTION_SLUGS, bodyOf, pickTargets, type Restriction } from '@/components/app/insights/insights';
+import { DIETS, bodyOf, pickTargets } from '@/components/app/insights/insights';
+import { RESTRICTIONS, RESTRICTION_SLUGS, type Restriction } from '@/lib/restrictions';
 import { userToday } from '@/components/app/insights/server';
 import type { BodyValues } from './ProfileForms';
 import { ProfileMenu } from './ProfileMenu';
 import s from './profile.module.css';
+import { fmt } from '@/lib/format';
 
 export const metadata = { title: 'Profile' };
 
 const GOOGLE_PHOTO = /^https:\/\/lh3\.googleusercontent\.com\//;
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
 export default async function ProfilePage() {
   const profile = await requireOnboarded('/app/profile');

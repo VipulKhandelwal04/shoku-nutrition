@@ -10,6 +10,10 @@ export type AiApiResult<T> = { ok: true; data: T } | { ok: false; error: string 
 export const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a valid date');
 export const MEAL = z.enum(MEALS);
 export const MAX_TEXT = 300;
+/** A day plan as the client sends it back to be saved (Use this plan, a swapped week day, Use this week). */
+const planItem = z.object({ foodId: z.string().min(1).max(80), q: z.number().min(0.25).max(20), flex: z.boolean().default(false) });
+export const planSchema = z.object(Object.fromEntries(MEALS.map(m => [m, z.array(planItem).max(8)])) as Record<Meal, z.ZodArray<typeof planItem>>);
+
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 

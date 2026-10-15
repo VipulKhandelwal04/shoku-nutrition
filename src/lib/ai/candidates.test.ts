@@ -197,3 +197,34 @@ describe('recipes as candidates', () => {
     expect(card.diet).toBe('veg');
   });
 });
+
+describe('one rule set for every surface', () => {
+  it('applies the profile keyword screens too (diabetic-friendly, no onion-garlic)', () => {
+    const sweet = ids({ diet: 'veg', restrictions: ['diabetic-friendly'] });
+    expect(sweet.has('chai')).toBe(false); // sweetened
+    expect(sweet.has('dal')).toBe(true);
+    expect(ids({ diet: 'veg', restrictions: ['jain'] }).has('paratha')).toBe(false); // aloo
+  });
+  it('lactose-free keeps cooking oil and recipes cooked in it, and drops ghee', () => {
+    const set = mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: ['lactose-free'] });
+    expect(set.eligible.has('oil')).toBe(true);
+    expect(set.eligible.has('ghee')).toBe(false);
+  });
+});
+
+describe('recipes and cuisine preferences', () => {
+  const r = (id: string, cuisine: string, ingredients: string[]) => ({ id, name: id, cuisine, servings: 2, steps: ['Cook.'], ingredients: ingredients.map(foodId => ({ foodId, q: 1 })) });
+  const recipes = [r('dal-rice', 'Indian', ['dal', 'rice']), r('fried-rice', 'Chinese', ['rice', 'egg', 'oil']), r('tofu-stir-fry', 'Chinese', ['tofu', 'sabzi', 'oil'])];
+
+  it('puts recipes from preferred cuisines first, without dropping the others', () => {
+    const set = mealCandidates(SEED_FOODS, { diet: 'egg', restrictions: [], recipes, cuisines: { mode: 'chosen', chosen: ['Chinese'] } });
+    expect(set.recipes.map(x => x.id)).toEqual(['fried-rice', 'tofu-stir-fry', 'dal-rice']);
+    const familiar = mealCandidates(SEED_FOODS, { diet: 'egg', restrictions: [], recipes, cuisines: { mode: 'familiar', chosen: [] } });
+    expect(familiar.recipes[0].id).toBe('dal-rice');
+  });
+  it('counts preferred recipes toward the thin-cuisine check', () => {
+    const many = Array.from({ length: 8 }, (_, n) => r(`stir-fry-${n}`, 'Chinese', ['tofu', 'sabzi']));
+    expect(mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [], recipes: many, cuisines: { mode: 'chosen', chosen: ['Chinese'] } }).thin).toBe(false);
+    expect(mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [], recipes: many.slice(0, 2), cuisines: { mode: 'chosen', chosen: ['Chinese'] } }).thin).toBe(true);
+  });
+});

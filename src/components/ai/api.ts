@@ -66,9 +66,7 @@ export async function downscaleImage(file: File, max = 1024, quality = 0.8): Pro
 }
 
 /** 1.5 → "1.5", 0.25 → "0.25", 2 → "2". */
-export function fmtQ(q: number): string {
-  return String(Math.round(q * 100) / 100);
-}
+export { qty as fmtQ } from '@/lib/format';
 
 /** Bigger steps above one serving, quarter steps below. */
 export function stepQ(q: number, dir: 1 | -1): number {

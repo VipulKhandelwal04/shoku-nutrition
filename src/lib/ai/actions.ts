@@ -1,39 +1,32 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
-import { getFoods } from '@/lib/data/queries';
+import { SESSION_ENDED, actionUser } from '@/lib/auth';
 import { MEALS, type Plan } from '@/lib/nutrition';
-import { createClient } from '@/lib/supabase/server';
 import type { Profile } from '@/lib/types';
-import { MAX_TEXT } from './contracts';
-import { dietAllows } from './plan';
-
-const item = z.object({ foodId: z.string().min(1).max(80), q: z.number().min(0.25).max(20), flex: z.boolean() });
-const meal = z.array(item).max(8);
-const planSchema = z.object({ Breakfast: meal, Lunch: meal, Snacks: meal, Dinner: meal });
+import { MAX_TEXT, planSchema } from './contracts';
+import { memberSuggestions } from './member';
 
 /**
  * Saves an AI Assist plan only after the user taps "Use this plan" (the plan route never writes).
- * Re-checks every food exists and fits the user's diet, so a tampered request can't save junk.
+ * Re-checks every food against the member's eligible foods (diet and restrictions), so a tampered request can't
+ * save junk.
  */
 export async function saveAiPlan(plan: Plan, preferences: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const parsed = planSchema.safeParse(plan);
   if (!parsed.success) return { ok: false, error: 'That plan looks incomplete. Try building it again.' };
+  const session = await actionUser();
+  if (!session) return { ok: false, error: SESSION_ENDED };
+  const { supabase, user } = session;
 
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { ok: false, error: 'Sign in again to save your plan.' };
-
-  const { data: profile } = await supabase.from('profiles').select('diet').eq('id', auth.user.id).maybeSingle<Pick<Profile, 'diet'>>();
-  const foodsById = new Map((await getFoods()).map(f => [f.id, f]));
-  const fits = MEALS.every(m => parsed.data[m].every(i => {
-    const f = foodsById.get(i.foodId);
-    return f && (!profile?.diet || dietAllows(profile.diet, f.diet));
-  }));
-  if (!fits) return { ok: false, error: 'Some foods in that plan aren’t available. Try building it again.' };
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<Profile>();
+  if (!profile) return { ok: false, error: SESSION_ENDED };
+  const { set } = await memberSuggestions(profile);
+  if (!MEALS.every(m => parsed.data[m].every(i => set.eligible.has(i.foodId)))) {
+    return { ok: false, error: 'Some foods in that plan aren’t available. Try building it again.' };
+  }
 
   const { error } = await supabase.from('user_plans').upsert({
-    user_id: auth.user.id,
+    user_id: user.id,
     plan: parsed.data,
     note: preferences.trim().slice(0, MAX_TEXT) || null,
     updated_at: new Date().toISOString(),

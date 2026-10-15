@@ -6,8 +6,8 @@ import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { applyRecommendedTargets, saveTargets, setGoal } from '@/components/app/insights/actions';
 import s from './compare.module.css';
+import { fmt } from '@/lib/format';
 
-const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
 /** Goal chips (save immediately) and targets vs the recommendation, with a one-tap "use recommended". */
 export function GoalCard({ goal, targets, recommended, bmi, bmiNote }: {
