@@ -36,8 +36,10 @@ export function GoalCard({ goal, targets, recommended, bmi, bmiNote }: {
 
   return (
     <section className={`panel ${s.goalCard}`} aria-labelledby="goal-title">
-      <p className="label">Your goal</p>
+
       <h2 id="goal-title">{GOALS[shownGoal].label}</h2>
+      <p className={s.goalSummary}>{fmt(targets.kcal)} kcal daily target</p>
+      <details className={s.disclosure}><summary>Adjust goal &amp; targets</summary>
       <div className={s.goalChips} role="group" aria-label="Choose your goal">
         {(Object.keys(GOALS) as Goal[]).map(g => (
           <button key={g} type="button" className="pill-choice" aria-pressed={shownGoal === g} disabled={pending && shownGoal !== g} onClick={() => choose(g)}>
@@ -79,6 +81,7 @@ export function GoalCard({ goal, targets, recommended, bmi, bmiNote }: {
         )}
         <Link className="btn-text" href="/app/profile#targets">Edit targets <Icon name="edit" size="sm" /></Link>
       </div>
+      </details>
     </section>
   );
 }

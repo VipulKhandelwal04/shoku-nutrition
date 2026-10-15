@@ -1,8 +1,8 @@
-.panel { padding: 24px; margin-bottom: 24px; scroll-margin-top: 100px; }
+.panel { padding: 24px; margin-bottom: 0; scroll-margin-top: 100px; }
 .heading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 8px 20px; }
 .heading h2 { font-size: 28px; }
 .heading p { color: var(--muted); font-size: 13px; margin-top: 4px; }
-.totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 24px 0; }
+.totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 16px 0; }
 .totals dt { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
 .totals i { width: 10px; height: 10px; display: inline-block; border-radius: 2px; }
 .foodKey, .foodBar { background: var(--accent); }
@@ -12,15 +12,15 @@
 .totals p { font-weight: 400; font-size: 12px; color: var(--muted); }
 .mobileScale { display: none; }
 .plot { display: flex; gap: 10px; }
-.axis { display: flex; flex-direction: column; justify-content: space-between; height: 180px; min-width: 38px; color: var(--muted); font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+.axis { display: flex; flex-direction: column; justify-content: space-between; height: 140px; min-width: 38px; color: var(--muted); font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
 .scroll { flex: 1; min-width: 0; overflow-x: auto; padding: 3px; }
 .columns { display: grid; gap: 8px; }
-.week { grid-template-columns: repeat(7, minmax(44px, 1fr)); min-width: 356px; }
+.week { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 0; }
 .day { grid-template-columns: minmax(44px, 1fr); }
-.column { display: flex; flex-direction: column; gap: 10px; min-width: 44px; border-radius: 6px; padding: 0 4px 8px; }
+.column { display: flex; flex-direction: column; gap: 10px; min-width: 0; border-radius: 6px; padding: 0 4px 8px; }
 .column:hover, .column[aria-pressed='true'] { background: var(--surface-2); }
 .column[aria-pressed='true'] .date { text-decoration: underline; text-underline-offset: 5px; color: var(--text); }
-.bars { height: 180px; display: flex; align-items: end; justify-content: center; gap: 4px; width: 100%; border-bottom: 1px solid var(--line-2); }
+.bars { height: 140px; display: flex; align-items: end; justify-content: center; gap: 4px; width: 100%; border-bottom: 1px solid var(--line-2); }
 .bars > span { height: var(--amount); width: 30%; max-width: 48px; border-radius: 3px 3px 0 0; }
 .date { color: var(--text-2); font-size: 12px; text-align: center; width: 100%; }
 .date small { font-size: inherit; color: var(--muted); }
@@ -41,11 +41,13 @@
 }
 
 @media (max-width: 600px) {
-  .mobileScale { display: flex; justify-content: space-between; margin-left: 62px; color: var(--muted); font-size: 11px; }
-  .axis { display: none; }
-  .week, .day { grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 4px; }
-  .column { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 44px; padding: 6px 4px; }
-  .date { grid-column: 1; grid-row: 1; text-align: left; }
-  .bars { grid-column: 2; grid-row: 1; height: 28px; flex-direction: column; justify-content: center; align-items: start; border: 0; }
-  .bars > span { height: 10px; width: var(--amount); max-width: none; border-radius: 0 3px 3px 0; }
+  .plot { gap: 4px; }
+  .columns { gap: 2px; }
+  .column { padding-inline: 1px; }
+  .date { font-size: 10px; }
+  .date small { display: block; margin-top: 3px; }
+  .axis { min-width: 30px; font-size: 10px; }
+  .detail { gap: 4px; padding: 10px 0; }
+  .totals dd { font-size: 25px; }
+  .note { margin-top: 10px; font-size: 12px; }
 }
