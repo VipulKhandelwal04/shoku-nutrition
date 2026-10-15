@@ -47,7 +47,10 @@ export function useResolvedDay(data: Pick<LogScreenData, 'serverToday' | 'reques
 const STAPLES = ['chapati', 'dal', 'rice', 'curd', 'idli', 'banana', 'poha', 'egg', 'sabzi', 'chai'];
 const dietAllows = (diet: Diet, f: Food) => diet === 'nonveg' || f.diet === 'veg' || (diet === 'egg' && f.diet === 'egg');
 
-export function TodayView({ data, ai, workouts }: { data: LogScreenData; ai: AiAssistStatus; workouts: WorkoutsData }) {
+/** Which Today panels feature flags leave on. */
+export type TodayShow = { workouts: boolean; water: boolean };
+
+export function TodayView({ data, ai, workouts, show }: { data: LogScreenData; ai: AiAssistStatus; workouts: WorkoutsData; show: TodayShow }) {
   const { day, today } = useResolvedDay(data, '/app');
   return (
     <DiaryProvider
@@ -61,12 +64,12 @@ export function TodayView({ data, ai, workouts }: { data: LogScreenData; ai: AiA
       days={data.days}
       mealsByDay={data.mealsByDay}
     >
-      <TodayContent data={data} ai={ai} workouts={workouts} />
+      <TodayContent data={data} ai={ai} workouts={workouts} show={show} />
     </DiaryProvider>
   );
 }
 
-function TodayContent({ data, ai, workouts }: { data: LogScreenData; ai: AiAssistStatus; workouts: WorkoutsData }) {
+function TodayContent({ data, ai, workouts, show }: { data: LogScreenData; ai: AiAssistStatus; workouts: WorkoutsData; show: TodayShow }) {
   const { day, isToday, today, openSearch, foodsById, quickAdd, openPortion, aiLogged } = useDiary();
   const router = useRouter();
   const hour = useLocalHour(data.serverHour);
@@ -157,10 +160,12 @@ function TodayContent({ data, ai, workouts }: { data: LogScreenData; ai: AiAssis
             <DoneToggle />
           </section>
         </div>
-        <aside className="stack">
-          <WorkoutsPanel day={day} isToday={isToday} data={workouts} />
-          <WaterPanel />
-        </aside>
+        {(show.workouts || show.water) && (
+          <aside className="stack">
+            {show.workouts && <WorkoutsPanel day={day} isToday={isToday} data={workouts} />}
+            {show.water && <WaterPanel />}
+          </aside>
+        )}
       </div>
 
       {showPhoto && (

@@ -1,6 +1,8 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { requireOnboarded } from '@/lib/auth';
-import { getAiAssist, getEntries, getFoods } from '@/lib/data/queries';
+import { getAiAssist, getEntries, getFlags, getFoods } from '@/lib/data/queries';
+import { isOn } from '@/lib/flags';
 import { GOALS, buildPlan, groupStatus, planCheck, recommend, shiftDate, totals, type Entry, type Food, type PlanItemStatus } from '@/lib/nutrition';
 import { FoodTile, Icon } from '@/components/ui/Icon';
 import { CompareRow } from '@/components/app/insights/CompareRow';
@@ -27,6 +29,8 @@ const PLAN_CHIP: Record<PlanItemStatus, { label: string; tone: string }> = {
 
 export default async function ComparePage({ searchParams }: PageProps<'/app/compare'>) {
   const profile = await requireOnboarded('/app/compare');
+  const flags = await getFlags();
+  if (!isOn(flags, 'compare')) notFound();
   const sp = await searchParams;
   const { today, tz } = await userToday();
   const period = sp.period === 'week' ? 'week' : 'day';
@@ -244,11 +248,16 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
             )}
           </section>
 
-          <CompareTabs initial={initialTab} groups={groupsPanel} nutrients={nutrientsPanel} plan={planPanel} />
+          <CompareTabs
+            initial={initialTab}
+            groups={isOn(flags, 'compare', 'groups') ? groupsPanel : null}
+            nutrients={isOn(flags, 'compare', 'nutrients') ? nutrientsPanel : null}
+            plan={isOn(flags, 'compare', 'plan') ? planPanel : null}
+          />
         </div>
 
         <aside className={`stack ${s.side}`} aria-label="Goal and sources">
-          <GoalCard goal={goal} targets={targets} recommended={rec ? pickTargets(rec) : null} bmi={rec?.bmi ?? null} bmiNote={rec ? bmiBand(rec.bmi) : null} />
+          {isOn(flags, 'compare', 'goal') && <GoalCard goal={goal} targets={targets} recommended={rec ? pickTargets(rec) : null} bmi={rec?.bmi ?? null} bmiNote={rec ? bmiBand(rec.bmi) : null} />}
 
           <section className="panel panel-pad" aria-labelledby="split-title">
             <h3 id="split-title" className={s.sideTitle}>Where your energy comes from</h3>

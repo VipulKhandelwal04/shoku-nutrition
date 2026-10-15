@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { BADGES, MEALS, earnedBadges, streakInfo, type Food } from '../nutrition';
 import { createClient } from '../supabase/server';
 import type { EntrySource } from '../types';
-import { getMealsByDay } from './queries';
+import { FLAG_OFF, isOn } from '../flags';
+import { getFlags, getMealsByDay } from './queries';
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -99,6 +100,7 @@ export async function repeatMeal(input: { fromDay: string; toDay: string; meal: 
 }
 
 export async function changeWater(input: { day: string; deltaMl: number }): Promise<ActionResult<{ waterMl: number }>> {
+  if (!isOn(await getFlags(), 'water')) return { ok: false, error: FLAG_OFF };
   const parsed = z.object({ day, deltaMl: z.number().int().min(-2000).max(2000) }).safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Couldn’t update water.' };
   const { supabase, user } = await userOrFail();

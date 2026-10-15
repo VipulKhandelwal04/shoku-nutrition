@@ -1,5 +1,7 @@
 // Strava OAuth return leg: check state, store tokens, run a first import, then back to the profile.
 import { NextResponse, type NextRequest } from 'next/server';
+import { getFlags } from '@/lib/data/queries';
+import { isOn } from '@/lib/flags';
 import { STATE_COOKIE, STRAVA_SCOPE, connect, sync } from '@/lib/strava';
 import { createClient } from '@/lib/supabase/server';
 
@@ -11,6 +13,7 @@ export async function GET(request: NextRequest) {
     return res;
   };
 
+  if (!isOn(await getFlags(), 'apps', 'strava')) return back('unavailable');
   const state = searchParams.get('state');
   if (!state || state !== request.cookies.get(STATE_COOKIE)?.value) return back('error');
   if (searchParams.get('error')) return back('cancelled');

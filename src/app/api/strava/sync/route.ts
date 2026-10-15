@@ -1,6 +1,8 @@
 // Imports new Strava activities for the signed-in user. Throttled server-side; `{ force: true }` skips the throttle.
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { getFlags } from '@/lib/data/queries';
+import { FLAG_OFF, isOn } from '@/lib/flags';
 import { sync } from '@/lib/strava';
 import { createClient } from '@/lib/supabase/server';
 
@@ -10,6 +12,7 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user) return NextResponse.json({ ok: false, error: 'Sign in again.' }, { status: 401 });
+  if (!isOn(await getFlags(), 'apps', 'strava')) return NextResponse.json({ ok: false, error: FLAG_OFF }, { status: 403 });
   const force = await request.json().then((b: { force?: unknown }) => b?.force === true).catch(() => false);
   try {
     const { data: p } = await supabase.from('profiles').select('weight_kg').eq('id', data.user.id).maybeSingle();

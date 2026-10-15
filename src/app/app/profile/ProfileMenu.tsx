@@ -32,13 +32,15 @@ const UPCOMING_APPS: { name: string; note: string; icon: IconName }[] = [
 ];
 
 /** iOS-style grouped settings list. Plan rows open their form in a sheet; the rest are links. */
-export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, strava }: {
+export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, strava, upcoming }: {
   plan: PlanRow[];
   initial: BodyValues;
   targets: Targets;
   recommended: Targets | null;
   isAdmin: boolean;
   strava: { configured: boolean; connection: ConnectionStatus | null };
+  /** Feature flag: list the coming-soon health apps. */
+  upcoming: boolean;
 }) {
   const [open, setOpen] = useState<SheetKind | null>(null);
   const [busy, setBusy] = useState(false);
@@ -88,10 +90,12 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
         </ul>
       </section>
 
+      {(strava.configured || strava.connection || upcoming) && (
       <section aria-labelledby="pm-apps">
         <h2 id="pm-apps" className={s.groupTitle}>Connected apps</h2>
         <ul className={s.group}>
-          {strava.configured && (
+          {/* An existing connection always shows, so members can disconnect even after Strava is switched off. */}
+          {(strava.configured || strava.connection) && (
             <li>
               {strava.connection ? (
                 <button type="button" className={s.row} onClick={() => setOpen('strava')}>
@@ -114,7 +118,7 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
               )}
             </li>
           )}
-          {UPCOMING_APPS.map(app => (
+          {upcoming && UPCOMING_APPS.map(app => (
             <li key={app.name}>
               <div className={`${s.row} ${s.rowStatic}`}>
                 <span className={s.rowIcon} aria-hidden="true"><Icon name={app.icon} size="sm" /></span>
@@ -128,6 +132,7 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
           ))}
         </ul>
       </section>
+      )}
 
       <section aria-labelledby="pm-data">
         <h2 id="pm-data" className={s.groupTitle}>Data and privacy</h2>

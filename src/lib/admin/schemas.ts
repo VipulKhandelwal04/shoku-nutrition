@@ -1,6 +1,7 @@
 // Pure validation for the admin console. Mirrors the DB checks in supabase/migrations/*_init.sql so the
 // operator sees field-level errors before Postgres rejects anything. No server-only imports: tests run this.
 import { z } from 'zod';
+import { PRIMARY_KEYS, secondaryKeys } from '../flags';
 import type { GroupKey } from '../nutrition';
 
 export const FOOD_ICONS = ['bowl', 'fruit', 'glass', 'egg', 'plate', 'roti', 'cube', 'leaf', 'nuts'] as const;
@@ -112,6 +113,7 @@ export const aiSettingsSchema = z.object({
   text: z.boolean(),
   plan: z.boolean(),
   coach: z.boolean(),
+  ask: z.boolean(),
   daily_quota: z.preprocess(
     toNumber,
     z.number({ error: 'Enter a whole number' }).int('Use a whole number').min(1, 'At least 1 call a day').max(200, 'At most 200 calls a day'),
@@ -119,6 +121,11 @@ export const aiSettingsSchema = z.object({
 });
 
 export const featureSettingsSchema = z.object({ signups_open: z.boolean() });
+
+/** Built from the registry so a new flag needs no schema change. Every primary and secondary is required. */
+export const flagsSchema = z.object(Object.fromEntries(PRIMARY_KEYS.map(p => [
+  p, z.object(Object.fromEntries(['on', ...secondaryKeys(p)].map(k => [k, z.boolean()]))).strict(),
+]))).strict();
 
 export const roleSchema = z.object({ target: z.uuid('Unknown user'), role: z.enum(['user', 'admin']) });
 export const disabledSchema = z.object({ target: z.uuid('Unknown user'), disabled: z.boolean() });

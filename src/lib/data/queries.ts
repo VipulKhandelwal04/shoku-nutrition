@@ -1,4 +1,5 @@
 import 'server-only';
+import { mergeFlags, type FeatureFlags } from '../flags';
 import { cache } from 'react';
 import { createClient } from '../supabase/server';
 import { DEFAULT_AI_SETTINGS, type AiAssistStatus, type AiSettings, type ConnectionStatus, type DayRow, type EntryRow, type FeatureSettings, type FoodRow, type Quote, type TourSlide, type WorkoutRow } from '../types';
@@ -97,6 +98,13 @@ export const getAiAssist = cache(async (): Promise<AiAssistStatus> => {
     features: { photo: on && s.photo, text: on && s.text, plan: on && s.plan, coach: on && s.coach, ask: on && s.ask },
     dailyQuota: s.daily_quota,
   };
+});
+
+/** Product feature flags (primary + secondary). Missing or unknown values fall back to on. */
+export const getFlags = cache(async (): Promise<FeatureFlags> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from('app_settings').select('value').eq('key', 'flags').maybeSingle();
+  return mergeFlags(data?.value);
 });
 
 export const getFeatureSettings = cache(async (): Promise<FeatureSettings> => {

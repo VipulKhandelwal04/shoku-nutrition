@@ -12,6 +12,9 @@ import s from './log.module.css';
 
 export type WorkoutsData = {
   workouts: WorkoutRow[];
+  /** Feature flags: logging by hand and the light-base suggestion. */
+  manual: boolean;
+  lightBase: boolean;
   strava: { configured: boolean; connection: ConnectionStatus | null };
   weightKg: number;
   activity: Activity | null;
@@ -40,7 +43,7 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
   const burned = list.reduce((n, w) => n + w.kcal, 0);
   const credit = exerciseCredit(burned);
   const connection = data.strava.connection;
-  const doubleCount = !!data.activity && (data.activity === 'moderate' || data.activity === 'high') && (list.length > 0 || !!connection);
+  const doubleCount = data.lightBase && !!data.activity && (data.activity === 'moderate' || data.activity === 'high') && (list.length > 0 || !!connection);
 
   // Quiet background import when Today opens; the server throttles too.
   const tried = useRef(false);
@@ -90,7 +93,7 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
       <p className={s.subtle}>
         {burned > 0
           ? <>+{fmt(credit)} kcal added to {isToday ? 'today’s' : 'this day’s'} target ({Math.round(EXERCISE_CREDIT * 100)}% of the burn, since estimates run high).</>
-          : <>Log a class, run or walk. Half of what you burn is added to {isToday ? 'today’s' : 'this day’s'} target.</>}
+          : <>{data.manual ? 'Log a class, run or walk.' : 'Workouts from your connected apps show up here.'} Half of what you burn is added to {isToday ? 'today’s' : 'this day’s'} target.</>}
       </p>
 
       {list.length > 0 && (
@@ -111,9 +114,11 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
         </ul>
       )}
 
-      <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>
-        <Icon name="plus" size="sm" /> Log a workout
-      </button>
+      {data.manual && (
+        <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>
+          <Icon name="plus" size="sm" /> Log a workout
+        </button>
+      )}
 
       {doubleCount && (
         <div className={s.workoutHint} role="note">
@@ -138,7 +143,7 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
         </div>
       )}
 
-      <WorkoutSheet open={open} onClose={() => setOpen(false)} day={day} weightKg={data.weightKg} />
+      {data.manual && <WorkoutSheet open={open} onClose={() => setOpen(false)} day={day} weightKg={data.weightKg} />}
     </section>
   );
 }

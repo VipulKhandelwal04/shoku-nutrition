@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { ACTIVITY, WORKOUT_PRESETS, recommend, type Activity, type Targets } from '../nutrition';
+import { FLAG_OFF, isOn } from '../flags';
 import { createClient } from '../supabase/server';
+import { getFlags } from './queries';
 import type { Profile, WorkoutRow } from '../types';
 import type { ActionResult } from './diary';
 
@@ -26,6 +28,7 @@ async function session() {
 }
 
 export async function addWorkout(input: z.input<typeof addSchema>): Promise<ActionResult<{ id: string }>> {
+  if (!isOn(await getFlags(), 'workouts', 'manual')) return { ok: false, error: FLAG_OFF };
   const parsed = addSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Check the workout details.' };
   const { supabase, user } = await session();
@@ -74,6 +77,7 @@ export async function restoreWorkout(row: WorkoutRow): Promise<ActionResult> {
  * Switches the activity level to "light" and recalculates targets. Returns what to restore for Undo.
  */
 export async function switchToLightBase(): Promise<ActionResult<{ previous: { activity: Activity; targets: Targets } }>> {
+  if (!isOn(await getFlags(), 'workouts', 'light_base')) return { ok: false, error: FLAG_OFF };
   const { supabase, user } = await session();
   if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
   const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<Profile>();
