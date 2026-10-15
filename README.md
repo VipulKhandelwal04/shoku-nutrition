@@ -1,4 +1,6 @@
-# Shoku
+# Shoku Nutrition
+
+Production: https://shoku-nutrition.vercel.app
 
 A nutrition tracker for Indian plates. Log rotis, dal, sabzi and curd in seconds, see which food groups your
 plate is missing, and build a streak one counted day (3+ meals) at a time.

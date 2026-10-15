@@ -1,4 +1,4 @@
-/* Today, Diary and the logging sheets. Ported from the cult-nutrition prototype. */
+/* Today, Diary and the logging sheets. Ported from the Shoku Nutrition prototype. */
 
 .intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .intro h1 { margin-top: 6px; }
