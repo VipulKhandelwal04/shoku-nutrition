@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { MEALS, type Food } from '../nutrition';
+import { MEALS, buildPlan, type Food } from '../nutrition';
 import { SEED_FOODS } from '../seed-foods';
-import { dietAllows, isExcluded, parseExclusions, planKcal, repairPlan, type ProposedPlan } from './plan';
+import { PLAN_TOLERANCE, buildWeek, dietAllows, isExcluded, parseExclusions, planKcal, repairPlan, swapKey, type ProposedPlan } from './plan';
 
 const byId = new Map<string, Food>(SEED_FOODS.map(f => [f.id, f]));
 const food = (id: string) => byId.get(id)!;
@@ -94,5 +94,52 @@ describe('repairPlan', () => {
     p.Dinner = [{ foodId: 'pizza', servings: 1 }];
     expect(repairPlan(p, { foodsById: byId, allowed: all, targetKcal: 2000 }).ok).toBe(false);
     expect(repairPlan(proposal(), { foodsById: byId, allowed: all, targetKcal: 9000 }).ok).toBe(false);
+  });
+});
+
+describe('buildWeek', () => {
+  const target = { kcal: 2000 };
+  const setup = (diet: 'veg' | 'egg' | 'nonveg') => {
+    const eligible = SEED_FOODS.filter(f => dietAllows(diet, f.diet));
+    const plan = buildPlan(target, 'fit', diet, new Map(eligible.map(f => [f.id, f])));
+    return { eligible, plan, week: buildWeek(plan, { eligible, targetKcal: target.kcal }) };
+  };
+
+  it('builds seven days, each within the calorie tolerance', () => {
+    for (const diet of ['veg', 'egg', 'nonveg'] as const) {
+      const { week, eligible } = setup(diet);
+      expect(week).toHaveLength(7);
+      const byId = new Map(eligible.map(f => [f.id, f]));
+      for (const d of week.slice(1)) {
+        expect(Math.abs(planKcal(d.plan, byId) - target.kcal)).toBeLessThanOrEqual(target.kcal * PLAN_TOLERANCE);
+        for (const m of ['Breakfast', 'Lunch', 'Dinner'] as const) expect(d.plan[m].length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('keeps day one exactly the day plan, and leaves the day plan untouched', () => {
+    const { plan, week } = setup('veg');
+    const before = JSON.stringify(plan);
+    expect(week[0].plan).toBe(plan);
+    expect(JSON.stringify(plan)).toBe(before);
+  });
+
+  it('varies foods across the week', () => {
+    const { week } = setup('veg');
+    const lunches = new Set(week.map(d => d.plan.Lunch.map(i => i.foodId).sort().join(',')));
+    expect(lunches.size).toBeGreaterThanOrEqual(3);
+    expect(week.slice(1).every(d => d.rotated > 0)).toBe(true);
+  });
+
+  it('only swaps within the diet and within the same kind of food', () => {
+    const { week, eligible } = setup('veg');
+    const byId = new Map(SEED_FOODS.map(f => [f.id, f]));
+    for (const d of week) for (const m of MEALS) for (const i of d.plan[m]) {
+      expect(eligible.some(f => f.id === i.foodId)).toBe(true);
+      expect(byId.get(i.foodId)!.diet).toBe('veg');
+    }
+    expect(swapKey(byId.get('chapati')!)).toBe(swapKey(byId.get('rice')!));
+    expect(swapKey(byId.get('chapati')!)).not.toBe(swapKey(byId.get('dal')!));
+    expect(swapKey(byId.get('whey')!)).toBeNull();
   });
 });
