@@ -41,3 +41,27 @@ npm run typecheck && npm test && npx eslint . && npx next build
 ```
 
 Photo credits: see [CREDITS.md](CREDITS.md).
+
+## Deploying the review security fixes
+
+Migration `20261015000018_review_security.sql` and the matching application must be rolled out together.
+The preview shares the production database: obtain the owner's confirmation before applying the migration.
+This PR does not apply it or change deployment secrets.
+
+1. Configure `SUPABASE_SERVICE_ROLE_KEY` on the server alongside `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET`.
+   Never give it a `NEXT_PUBLIC_` prefix. Only the Strava credential RPC client uses this privileged key.
+2. Pause AI Assist and Strava imports during the coordinated rollout, then apply the migration and deploy this code.
+   The migration revokes the old token RPCs and direct AI usage inserts, so the old application is not compatible.
+3. Re-enable the features and verify Google sign-in, Strava connect/sync/disconnect, AI suggestions, and week Undo.
+   Existing Strava connections and usage history remain in place; no reconnection is required.
+
+The migration enforces active accounts with restrictive RLS, rejects new auth users while signups are closed,
+reserves AI quota atomically before generation, protects Strava credentials from browser JWTs, and restores
+weeks transactionally. Unfinished profiles cannot complete onboarding while signups are closed, regardless of age.
+Failed/cancelled model calls consume their reserved quota; invalid requests and non-AI coach fallbacks do not.
+Strava backlogs resume in batches of up to 15 activities without advancing the completed-sync watermark early.
+
+`npm test` includes an isolated PGlite PostgreSQL suite that applies every migration to a minimal Supabase
+platform scaffold and checks RLS, signup enforcement, function permissions, quota reservations, and restore
+rollback. It does not connect to the shared database. PGlite has one backend; production multi-connection lock
+contention and live OAuth/provider behavior still need deployment smoke checks.

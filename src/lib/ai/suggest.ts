@@ -13,6 +13,7 @@ import { catalogueLines, matchSuggestions } from './match';
 export async function suggestFoods(args: {
   feature: 'photo' | 'text';
   supabase: SupabaseClient;
+  usageId: number;
   system: string;
   input: Part;
   meal: Meal;
@@ -34,6 +35,6 @@ export async function suggestFoods(args: {
   } catch (err) {
     return errorResponse(err, args.feature);
   } finally {
-    await recordUsage(args.supabase, args.feature, success);
+    await recordUsage(args.supabase, args.feature, success, args.usageId);
   }
 }

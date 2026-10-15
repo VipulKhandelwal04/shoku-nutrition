@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { stravaAdmin } from './supabase/strava-admin';
 import { WORKOUT_PRESETS, estimateBurn } from './nutrition';
 
 // Strava connector: OAuth (web), token refresh, and importing recent activities as workouts.
@@ -45,10 +46,11 @@ async function tokenRequest(body: Record<string, string>): Promise<TokenResponse
 }
 
 /** Exchanges the OAuth code and stores the connection for the signed-in user. */
-export async function connect(supabase: SupabaseClient, code: string, grantedScope: string | null) {
+export async function connect(userId: string, code: string, grantedScope: string | null) {
   const t = await tokenRequest({ code, grant_type: 'authorization_code' });
   const name = [t.athlete?.firstname, t.athlete?.lastname].filter(Boolean).join(' ') || null;
-  const { error } = await supabase.rpc('connection_save', {
+  const { error } = await stravaAdmin().rpc('connection_save_for_user', {
+    p_user_id: userId,
     p_provider: 'strava', p_external_user_id: String(t.athlete?.id ?? ''), p_display_name: name,
     p_access_token: t.access_token, p_refresh_token: t.refresh_token,
     p_expires_at: new Date(t.expires_at * 1000).toISOString(), p_scope: grantedScope,
@@ -56,22 +58,25 @@ export async function connect(supabase: SupabaseClient, code: string, grantedSco
   if (error) throw new Error('Could not save the Strava connection');
 }
 
-type Stored = { access_token: string; refresh_token: string; expires_at: string; last_sync_at: string | null };
+type Stored = { access_token: string; refresh_token: string; expires_at: string; last_sync_at: string | null; sync_after: string | null; sync_before: string | null; sync_page: number };
 
-async function stored(supabase: SupabaseClient): Promise<Stored | null> {
-  const { data } = await supabase.rpc('connection_tokens', { p_provider: 'strava' });
+async function stored(userId: string): Promise<Stored | null> {
+  const { data, error } = await stravaAdmin().rpc('connection_tokens_for_user', { p_user_id: userId, p_provider: 'strava' });
+  if (error) throw new Error('Could not read the Strava connection');
   return (data?.[0] as Stored | undefined) ?? null;
 }
 
 /** A valid access token, refreshed (and re-stored) when it expires within a minute. */
-async function accessToken(supabase: SupabaseClient, s: Stored): Promise<string> {
+async function accessToken(userId: string, s: Stored): Promise<string> {
   if (new Date(s.expires_at).getTime() - Date.now() > 60_000) return s.access_token;
   const t = await tokenRequest({ grant_type: 'refresh_token', refresh_token: s.refresh_token });
-  await supabase.rpc('connection_save', {
+  const { error } = await stravaAdmin().rpc('connection_save_for_user', {
+    p_user_id: userId,
     p_provider: 'strava', p_external_user_id: '', p_display_name: null,
     p_access_token: t.access_token, p_refresh_token: t.refresh_token,
     p_expires_at: new Date(t.expires_at * 1000).toISOString(), p_scope: null,
   });
+  if (error) throw new Error('Could not save refreshed Strava credentials');
   return t.access_token;
 }
 
@@ -117,39 +122,54 @@ export type SyncResult = { imported: number; skipped?: 'recent' | 'not-connected
 
 /** Imports activities since the last sync (first time: two weeks). Throttled unless `force`. */
 export async function sync(supabase: SupabaseClient, userId: string, weightKg: number, force = false): Promise<SyncResult> {
-  const s = await stored(supabase);
+  const s = await stored(userId);
   if (!s) return { imported: 0, skipped: 'not-connected' };
-  if (!force && s.last_sync_at && Date.now() - new Date(s.last_sync_at).getTime() < SYNC_EVERY_MS) return { imported: 0, skipped: 'recent' };
+  if (!force && !s.sync_after && s.last_sync_at && Date.now() - new Date(s.last_sync_at).getTime() < SYNC_EVERY_MS) return { imported: 0, skipped: 'recent' };
 
-  const token = await accessToken(supabase, s);
-  const since = s.last_sync_at ? new Date(s.last_sync_at).getTime() - 2 * 86_400_000 : Date.now() - FIRST_SYNC_DAYS * 86_400_000;
-  const list = await api<Summary[]>(token, `/athlete/activities?after=${Math.floor(since / 1000)}&per_page=50`);
-
-  const ids = list.map(a => String(a.id));
-  const { data: known } = ids.length
-    ? await supabase.from('workouts').select('external_id').eq('source', 'strava').in('external_id', ids)
-    : { data: [] as { external_id: string }[] };
-  const seen = new Set((known ?? []).map(k => k.external_id));
-  const fresh = list.filter(a => !seen.has(String(a.id))).slice(0, MAX_NEW_PER_SYNC);
-
+  const token = await accessToken(userId, s);
+  // Keep a fixed window and page until every activity in it is persisted. A partial batch or failed write
+  // must never advance last_sync_at. The stored window also survives retries more than fourteen days later.
+  const after = s.sync_after ?? new Date(s.last_sync_at ? Date.parse(s.last_sync_at) - 2 * 86_400_000 : Date.now() - FIRST_SYNC_DAYS * 86_400_000).toISOString();
+  const before = s.sync_before ?? new Date().toISOString();
+  let page = s.sync_page || 1;
+  const progress = async (complete = false) => {
+    const { error } = await stravaAdmin().rpc('connection_sync_progress', {
+      p_user_id: userId, p_after: after, p_before: before, p_page: page, p_complete: complete,
+    });
+    if (error) throw new Error('Could not save Strava sync progress');
+  };
+  await progress();
   let imported = 0;
-  for (const a of fresh) {
-    // Calories are only on the detailed activity.
-    const detail = await api<Detail>(token, `/activities/${a.id}`).catch(() => a as Detail);
-    const w = toWorkout(detail, weightKg);
-    const { error } = await supabase.from('workouts').upsert(
-      { user_id: userId, day: w.day, start_time: w.start_time, kind: w.sport, label: w.label, minutes: w.minutes, kcal: w.kcal, kcal_source: w.kcal_source, source: 'strava', external_id: w.external_id },
-      { onConflict: 'user_id,source,external_id', ignoreDuplicates: true },
-    );
-    if (!error) imported++;
+  // Bound requests per invocation; the next sync resumes this page/window.
+  for (let pages = 0; pages < 3; pages++) {
+    const list = await api<Summary[]>(token, `/athlete/activities?after=${Math.floor(Date.parse(after) / 1000)}&before=${Math.floor(Date.parse(before) / 1000)}&per_page=50&page=${page}`);
+    const ids = list.map(a => String(a.id));
+    const { data: known, error: readError } = ids.length
+      ? await supabase.from('workouts').select('external_id').eq('source', 'strava').in('external_id', ids)
+      : { data: [], error: null };
+    if (readError) throw new Error('Could not read imported workouts');
+    const seen = new Set((known ?? []).map(k => k.external_id));
+    for (const a of list.filter(a => !seen.has(String(a.id)))) {
+      if (imported >= MAX_NEW_PER_SYNC) { await progress(); return { imported }; }
+      const detail = await api<Detail>(token, `/activities/${a.id}`).catch(() => a as Detail);
+      const w = toWorkout(detail, weightKg);
+      const { error } = await supabase.from('workouts').upsert(
+        { user_id: userId, day: w.day, start_time: w.start_time, kind: w.sport, label: w.label, minutes: w.minutes, kcal: w.kcal, kcal_source: w.kcal_source, source: 'strava', external_id: w.external_id },
+        { onConflict: 'user_id,source,external_id', ignoreDuplicates: true },
+      );
+      if (error) throw new Error('Could not save an imported workout');
+      imported++;
+    }
+    if (list.length < 50) { await progress(true); return { imported }; }
+    page++;
+    await progress();
   }
-  await supabase.rpc('connection_mark_synced', { p_provider: 'strava', p_at: new Date().toISOString() });
   return { imported };
 }
 
 /** Revokes Shoku's access at Strava (best effort) and deletes the connection and imported workouts. */
-export async function disconnect(supabase: SupabaseClient) {
-  const s = await stored(supabase);
+export async function disconnect(supabase: SupabaseClient, userId: string) {
+  const s = await stored(userId);
   if (s) {
     await fetch(`${OAUTH}/deauthorize`, {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

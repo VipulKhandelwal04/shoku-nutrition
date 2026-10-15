@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getFlags } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
 import { STATE_COOKIE, STRAVA_SCOPE, connect, sync } from '@/lib/strava';
-import { createClient } from '@/lib/supabase/server';
+import { actionUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -22,19 +22,19 @@ export async function GET(request: NextRequest) {
   // Activities need activity:read_all (or activity:read); without it there is nothing to import.
   if (!code || !scope?.includes('activity:read')) return back('scope');
 
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.redirect(new URL('/login?next=/app/profile', origin));
+  const session = await actionUser();
+  if (!session) return NextResponse.redirect(new URL('/login?next=/app/profile', origin));
+  const { supabase, user } = session;
 
   try {
-    await connect(supabase, code, scope ?? STRAVA_SCOPE);
+    await connect(user.id, code, scope ?? STRAVA_SCOPE);
   } catch (e) {
     console.error('[strava/callback]', e instanceof Error ? e.message : 'connect failed');
     return back('error');
   }
   try {
-    const { data: p } = await supabase.from('profiles').select('weight_kg').eq('id', data.user.id).maybeSingle();
-    await sync(supabase, data.user.id, Number(p?.weight_kg ?? 70), true);
+    const { data: p } = await supabase.from('profiles').select('weight_kg').eq('id', user.id).maybeSingle();
+    await sync(supabase, user.id, Number(p?.weight_kg ?? 70), true);
   } catch (e) {
     // Connected but the first import failed: the next Today visit retries.
     console.error('[strava/callback] first sync', e instanceof Error ? e.message : 'failed');

@@ -5,8 +5,6 @@ import { getFeatureSettings } from '@/lib/data/queries';
 import { safeNext } from '@/components/public/content';
 import type { Profile } from '@/lib/types';
 
-const NEW_ACCOUNT_WINDOW_MS = 2 * 60 * 1000;
-
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get('code');
@@ -45,19 +43,10 @@ export async function GET(request: NextRequest) {
 
   const onboarded = !!profile?.onboarded_at;
   if (!onboarded) {
-    const createdAt = profile ? Date.parse(profile.created_at) : Date.now();
-    const isNew = Number.isNaN(createdAt) || Date.now() - createdAt < NEW_ACCOUNT_WINDOW_MS;
-    if (isNew) {
-      let signupsOpen = true;
-      try {
-        signupsOpen = (await getFeatureSettings()).signups_open;
-      } catch (e) {
-        console.error('[auth/callback] could not read feature settings; leaving sign-ups open', e);
-      }
-      if (!signupsOpen) {
-        await supabase.auth.signOut();
-        return to('/login?error=signups_closed');
-      }
+    // An OAuth attempt can leave an unfinished profile behind. Its age is not admission.
+    if (!(await getFeatureSettings()).signups_open) {
+      await supabase.auth.signOut();
+      return to('/login?error=signups_closed');
     }
     return to('/onboarding');
   }

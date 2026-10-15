@@ -44,7 +44,10 @@ export async function requireAdmin(): Promise<Profile> {
 export async function actionUser(): Promise<{ supabase: Awaited<ReturnType<typeof createClient>>; user: NonNullable<Awaited<ReturnType<typeof getUser>>> } | null> {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
-  return data.user ? { supabase, user: data.user } : null;
+  if (!data.user) return null;
+  const { data: profile, error } = await supabase.from('profiles').select('disabled').eq('id', data.user.id).maybeSingle();
+  if (error || !profile || profile.disabled) return null;
+  return { supabase, user: data.user };
 }
 
 /** The message every action shows when the session has ended. */

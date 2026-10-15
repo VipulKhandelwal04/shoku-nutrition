@@ -26,14 +26,23 @@ export async function proxy(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const signedIn = !!data?.claims;
+  let signedIn = !!data?.claims;
+  if (data?.claims) {
+    const { data: profile, error } = await supabase.from('profiles').select('disabled').eq('id', data.claims.sub).maybeSingle();
+    if (error || !profile || profile.disabled) {
+      await supabase.auth.signOut();
+      signedIn = false;
+    }
+  }
   const path = request.nextUrl.pathname;
 
   if (!signedIn && PRIVATE.some(p => path === p || path.startsWith(`${p}/`))) {
     const login = request.nextUrl.clone();
     login.pathname = '/login';
     login.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
-    return NextResponse.redirect(login);
+    const redirect = NextResponse.redirect(login);
+    for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+    return redirect;
   }
   if (signedIn && path === '/login') {
     const app = request.nextUrl.clone();

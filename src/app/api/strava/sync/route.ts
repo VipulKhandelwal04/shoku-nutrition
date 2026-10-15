@@ -4,19 +4,19 @@ import { revalidatePath } from 'next/cache';
 import { getFlags } from '@/lib/data/queries';
 import { FLAG_OFF, isOn } from '@/lib/flags';
 import { sync } from '@/lib/strava';
-import { createClient } from '@/lib/supabase/server';
+import { actionUser } from '@/lib/auth';
 
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.json({ ok: false, error: 'Sign in again.' }, { status: 401 });
+  const session = await actionUser();
+  if (!session) return NextResponse.json({ ok: false, error: 'Sign in again.' }, { status: 401 });
+  const { supabase, user } = session;
   if (!isOn(await getFlags(), 'apps', 'strava')) return NextResponse.json({ ok: false, error: FLAG_OFF }, { status: 403 });
   const force = await request.json().then((b: { force?: unknown }) => b?.force === true).catch(() => false);
   try {
-    const { data: p } = await supabase.from('profiles').select('weight_kg').eq('id', data.user.id).maybeSingle();
-    const result = await sync(supabase, data.user.id, Number(p?.weight_kg ?? 70), force);
+    const { data: p } = await supabase.from('profiles').select('weight_kg').eq('id', user.id).maybeSingle();
+    const result = await sync(supabase, user.id, Number(p?.weight_kg ?? 70), force);
     if (result.imported > 0) revalidatePath('/app', 'layout');
     return NextResponse.json({ ok: true, data: result }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {

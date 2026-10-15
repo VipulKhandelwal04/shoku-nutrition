@@ -1,7 +1,7 @@
 import { weekOutput, weekRequest, type WeekResponse } from '@/lib/ai/contracts';
 import { candidateLines, recipeLines } from '@/lib/ai/candidates';
 import { generateJson } from '@/lib/ai/gemini';
-import { guardAi, recordUsage } from '@/lib/ai/guard';
+import { guardAi, recordUsage, reserveAi } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson, todayIst } from '@/lib/ai/http';
 import { memberDayPlan, memberSuggestions, trainingDaysFor } from '@/lib/ai/member';
 import { buildWeek, dayTarget, isoWeekday, planRows, repairWeek } from '@/lib/ai/plan';
@@ -57,6 +57,9 @@ export async function POST(request: Request) {
     trainingDays,
   };
 
+  const reservation = await reserveAi(guard.supabase, 'week', guard.settings.daily_quota);
+  if (!reservation.ok) return reservation.response;
+
   let success = false;
   try {
     const out = await generateJson(weekOutput, {
@@ -88,6 +91,6 @@ export async function POST(request: Request) {
   } catch (err) {
     return errorResponse(err, 'week');
   } finally {
-    await recordUsage(guard.supabase, 'week', success);
+    await recordUsage(guard.supabase, 'week', success, reservation.usageId);
   }
 }
