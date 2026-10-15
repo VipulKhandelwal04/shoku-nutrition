@@ -10,6 +10,7 @@ const FEATURES: { key: AiFeature; title: string; body: string }[] = [
   { key: 'text', title: 'Describe a meal', body: '“2 rotis and dal” becomes catalogue items to confirm.' },
   { key: 'plan', title: 'Tune my plan', body: 'Tailors the day plan to their goal and diet.' },
   { key: 'coach', title: 'Coach line', body: 'A short, encouraging nudge on the Today screen.' },
+  { key: 'ask', title: 'Ask Shoku', body: 'Members ask for meal ideas from the top bar. Ideas use only catalogue foods that fit their diet.' },
 ];
 
 /**

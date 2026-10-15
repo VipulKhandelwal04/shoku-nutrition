@@ -65,7 +65,10 @@ describe('content schemas', () => {
 });
 
 describe('aiSettingsSchema', () => {
-  const base = { enabled: true, photo: true, text: true, plan: false, coach: true };
+  const base = { enabled: true, photo: true, text: true, plan: false, coach: true, ask: true };
+  it('keeps Ask Shoku switched off when saved off', () => {
+    expect(aiSettingsSchema.parse({ ...base, ask: false, daily_quota: 25 }).ask).toBe(false);
+  });
   it('accepts a quota of 1-200 whole calls', () => {
     expect(aiSettingsSchema.parse({ ...base, daily_quota: '25' }).daily_quota).toBe(25);
     expect(aiSettingsSchema.safeParse({ ...base, daily_quota: 0 }).success).toBe(false);

@@ -7,6 +7,7 @@ import { createClient } from '../supabase/server';
 import type { Profile } from '../types';
 import {
   aiSettingsSchema,
+  flagsSchema,
   disabledSchema,
   featureSettingsSchema,
   foodSchema,
@@ -226,7 +227,7 @@ export async function setUserDisabled(target: string, disabled: boolean): Promis
 }
 
 // ---------------------------------------------------------------- Settings
-async function saveSetting(a: Admin, key: 'ai' | 'features', value: Record<string, unknown>): Promise<ActionResult | null> {
+async function saveSetting(a: Admin, key: 'ai' | 'features' | 'flags', value: Record<string, unknown>): Promise<ActionResult | null> {
   const { error } = await a.supabase
     .from('app_settings')
     .upsert({ key, value, updated_at: new Date().toISOString(), updated_by: a.profile.id }, { onConflict: 'key' });
@@ -241,6 +242,18 @@ export async function saveAiSettings(input: unknown): Promise<ActionResult> {
   const failed = await saveSetting(a, 'ai', parsed.data);
   if (failed) return failed;
   revalidatePath('/', 'layout'); // AI Assist entry points across the app read this flag.
+  return done();
+}
+
+/** Saves every product feature flag at once (primary + secondary). Entry points across the app read these. */
+export async function saveFlags(input: unknown): Promise<ActionResult> {
+  const a = await admin();
+  if (!a) return DENIED;
+  const parsed = flagsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Those switches didn’t save. Reload the page and try again.' };
+  const failed = await saveSetting(a, 'flags', parsed.data);
+  if (failed) return failed;
+  revalidatePath('/', 'layout');
   return done();
 }
 

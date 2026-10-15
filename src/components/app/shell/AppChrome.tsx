@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { AskShoku } from '@/components/ai/AskShoku';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import s from './shell.module.css';
 
@@ -34,8 +35,14 @@ function initials(name: string) {
   return ((parts[0]?.[0] ?? 'S') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 
-export function AppChrome({ user, children }: { user: ShellUser; children: ReactNode }) {
+/**
+ * `ask` turns on the Ask Shoku field in the top bar (admin flag on and Gemini configured).
+ * `hide` lists nav destinations switched off by feature flags (e.g. '/app/compare').
+ */
+export function AppChrome({ user, ask = false, hide = [], children }: { user: ShellUser; ask?: boolean; hide?: string[]; children: ReactNode }) {
   const pathname = usePathname();
+  const nav = NAV.filter(n => !hide.includes(n.href));
+  const tabs = TABS.filter(t => !hide.includes(t.href));
   const profileActive = isActive(pathname, '/app/profile');
   return (
     <>
@@ -46,8 +53,9 @@ export function AppChrome({ user, children }: { user: ShellUser; children: React
             <span className={s.brandMark} aria-hidden="true" lang="ja">食</span>
             <span className={s.brandName}>Shoku</span>
           </Link>
+          {ask && <AskShoku />}
           <nav className={s.topLinks} aria-label="Main">
-            {NAV.map(n => (
+            {nav.map(n => (
               <Link key={n.href} href={n.href} aria-current={isActive(pathname, n.href) ? 'page' : undefined}>{n.label}</Link>
             ))}
           </nav>
@@ -76,7 +84,7 @@ export function AppChrome({ user, children }: { user: ShellUser; children: React
       </main>
 
       <nav className={s.tabbar} aria-label="Main">
-        {TABS.map(t => {
+        {tabs.map(t => {
           const active = isActive(pathname, t.href);
           return (
             <Link key={t.href} href={t.href} aria-current={active ? 'page' : undefined}>

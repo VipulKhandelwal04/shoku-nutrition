@@ -1,7 +1,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { requireOnboarded } from '@/lib/auth';
-import { getDays, getEarnedBadges, getEntries, getMealsByDay } from '@/lib/data/queries';
+import { getDays, getEarnedBadges, getEntries, getFlags, getMealsByDay } from '@/lib/data/queries';
+import { isOn } from '@/lib/flags';
 import { BADGES, MEALS_FOR_A_COUNTED_DAY, earnedBadges, shiftDate, streakInfo } from '@/lib/nutrition';
 import { Icon } from '@/components/ui/Icon';
 import { DeviceTimeZone } from '@/components/app/insights/DeviceTimeZone';
@@ -16,6 +18,9 @@ const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
 export default async function ProgressPage({ searchParams }: PageProps<'/app/progress'>) {
   const profile = await requireOnboarded('/app/progress');
+  const flags = await getFlags();
+  if (!isOn(flags, 'progress')) notFound();
+  const show = { streak: isOn(flags, 'progress', 'streak'), chart: isOn(flags, 'progress', 'chart'), brief: isOn(flags, 'progress', 'brief'), water: isOn(flags, 'water', 'weekly') };
   const sp = await searchParams;
   const { today, tz } = await userToday();
   const end = parseDayParam(sp.week, today, today);
@@ -63,6 +68,7 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
           </section>
         )}
 
+        {show.streak && (
         <section className={`panel ${s.streak}`} aria-labelledby="streak-title">
           <div className={s.streakNow}>
             <span className={s.streakNum} aria-hidden="true">{streak.current}</span>
@@ -85,9 +91,11 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
             })}
           </ul>
         </section>
+        )}
 
         {!isNew && (
           <>
+            {show.chart && (<>
             <div className={s.stats}>
               <section className="panel">
                 <p className="label">Days that counted</p>
@@ -136,8 +144,12 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
               </div>
             </section>
 
+            </>)}
+
+            {show.brief && (
             <section className="panel panel-pad" aria-labelledby="brief-title">
               <h2 id="brief-title" className={s.briefTitle}>This week, in brief</h2>
+              {show.water && (
               <div className={s.insight}>
                 <Icon name="drop" />
                 <div>
@@ -145,6 +157,7 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
                   <p className="muted">That’s what you recorded, about {fmt(stats.water / 7)} ml a day against {fmt(targets.water)} ml. Missing logs don’t mean you didn’t drink.</p>
                 </div>
               </div>
+              )}
               <div className={s.insight}>
                 <Icon name="star" />
                 <div>
@@ -169,6 +182,7 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
                 </div>
               </div>
             </section>
+            )}
           </>
         )}
       </div>

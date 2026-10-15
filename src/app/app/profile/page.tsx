@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { requireOnboarded } from '@/lib/auth';
-import { getConnections, getEarnedBadges, getMealsByDay, isStravaConfigured } from '@/lib/data/queries';
+import { getConnections, getEarnedBadges, getFlags, getMealsByDay, isStravaConfigured } from '@/lib/data/queries';
+import { isOn } from '@/lib/flags';
 import { BADGES, GOALS, dayCounts, recommend, streakInfo } from '@/lib/nutrition';
 import { Icon } from '@/components/ui/Icon';
 import { DIETS, RESTRICTIONS, RESTRICTION_SLUGS, bodyOf, pickTargets, type Restriction } from '@/components/app/insights/insights';
@@ -17,7 +18,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 export default async function ProfilePage() {
   const profile = await requireOnboarded('/app/profile');
   const { today } = await userToday();
-  const [mealsByDay, badges, connections] = await Promise.all([getMealsByDay(today, 365), getEarnedBadges(), getConnections()]);
+  const [mealsByDay, badges, connections, flags] = await Promise.all([getMealsByDay(today, 365), getEarnedBadges(), getConnections(), getFlags()]);
 
   const body = bodyOf(profile);
   const recommended = body ? pickTargets(recommend(body)) : null;
@@ -85,7 +86,8 @@ export default async function ProfilePage() {
         targets={targets}
         recommended={recommended}
         isAdmin={profile.role === 'admin'}
-        strava={{ configured: isStravaConfigured(), connection: connections.find(c => c.provider === 'strava') ?? null }}
+        strava={{ configured: isStravaConfigured() && isOn(flags, 'apps', 'strava'), connection: connections.find(c => c.provider === 'strava') ?? null }}
+        upcoming={isOn(flags, 'apps', 'upcoming')}
       />
 
       <p className={s.foot}>

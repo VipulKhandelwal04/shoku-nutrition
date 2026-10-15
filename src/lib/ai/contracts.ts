@@ -49,3 +49,26 @@ export const planOutput = z.object({
 });
 
 export const coachOutput = z.object({ line: z.string() });
+
+// ---------- Ask Shoku ----------
+
+/** POST /api/ai/ask ({ question, day }). Read-only: logging an idea goes through addEntries after the user taps it. */
+export const askRequest = z.object({
+  question: z.string().trim().min(3, 'Ask a little more, e.g. “dinner after leg day”').max(MAX_TEXT, `Keep it under ${MAX_TEXT} characters`),
+  day: DAY,
+});
+export type AskItem = { foodId: string; name: string; unit: string; icon: string; q: number; kcal: number; p: number };
+export type AskIdea = { title: string; meal: Meal; why: string; items: AskItem[]; kcal: number; p: number };
+/** What Shoku looked at, shown under the answer so the grounding is visible. */
+export type AskContext = { workouts: { label: string; minutes: number; kcal: number }[]; eatenKcal: number; targetKcal: number; eatenProtein: number; targetProtein: number; diet: string; avoiding: string[] };
+export type AskResponse = { answer: string; ideas: AskIdea[]; context: AskContext };
+
+export const askOutput = z.object({
+  answer: z.string().describe('One or two short sentences that answer the question directly'),
+  ideas: z.array(z.object({
+    title: z.string().describe('Short dish name, e.g. "Paneer bhurji with 2 rotis"'),
+    meal: MEAL,
+    why: z.string().describe('One sentence on why it fits their day: training, what is left of their targets, or their request'),
+    items: z.array(z.object({ foodId: z.string(), servings: z.number() })).max(6),
+  })).max(3),
+});
