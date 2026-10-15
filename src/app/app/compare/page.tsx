@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { requireOnboarded } from '@/lib/auth';
 import { getAiAssist, getEntries, getFlags, getFoods } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
-import { GOALS, buildPlan, groupStatus, planCheck, recommend, shiftDate, totals, type Entry, type Food, type PlanItemStatus } from '@/lib/nutrition';
+import { GOALS, MEALS, buildPlan, groupStatus, planCheck, recommend, shiftDate, totals, type Entry, type Food, type Plan, type PlanItem, type PlanItemStatus } from '@/lib/nutrition';
 import { FoodTile, Icon } from '@/components/ui/Icon';
 import { CompareRow } from '@/components/app/insights/CompareRow';
 import { DeviceTimeZone } from '@/components/app/insights/DeviceTimeZone';
@@ -17,8 +17,9 @@ import ins from '@/components/app/insights/insights.module.css';
 import { CompareTabs } from './CompareTabs';
 import { GoalCard } from './GoalCard';
 import { PlanTunerEntry } from './PlanTunerEntry';
-import { WeekPlan } from './WeekPlan';
-import { buildWeek } from '@/lib/ai/plan';
+import { WeekPlan, type WeekDayView, type WeekItem } from './WeekPlan';
+import { buildWeek, isoWeekday, planKcal } from '@/lib/ai/plan';
+import { getWeekPlans } from '@/lib/data/queries';
 import { mealCandidates } from '@/lib/ai/candidates';
 import s from './compare.module.css';
 
@@ -77,13 +78,38 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const saved = parseStoredPlan(storedPlan, foodsById);
   const plan = filterPlan(saved ?? buildPlan(targets, goal, profile.diet, foodsById), foodsById, profile.diet, profile.restrictions ?? []);
   const check = planCheck(plan, dayEntries, foodsById);
-  const week = planView === 'week'
-    ? buildWeek(plan, { eligible: mealCandidates(foods, { diet: profile.diet, restrictions: profile.restrictions ?? [] }).candidates.map(c => c.food), targetKcal: targets.kcal })
-    : null;
-  const weekLabels = Array.from({ length: 7 }, (_, i) => {
-    const key = shiftDate(today, i);
-    return i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(`${key}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-  });
+  const week = planView === 'week' ? await weekView(plan) : null;
+
+  /** Seven days from today: a saved weekday wins over the generated day; each meal lists its swap options. */
+  async function weekView(dayPlan: Plan): Promise<WeekDayView[]> {
+    const eligible = mealCandidates(foods, { diet: profile.diet, restrictions: profile.restrictions ?? [] }).candidates.map(c => c.food);
+    const generated = buildWeek(dayPlan, { eligible, targetKcal: targets.kcal });
+    // Saved days always show (and can be reset) even while editing is switched off.
+    const savedDays = await getWeekPlans();
+    const toItems = (items: PlanItem[]): WeekItem[] => items.flatMap(i => {
+      const f = foodsById.get(i.foodId);
+      return f ? [{ foodId: f.id, name: f.name, unit: unitFor(i.q, f.unit), q: i.q, kcal: Math.round(f.kcal * i.q) }] : [];
+    });
+    const sig = (items: PlanItem[]) => items.map(i => i.foodId).sort().join(',');
+    return generated.map((g, i) => {
+      const key = shiftDate(today, i);
+      const weekday = isoWeekday(key);
+      const stored = savedDays.get(weekday);
+      const own = stored ? parseStoredPlan(stored, foodsById) : null;
+      const plan = own ? filterPlan(own, foodsById, profile.diet, profile.restrictions ?? []) : g.plan;
+      const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(`${key}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+      const meals = MEALS.map(meal => {
+        // Every distinct version of this meal across the generated week, starting after the current one, so
+        // repeated swaps walk through them all.
+        const versions: PlanItem[][] = [];
+        for (const d of generated) if (d.plan[meal].length && !versions.some(v => sig(v) === sig(d.plan[meal]))) versions.push(d.plan[meal]);
+        const at = versions.findIndex(v => sig(v) === sig(plan[meal]));
+        const alternatives = [...versions.slice(at + 1), ...versions.slice(0, Math.max(0, at))].filter(v => sig(v) !== sig(plan[meal]));
+        return { meal, items: toItems(plan[meal]), alternatives: alternatives.map(toItems) };
+      });
+      return { key, label, weekday, kcal: planKcal(plan, foodsById), saved: !!own, plan, meals };
+    });
+  }
   // Keep the page's period/day when switching between Day and Week plans.
   const planHref = (v: 'day' | 'week') => {
     const q = new URLSearchParams();
@@ -163,7 +189,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const planPanel = week ? (
     <>
       {planToggle}
-      <WeekPlan week={week} labels={weekLabels} foodsById={foodsById} target={targets.kcal} />
+      <WeekPlan days={week} today={today} target={targets.kcal} canEdit={isOn(flags, 'week', 'edit')} />
     </>
   ) : (
     <>

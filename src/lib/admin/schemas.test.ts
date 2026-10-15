@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aiSettingsSchema, fieldErrors, foodSchema, imageUrlSchema, quoteSchema, slugify, tourSlideSchema } from './schemas';
+import { aiSettingsSchema, fieldErrors, foodSchema, imageUrlSchema, quoteSchema, recipeSchema, slugify, tourSlideSchema } from './schemas';
 
 const food = {
   id: 'masala-dosa', name: 'Masala dosa', category: 'Breakfast', cuisine: 'Indian', unit: 'piece', grams: '120', kcal: '250',
@@ -86,5 +86,39 @@ describe('aiSettingsSchema', () => {
     expect(aiSettingsSchema.safeParse({ ...base, daily_quota: 0 }).success).toBe(false);
     expect(aiSettingsSchema.safeParse({ ...base, daily_quota: 201 }).success).toBe(false);
     expect(aiSettingsSchema.safeParse({ ...base, daily_quota: 2.5 }).success).toBe(false);
+  });
+});
+
+describe('recipeSchema', () => {
+  const recipe = {
+    name: ' Dal tadka ', cuisine: 'Indian', servings: '4', active: true,
+    steps: ['Rinse and pressure-cook the dal.', '  ', 'Temper with cumin and garlic.'],
+    ingredients: [{ foodId: 'dal', q: '4' }, { foodId: 'oil', q: 1 }],
+  };
+  it('trims text, coerces numbers and drops blank steps', () => {
+    const r = recipeSchema.parse(recipe);
+    expect(r.name).toBe('Dal tadka');
+    expect(r.servings).toBe(4);
+    expect(r.steps).toEqual(['Rinse and pressure-cook the dal.', 'Temper with cumin and garlic.']);
+    expect(r.ingredients).toEqual([{ foodId: 'dal', q: 4 }, { foodId: 'oil', q: 1 }]);
+  });
+  it('drafts start hidden when active is left out', () => {
+    expect(recipeSchema.parse({ ...recipe, active: undefined }).active).toBe(false);
+  });
+  it('needs a step, an ingredient and whole servings in range', () => {
+    expect(fieldErrors(recipeSchema.safeParse({ ...recipe, steps: [' '] }).error!)).toHaveProperty('steps');
+    expect(fieldErrors(recipeSchema.safeParse({ ...recipe, ingredients: [] }).error!)).toHaveProperty('ingredients');
+    expect(recipeSchema.safeParse({ ...recipe, servings: '2.5' }).success).toBe(false);
+    expect(recipeSchema.safeParse({ ...recipe, servings: '0' }).success).toBe(false);
+    expect(recipeSchema.safeParse({ ...recipe, servings: '21' }).success).toBe(false);
+  });
+  it('rejects zero quantities, unknown-looking food ids and the same food twice', () => {
+    expect(fieldErrors(recipeSchema.safeParse({ ...recipe, ingredients: [{ foodId: 'dal', q: '0' }] }).error!)).toHaveProperty(['ingredients.0.q']);
+    expect(recipeSchema.safeParse({ ...recipe, ingredients: [{ foodId: 'Dal Tadka', q: 1 }] }).success).toBe(false);
+    expect(fieldErrors(recipeSchema.safeParse({ ...recipe, ingredients: [{ foodId: 'dal', q: 1 }, { foodId: 'dal', q: 2 }] }).error!)).toHaveProperty('ingredients');
+  });
+  it('has no nutrition field: typed numbers are dropped', () => {
+    const r = recipeSchema.parse({ ...recipe, kcal: 900 }) as Record<string, unknown>;
+    expect('kcal' in r).toBe(false);
   });
 });

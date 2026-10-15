@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPlan, cuisineOf, earnedBadges, groupStatus, MEALS, planCheck, recommend, shiftDate, streakInfo, totals, type Food } from './nutrition';
+import { buildPlan, cuisineOf, earnedBadges, groupStatus, MEALS, planCheck, recipeNutrition, recommend, shiftDate, streakInfo, totals, type Food } from './nutrition';
 import { SEED_FOODS } from './seed-foods';
 
 const byId = new Map<string, Food>(SEED_FOODS.map(f => [f.id, f]));
@@ -101,5 +101,31 @@ describe('cuisineOf', () => {
     expect(cuisineOf({})).toBe('Indian');
     expect(cuisineOf({ cuisine: '  ' })).toBe('Indian');
     expect(cuisineOf({ cuisine: ' Thai ' })).toBe('Thai');
+  });
+});
+
+describe('recipeNutrition', () => {
+  const byId = new Map(SEED_FOODS.map(f => [f.id, f]));
+  const dal = byId.get('dal')!, rice = byId.get('rice')!, chicken = byId.get('chicken')!;
+
+  it('is ingredients × quantity ÷ servings', () => {
+    const r = recipeNutrition([{ foodId: 'dal', q: 2 }, { foodId: 'rice', q: 2 }], 2, byId);
+    expect(r.total.kcal).toBeCloseTo(dal.kcal * 2 + rice.kcal * 2, 0);
+    expect(r.perServing.kcal).toBeCloseTo(dal.kcal + rice.kcal, 0);
+    expect(r.perServing.p).toBeCloseTo(dal.p + rice.p, 0);
+    expect(r.diet).toBe('veg');
+    expect(r.missing).toEqual([]);
+  });
+  it('takes the strictest diet of its ingredients', () => {
+    expect(recipeNutrition([{ foodId: 'rice', q: 1 }, { foodId: 'chicken', q: 1 }], 1, byId).diet).toBe('nonveg');
+    expect(recipeNutrition([{ foodId: 'rice', q: 1 }, { foodId: 'egg', q: 1 }], 1, byId).diet).toBe('egg');
+  });
+  it('lists ingredients no longer in the catalogue and counts nothing for them', () => {
+    const r = recipeNutrition([{ foodId: 'chicken', q: 1 }, { foodId: 'gone-food', q: 3 }], 1, byId);
+    expect(r.missing).toEqual(['gone-food']);
+    expect(r.total.kcal).toBeCloseTo(chicken.kcal, 0);
+  });
+  it('treats bad servings as one', () => {
+    expect(recipeNutrition([{ foodId: 'dal', q: 1 }], 0, byId).perServing.kcal).toBeCloseTo(dal.kcal, 0);
   });
 });

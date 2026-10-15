@@ -82,3 +82,16 @@ export type WorkoutRow = {
 
 /** Connection status for the UI. Never carries tokens. */
 export type ConnectionStatus = { provider: 'strava'; display_name: string | null; last_sync_at: string | null; connected_at: string };
+
+/** A recipe (migration 0012). Admin-only for now. Nutrition is computed with recipeNutrition, never stored. */
+export type RecipeRow = {
+  id: string;
+  name: string;
+  cuisine: string;
+  servings: number;
+  steps: string[];
+  ingredients: { foodId: string; q: number }[];
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};

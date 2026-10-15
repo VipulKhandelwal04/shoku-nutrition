@@ -8,6 +8,7 @@ import s from './admin.module.css';
 const LINKS: { href: string; label: string; icon: IconName }[] = [
   { href: '/admin', label: 'Overview', icon: 'chart' },
   { href: '/admin/foods', label: 'Foods', icon: 'bowl' },
+  { href: '/admin/recipes', label: 'Recipes', icon: 'diary' },
   { href: '/admin/content', label: 'Content', icon: 'quote' },
   { href: '/admin/users', label: 'Users', icon: 'users' },
   { href: '/admin/features', label: 'Features', icon: 'check' },

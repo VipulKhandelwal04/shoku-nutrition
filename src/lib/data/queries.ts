@@ -139,3 +139,11 @@ export async function getFeedbackForSuggestions(flags: FeatureFlags, profile: { 
   const summary = feedbackSummary(data as Pick<FeedbackRow, 'food_ids' | 'rating' | 'title' | 'created_at'>[]);
   return summary.any ? summary : undefined;
 }
+
+/** The member's saved week days, weekday (1 = Monday) → stored plan JSON. Empty before migration 0013. */
+export async function getWeekPlans(): Promise<Map<number, unknown>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('week_plans').select('weekday, plan');
+  if (error) return new Map();
+  return new Map((data ?? []).map(r => [Number(r.weekday), r.plan as unknown]));
+}

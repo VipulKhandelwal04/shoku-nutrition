@@ -2,7 +2,7 @@ import 'server-only';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { createClient } from '../supabase/server';
-import { DEFAULT_AI_SETTINGS, type AiSettings, type FeatureSettings, type FoodRow, type Quote, type TourSlide } from '../types';
+import { DEFAULT_AI_SETTINGS, type AiSettings, type FeatureSettings, type FoodRow, type Quote, type RecipeRow, type TourSlide } from '../types';
 import type { AiUsageRow, UserStatRow } from './stats';
 
 // Admin reads. RLS + is_admin() guard every query; user data comes only from the aggregate admin_* functions.
@@ -66,4 +66,12 @@ export async function localImages(): Promise<string[]> {
   } catch {
     return known;
   }
+}
+
+/** Every recipe, drafts included. Admin-only by RLS. */
+export async function adminRecipes(): Promise<RecipeRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('recipes').select('*').order('name');
+  if (error) throw new Error(`Could not load recipes: ${error.message}`);
+  return ((data ?? []) as RecipeRow[]).map(r => ({ ...r, servings: Number(r.servings), ingredients: (r.ingredients ?? []).map(i => ({ foodId: i.foodId, q: Number(i.q) })) }));
 }
