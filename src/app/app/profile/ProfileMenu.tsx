@@ -21,6 +21,16 @@ const STRAVA_MSG: Record<string, string> = {
 };
 type PlanRow = { label: string; value: string; sheet: SheetKind; icon: IconName };
 
+/**
+ * Health platforms people ask for. Samsung Health and Apple Health only share data with a phone app
+ * (Android Health Connect / iOS HealthKit), so they can't connect from the web app yet; listed so people know.
+ */
+const UPCOMING_APPS: { name: string; note: string; icon: IconName }[] = [
+  { name: 'Samsung Health', note: 'Galaxy Watch and phone workouts · needs the Shoku Android app (via Health Connect)', icon: 'heart' },
+  { name: 'Apple Health', note: 'Apple Watch and iPhone workouts · needs the Shoku iOS app', icon: 'heart' },
+  { name: 'Garmin Connect', note: 'Garmin watches and bike computers', icon: 'bolt' },
+];
+
 /** iOS-style grouped settings list. Plan rows open their form in a sheet; the rest are links. */
 export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, strava }: {
   plan: PlanRow[];
@@ -78,10 +88,10 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
         </ul>
       </section>
 
-      {strava.configured && (
-        <section aria-labelledby="pm-apps">
-          <h2 id="pm-apps" className={s.groupTitle}>Connected apps</h2>
-          <ul className={s.group}>
+      <section aria-labelledby="pm-apps">
+        <h2 id="pm-apps" className={s.groupTitle}>Connected apps</h2>
+        <ul className={s.group}>
+          {strava.configured && (
             <li>
               {strava.connection ? (
                 <button type="button" className={s.row} onClick={() => setOpen('strava')}>
@@ -103,9 +113,21 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
                 </a>
               )}
             </li>
-          </ul>
-        </section>
-      )}
+          )}
+          {UPCOMING_APPS.map(app => (
+            <li key={app.name}>
+              <div className={`${s.row} ${s.rowStatic}`}>
+                <span className={s.rowIcon} aria-hidden="true"><Icon name={app.icon} size="sm" /></span>
+                <span className={s.rowText}>
+                  <span className={s.rowLabel}>{app.name}</span>
+                  <span className={s.rowValue}>{app.note}</span>
+                </span>
+                <span className="chip">Soon</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section aria-labelledby="pm-data">
         <h2 id="pm-data" className={s.groupTitle}>Data and privacy</h2>
