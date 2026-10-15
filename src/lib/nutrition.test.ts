@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPlan, cuisineOf, earnedBadges, groupStatus, MEALS, planCheck, recipeNutrition, recommend, shiftDate, streakInfo, totals, type Food } from './nutrition';
+import { buildPlan, cuisineOf, earnedBadges, groupStatus, MEALS, planCheck, recipeNutrition, energyRecommendation, recommend, shiftDate, streakInfo, totals, type Food } from './nutrition';
 import { SEED_FOODS } from './seed-foods';
 
 const byId = new Map<string, Food>(SEED_FOODS.map(f => [f.id, f]));
@@ -128,4 +128,24 @@ describe('recipeNutrition', () => {
   it('treats bad servings as one', () => {
     expect(recipeNutrition([{ foodId: 'dal', q: 1 }], 0, byId).perServing.kcal).toBeCloseTo(dal.kcal, 0);
   });
+});
+
+describe('recommendation explanation', () => {
+  it('uses the same calorie estimate as targets for every goal', () => {
+    for (const goal of ['lose', 'fit', 'muscle'] as const) {
+      const body = { goal, sex: 'male' as const, age: 35, height: 180, weight: 110, activity: 'moderate' as const };
+      const estimate = energyRecommendation(body);
+      const target = recommend(body);
+      expect(estimate.bmr).toBe(2055);
+      expect(estimate.maintenance).toBe(2055 * 1.55);
+      expect(estimate.maintenance + estimate.adjustment).toBe(target.kcal);
+      expect(Math.abs(target.p * 4 + target.c * 4 + target.f * 9 - target.kcal)).toBeLessThanOrEqual(2);
+    }
+  });
+});
+
+it('preserves the resting-energy floor after rounding a loss target', () => {
+  const body = { goal: 'lose' as const, sex: 'male' as const, age: 35, height: 180, weight: 59.8, activity: 'sedentary' as const };
+  const estimate = energyRecommendation(body);
+  expect(estimate.kcal).toBeGreaterThanOrEqual(estimate.bmr);
 });

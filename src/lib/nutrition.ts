@@ -109,11 +109,18 @@ export function isValidProfile(p: Partial<BodyProfile> | null | undefined): p is
 }
 
 /** Mifflin-St Jeor energy, ICMR protein (0.83 g/kg; 1.6 g/kg for muscle), 30% fat, WHO fibre floor. */
-export function recommend(pr: BodyProfile): Targets & { fibre: number; bmi: number } {
+export function energyRecommendation(pr: BodyProfile) {
   const bmr = 10 * pr.weight + 6.25 * pr.height - 5 * pr.age + (pr.sex === 'female' ? -161 : 5);
   const tdee = bmr * ACTIVITY[pr.activity].factor;
   let kcal = pr.goal === 'lose' ? Math.max(tdee - 500, bmr, 1200) : pr.goal === 'muscle' ? tdee * 1.1 : tdee;
   kcal = Math.round(kcal / 10) * 10;
+  if (pr.goal === 'lose') kcal = Math.max(kcal, Math.ceil(Math.max(bmr, 1200) / 10) * 10);
+  return { bmr, maintenance: tdee, adjustment: kcal - tdee, kcal };
+}
+
+/** Macro targets share the same calorie estimate shown in the recommendation explanation. */
+export function recommend(pr: BodyProfile): Targets & { fibre: number; bmi: number } {
+  const { kcal } = energyRecommendation(pr);
   const p = Math.round(pr.goal === 'muscle' ? 1.6 * pr.weight : Math.max(0.83 * pr.weight, (kcal * 0.15) / 4));
   const f = Math.round((kcal * 0.3) / 9);
   const c = Math.max(0, Math.round((kcal - 4 * p - 9 * f) / 4));

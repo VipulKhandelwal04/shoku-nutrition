@@ -132,3 +132,8 @@
 @media (max-width: 760px) { .seg { width: 100%; } .layout { gap: 16px; } }
 
 .macroDetail { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); max-width: 560px; }
+
+.calculation { font-size: 13px; color: var(--text-2); }
+.calculation dl { display: grid; gap: 12px; }
+.calculation dl > div { display: flex; justify-content: space-between; gap: 12px; }
+.calculation dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
