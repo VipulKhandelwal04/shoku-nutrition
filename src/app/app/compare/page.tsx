@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireOnboarded } from '@/lib/auth';
-import { getAiAssist, getEntries, getFlags, getWeekPlans, getWorkouts } from '@/lib/data/queries';
+import { getAiAssist, getDays, getEntries, getFlags, getWeekPlans, getWorkouts } from '@/lib/data/queries';
 import { activityEnergy } from '@/lib/activity-energy';
 import { EnergyComparison } from '@/components/app/activity/EnergyComparison';
 import { isOn } from '@/lib/flags';
@@ -58,9 +58,10 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const rec = body ? recommend(body) : null;
 
   const energyKeys = period === 'week' ? weekKeys(today) : [day];
-  const [periodEntries, periodWorkouts] = await Promise.all([
+  const [periodEntries, periodWorkouts, periodDays] = await Promise.all([
     getEntries(energyKeys[0], energyKeys.at(-1)!),
     isOn(flags, 'workouts') ? getWorkouts(energyKeys[0], energyKeys.at(-1)!) : [],
+    getDays(energyKeys[0], energyKeys.at(-1)!),
   ]);
   const energy = activityEnergy(energyKeys, periodEntries, periodWorkouts);
 
@@ -68,10 +69,13 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   let entries: Entry[];
   let dayEntries: Entry[];
   let countedDays = 0;
+  let waterLogged: number | null = null;
   if (period === 'week') {
     const keys = weekKeys(today);
     const rows = periodEntries;
-    const summaries = summariseDays(keys, rows);
+    const summaries = summariseDays(keys, rows, periodDays);
+    const counted = summaries.filter(d => d.counted);
+    waterLogged = counted.length ? counted.reduce((sum, d) => sum + d.water, 0) / counted.length : null;
     const avg = averageDay(summaries);
     entries = avg.entries;
     countedDays = avg.days;
@@ -79,6 +83,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   } else {
     entries = toEntries(periodEntries);
     dayEntries = entries;
+    waterLogged = periodDays.find(d => d.day === day)?.water_ml ?? null;
   }
   const dayOpen = period === 'day' && day === today;
   const statuses = groupStatus(entries, targets.kcal, dayOpen);
@@ -156,7 +161,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
     : dayOpen ? 'Day still open: gaps close as you log' : dayLabel;
 
   const you = energySplit(t);
-  const recSplit = energySplit(rec ?? targets)!;
+  const recSplit = energySplit(targets)!;
 
   // ---- Panels ----
   const emptyNote = empty ? (
@@ -170,7 +175,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const contributions = groupContributions(entries);
   const groupsPanel = (
     <>
-      <p className={s.panelNote}>Food-group targets for {fmt(targets.kcal)} kcal a day</p>
+      <p className={s.panelNote}>Food-group targets scaled from the reference plate to your active {fmt(targets.kcal)} kcal daily target. These are food-group estimates, not individual nutrient prescriptions.</p>
       {emptyNote}
       <ul className={s.contribList}>
         {statuses.map(g => {
@@ -179,7 +184,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
             <li key={g.key}>
               <div className={s.contribHead}>
                 <strong>{g.label}</strong>
-                <span className="muted">{g.kind === 'limit' ? 'Up to' : 'At least'} {fmt(g.target)} {g.unit}</span>
+                <span className="muted">{fmt(g.eaten)} {g.unit} logged · {g.kind === 'limit' ? 'Limit' : 'Target'} {fmt(g.target)} {g.unit}</span>
               </div>
               {/* With nothing logged the note above says so once; no "nothing yet" line under every group. */}
               {(items.length > 0 || !empty) && (
@@ -199,6 +204,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const nutrientsPanel = (
     <>
       {emptyNote}
+      <p className={s.panelNote}>Logged intake against your active daily targets. Fibre uses a fixed 25 g target. Limits are ceilings, not amounts you need to reach.</p>
       <CompareRow label="Calories" eaten={t.kcal} target={targets.kcal} unit="kcal" kind="target" status={nutrientStatus(t.kcal, targets.kcal, 'target', dayOpen)} />
       <CompareRow label="Protein" eaten={t.p} target={targets.p} unit="g" kind="atleast" status={nutrientStatus(t.p, targets.p, 'atleast', dayOpen)} />
       <CompareRow label="Carbs" eaten={t.c} target={targets.c} unit="g" kind="target" status={nutrientStatus(t.c, targets.c, 'target', dayOpen)} />
@@ -223,11 +229,13 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
           <WeekPlanner />
         </div>
       )}
+      <p className={s.panelNote}>Daily base target: {fmt(targets.kcal)} kcal. Plan totals are proposed food, not logged intake. Training-day plans may include extra fuel; saved portions remain unchanged when targets change.</p>
       <WeekPlan days={week} today={today} target={targets.kcal} canEdit={isOn(flags, 'week', 'edit')} canLogRecipe={canLogRecipe} />
     </>
   ) : (
     <>
       {planToggle}
+      <p className={s.panelNote}>Daily target: {fmt(targets.kcal)} kcal · Planned: {fmt(planKcal(plan, foodsById))} kcal · Logged: {fmt(totals(dayEntries).kcal)} kcal. Planned food only counts as intake after you log it. Saved plans retain their portions when targets change; review them against your current target.</p>
       <div className={s.planHead}>
         <div>
           <p className={s.panelNote}>
@@ -356,14 +364,14 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
             </div>
 
             <aside className={`stack ${s.side}`} aria-label="Goal and targets">
-              {isOn(flags, 'compare', 'goal') && <GoalCard goal={goal} targets={targets} recommended={rec ? pickTargets(rec) : null} bmi={rec?.bmi ?? null} bmiNote={rec ? bmiBand(rec.bmi) : null} />}
+              {isOn(flags, 'compare', 'goal') && <GoalCard waterLogged={waterLogged} periodNote={period === 'week' ? `Daily averages from ${countedDays} days with at least 3 meals logged; partial days are excluded.` : `Logged on ${dayLabel}.`} body={body} logged={empty ? null : t} loggedLabel={period === 'week' ? 'Daily average' : 'Logged'} goal={goal} targets={targets} recommended={rec ? pickTargets(rec) : null} bmi={rec?.bmi ?? null} bmiNote={rec ? bmiBand(rec.bmi) : null} />}
 
 
               <details className={s.disclosure}>
                 <summary>About these numbers</summary>
                 <p className="note">
                   Calories come from your age, height, weight, sex and activity, adjusted for {GOALS[goal].label.toLowerCase()}.
-                  Protein is 0.83 g per kg of body weight (1.6 g when building muscle), and fibre is at least 25 g.
+                  Protein uses the higher of 0.83 g per kg or 15% of calories (1.6 g per kg when building muscle); fibre has a fixed 25 g target.
                   BMI bands use the lower cut-offs suited to Indian adults. These are general estimates for healthy adults:
                   if you’re pregnant, breastfeeding or managing a health condition, use targets from your doctor or dietitian.
                 </p>
@@ -375,7 +383,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
           <section className={s.macroDetail} aria-labelledby="split-title">
             <h3 id="split-title" className={s.sideTitle}>Where your energy comes from</h3>
             <SplitBar label="You" split={you} />
-            <SplitBar label={rec ? 'Recommended' : 'Your targets'} split={recSplit} />
+            <SplitBar label="Daily targets" split={recSplit} />
             <dl className={s.splitLegend}>
               {(['p', 'c', 'f'] as const).map(k => (
                 <div key={k}>

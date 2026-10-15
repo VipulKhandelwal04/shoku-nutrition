@@ -13,18 +13,22 @@ export type InsightsResult<T = undefined> = { ok: true; data: T } | { ok: false;
 
 const SIGNED_OUT = 'Your session ended. Sign in again.';
 
-/** Changes the goal. Targets stay as they are; the caller offers "Use recommended targets" when they differ. */
+/** A goal change applies its recommendation in the same profile update. */
 export async function setGoal(goal: string): Promise<InsightsResult<{ recommended: Targets | null }>> {
   const parsed = z.enum(['lose', 'fit', 'muscle']).safeParse(goal);
   if (!parsed.success) return { ok: false, error: 'Pick one of the three goals.' };
   const session = await actionUser();
   if (!session) return { ok: false, error: SIGNED_OUT };
   const { supabase, user } = session;
-  const { data, error } = await supabase.from('profiles').update({ goal: parsed.data }).eq('id', user.id).select('*').single();
-  if (error || !data) return { ok: false, error: 'Couldn’t change your goal. Try again.' };
-  const body = bodyOf(data as Profile);
+  const { data: profile, error: readError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+  if (readError || !profile) return { ok: false, error: 'Couldn’t load your profile. Try again.' };
+  const body = bodyOf({ ...profile as Profile, goal: parsed.data });
+  if (!body) return { ok: false, error: 'Complete your body details in Profile before changing your goal.' };
+  const recommended = pickTargets(recommend(body));
+  const { error } = await supabase.from('profiles').update({ goal: parsed.data, targets: recommended }).eq('id', user.id);
+  if (error) return { ok: false, error: 'Couldn’t change your goal. Try again.' };
   revalidatePath('/app', 'layout');
-  return { ok: true, data: { recommended: body ? pickTargets(recommend(body)) : null } };
+  return { ok: true, data: { recommended } };
 }
 
 /** Replaces targets with the recommendation for the saved profile. Returns the previous targets (for Undo). */
