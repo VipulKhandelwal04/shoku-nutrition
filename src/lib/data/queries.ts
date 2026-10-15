@@ -1,5 +1,6 @@
 import 'server-only';
-import { mergeFlags, type FeatureFlags } from '../flags';
+import { isOn, mergeFlags, type FeatureFlags } from '../flags';
+import { feedbackSummary, type FeedbackSummary } from '../ai/feedback';
 import { cache } from 'react';
 import { createClient } from '../supabase/server';
 import type { FeedbackRow } from '../preferences';
@@ -122,4 +123,19 @@ export async function getRatings(limit = 100): Promise<FeedbackRow[]> {
     .order('created_at', { ascending: false }).limit(limit);
   if (error) return [];
   return (data ?? []) as FeedbackRow[];
+}
+
+/**
+ * The feedback summary suggestions may use, or undefined when "Learn from feedback" is off (admin flag) or the
+ * member turned off "Remember meal feedback". Reads the last 120 days of ratings.
+ */
+export async function getFeedbackForSuggestions(flags: FeatureFlags, profile: { remember_feedback?: boolean | null }): Promise<FeedbackSummary | undefined> {
+  if (!isOn(flags, 'feedback', 'learning') || profile.remember_feedback === false) return undefined;
+  const since = new Date(Date.now() - 120 * 864e5).toISOString();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('meal_feedback').select('food_ids, rating, title, created_at')
+    .gte('created_at', since).order('created_at', { ascending: false }).limit(200);
+  if (error || !data?.length) return undefined;
+  const summary = feedbackSummary(data as Pick<FeedbackRow, 'food_ids' | 'rating' | 'title' | 'created_at'>[]);
+  return summary.any ? summary : undefined;
 }

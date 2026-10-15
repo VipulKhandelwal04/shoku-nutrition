@@ -5,7 +5,7 @@ import { useToast } from '@/components/ui/Toast';
 import { deleteRating } from '@/lib/data/feedback';
 import { CUISINE_MODES, MAX_CUISINES, ratingLabel, tagLabel, type CuisinePrefs, type FeedbackRow } from '@/lib/preferences';
 import fb from '@/components/app/feedback/feedback.module.css';
-import { saveActivityPrefs, saveCuisinePrefs } from './actions';
+import { saveActivityPrefs, saveCuisinePrefs, saveRememberFeedback } from './actions';
 import s from './profile.module.css';
 
 /** Profile → Food style: how much Ask Shoku and Tune my plan lean toward particular cuisines. */
@@ -104,9 +104,30 @@ export function ActivitySwitches({ initial }: { initial: { useWorkouts: boolean;
 
 const when = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
-/** Profile → Meal feedback: every rating the member saved, each deletable. */
-export function RatingsList({ ratings }: { ratings: FeedbackRow[] }) {
+/** Profile → Meal feedback: "Remember meal feedback" (when learning is on), then every rating, each deletable. */
+export function RatingsList({ ratings, remember }: { ratings: FeedbackRow[]; remember: boolean | null }) {
   const toast = useToast();
+  const [on, setOn] = useState(remember ?? true);
+  const [saving, startSave] = useTransition();
+  const flip = () => {
+    const next = !on;
+    setOn(next);
+    startSave(async () => {
+      const res = await saveRememberFeedback(next);
+      if (!res.ok) { setOn(!next); toast(res.error); }
+    });
+  };
+  const rememberRow = remember === null ? null : (
+    <ul className={s.switchList} aria-busy={saving || undefined}>
+      <li className={s.switchRow}>
+        <span className={s.rowText}>
+          <span className={s.rowLabel} id="pref-remember">Remember meal feedback</span>
+          <span className={s.switchHelp}>Ask Shoku and Tune my plan favour what you liked and push “not for me” down. Off keeps your ratings but stops using them.</span>
+        </span>
+        <button type="button" role="switch" className={s.switch} aria-checked={on} aria-labelledby="pref-remember" onClick={flip} />
+      </li>
+    </ul>
+  );
   const [gone, setGone] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const shown = ratings.filter(r => !gone.has(r.id));
@@ -120,9 +141,10 @@ export function RatingsList({ ratings }: { ratings: FeedbackRow[] }) {
     toast('Rating deleted.');
   }
 
-  if (!shown.length) return <p className={fb.empty}>No ratings yet. After a meal, open it on Today or in an Ask Shoku idea and tap “How was it?”.</p>;
+  if (!shown.length) return <>{rememberRow}<p className={fb.empty}>No ratings yet. After a meal, open it on Today or in an Ask Shoku idea and tap “How was it?”.</p></>;
   return (
     <>
+      {rememberRow}
       <p className={s.sub}>What you told Shoku about meals. Only you see these.</p>
       <ul className={fb.list}>
         {shown.map(r => (

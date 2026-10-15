@@ -25,6 +25,8 @@ export type Profile = {
   cuisines?: string[] | null;
   use_workouts?: boolean | null;
   ask_workouts?: boolean | null;
+  /** Migration 0010. */
+  remember_feedback?: boolean | null;
 };
 
 export type FoodRow = Food & { owner_id: string | null; active: boolean; updated_at?: string };

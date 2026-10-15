@@ -158,6 +158,7 @@ function PlanBody({ onUse }: { onUse: () => void }) {
           </h3>
           {result.note && <p className="muted">{result.note}</p>}
           {result.cuisines?.length > 0 && <p className="fine-print">Leaning toward {result.cuisines.join(', ')} · from your Food style</p>}
+          {result.feedback && <p className="fine-print">Shaped by your meal feedback · turn it off in Profile → Meal feedback</p>}
           {MEALS.map(m => (
             <div key={m} className={styles.planMeal}>
               <p className="label">{m}</p>

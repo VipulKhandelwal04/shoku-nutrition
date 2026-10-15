@@ -23,7 +23,7 @@ export const parseRequest = z.object({
 
 /** POST /api/ai/plan ({ preferences }). Nothing is saved until the user confirms (saveAiPlan). */
 export type PlanRow = { foodId: string; name: string; unit: string; icon: string; q: number; kcal: number };
-export type PlanResponse = { plan: Plan; rows: Record<Meal, PlanRow[]>; kcal: number; target: number; note: string | null; cuisines: string[] };
+export type PlanResponse = { plan: Plan; rows: Record<Meal, PlanRow[]>; kcal: number; target: number; note: string | null; cuisines: string[]; feedback: boolean };
 export const planRequest = z.object({ preferences: z.string().trim().max(MAX_TEXT, `Keep it under ${MAX_TEXT} characters`).default('') });
 
 /** POST /api/ai/coach ({ day }). `ai` is false for the built-in line used on empty days (no AI call made). */
@@ -70,6 +70,8 @@ export type AskContext = {
   diet: string; avoiding: string[];
   /** Cuisines the ideas leaned toward (empty when open to all). */
   cuisines: string[];
+  /** True when the member's meal feedback reached the brief. */
+  feedback: boolean;
 };
 export type AskResponse = { answer: string; ideas: AskIdea[]; context: AskContext };
 

@@ -47,6 +47,12 @@ export async function saveActivityPrefs(input: { useWorkouts: boolean; askFirst:
   return updatePrefs({ use_workouts: parsed.data.useWorkouts, ask_workouts: parsed.data.askFirst }, 'Couldn’t save that setting. Try again.');
 }
 
+/** "Remember meal feedback": whether ratings shape suggestions. Turning it off never deletes ratings. */
+export async function saveRememberFeedback(on: boolean): Promise<ActionResult> {
+  if (typeof on !== 'boolean') return { ok: false, error: 'Couldn’t save that setting.' };
+  return updatePrefs({ remember_feedback: on }, 'Couldn’t save that setting. Try again.');
+}
+
 async function updatePrefs(patch: Record<string, unknown>, failMsg: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();

@@ -3,9 +3,9 @@ import { askOutput, askRequest, type AskContext, type AskResponse } from '@/lib/
 import { generateJson } from '@/lib/ai/gemini';
 import { guardAi, recordUsage } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson, todayIst } from '@/lib/ai/http';
-import { candidateLines, cuisineBrief, mealCandidates } from '@/lib/ai/candidates';
+import { candidateLines, cuisineBrief, feedbackBrief, mealCandidates } from '@/lib/ai/candidates';
 import { ASK_SYSTEM } from '@/lib/ai/prompts';
-import { getFlags, getFoods } from '@/lib/data/queries';
+import { getFeedbackForSuggestions, getFlags, getFoods } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
 import { OPEN_CUISINES, cuisinePrefsOf } from '@/lib/preferences';
 import { GOALS, MEALS, totals } from '@/lib/nutrition';
@@ -41,7 +41,9 @@ export async function POST(request: Request) {
 
   const flags = await getFlags();
   const cuisines = isOn(flags, 'cuisines', 'ask') ? cuisinePrefsOf(profile) : OPEN_CUISINES;
-  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: question, cuisines });
+  const feedback = await getFeedbackForSuggestions(flags, profile);
+  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: question, cuisines, feedback });
+  const fbBrief = feedbackBrief(set, feedback);
   if (set.candidates.length < 4) return fail(422, 'Too few foods fit that question. Loosen one condition and ask again.');
 
   const dayEntries = (entries ?? []) as Pick<EntryRow, 'meal' | 'food' | 'quantity'>[];
@@ -60,6 +62,7 @@ export async function POST(request: Request) {
     diet: DIET_LABEL[profile.diet] ?? profile.diet,
     avoiding: (profile.restrictions ?? []).slice(0, 6),
     cuisines: set.preferred,
+    feedback: !!fbBrief,
   };
   const brief = {
     goal: profile.goal ? GOALS[profile.goal].label : 'Stay fit',
@@ -73,6 +76,7 @@ export async function POST(request: Request) {
     // read "no workouts" as a rest day.
     ...(workoutsUse === 'used' ? { workouts: dayWorkouts.map(w => ({ what: w.label, type: w.kind, minutes: w.minutes, kcal_burned: w.kcal, from: w.source })) } : {}),
     ...(cuisineBrief(set) ? { cuisines: cuisineBrief(set) } : {}),
+    ...(fbBrief ? { feedback: fbBrief } : {}),
   };
   const catalogue = candidateLines(set);
 

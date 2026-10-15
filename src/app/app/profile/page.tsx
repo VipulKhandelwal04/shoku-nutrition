@@ -110,6 +110,7 @@ export default async function ProfilePage() {
           cuisines: cuisinesOn ? { value: cuisines, choices: cuisineChoices } : null,
           activity,
           ratings: isOn(flags, 'feedback') || ratings.length ? ratings : null,
+          remember: isOn(flags, 'feedback', 'learning') ? profile.remember_feedback !== false : null,
         }}
       />
 

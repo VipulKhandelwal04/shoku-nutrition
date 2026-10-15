@@ -50,7 +50,8 @@ export default function PrivacyPage() {
       <p>
         When you use AI Assist, the photo or text you submit is sent to <strong>Google Gemini</strong> to suggest foods and portions, a plan, or a
         coach line. Only what that request needs is sent: for Ask Shoku, that is your question, today’s meals and targets, your diet and the
-        foods you skip, your cuisine preferences, and your workouts unless you turn that off in your profile. Results are suggestions: nothing is
+        foods you skip, your cuisine preferences, your workouts unless you turn that off, and the names of foods you liked or rated
+        “not for me” unless you turn off Remember meal feedback. Your notes on meals are never sent. Results are suggestions: nothing is
         saved to your diary until you confirm it.
       </p>
 
