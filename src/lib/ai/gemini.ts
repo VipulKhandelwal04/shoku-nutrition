@@ -1,6 +1,7 @@
 import 'server-only';
 import { ApiError, GoogleGenAI, ThinkingLevel, type Part } from '@google/genai';
 import { z } from 'zod';
+import { GroqError, groqJson, groqModel, isGroqConfigured } from './groq';
 
 // Server-only Gemini access for AI Assist. The key never leaves the server and is never logged.
 
@@ -124,8 +125,34 @@ export async function generateJson<T>(
       if (Date.now() - started > timeoutMs - 6_000) throw new AiBadResponse();
     }
   }
+  // Every Gemini model was overloaded or failing: the Groq backup takes text requests (photos stay with Gemini).
+  const text = textOnly(opts.parts);
+  if (isGroqConfigured() && text !== null && lastUpstream && RETRYABLE.has(lastUpstream.status)) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const out = await groqJson({ system: opts.system, text, jsonSchema: responseJsonSchema, temperature: opts.temperature ?? 0.2, signal });
+        const parsed = parseJson(out, schema);
+        if (parsed.ok) {
+          console.warn(`[ai] answered by Groq backup (${groqModel()}) after Gemini ${lastUpstream.status}`);
+          return parsed.data;
+        }
+      } catch (err) {
+        if (opts.signal?.aborted) throw new AiCancelled();
+        if (deadline.aborted || isAbort(err)) throw new AiTimeout();
+        console.error(`[ai] groq ${groqModel()} ${err instanceof GroqError ? err.message : 'request failed'}`);
+        break;
+      }
+      if (Date.now() - started > timeoutMs - 6_000) break;
+    }
+  }
   if (lastUpstream) throw lastUpstream;
   throw new AiBadResponse();
+}
+
+/** The request as one text, or null when it carries an image (only Gemini takes photos). */
+export function textOnly(parts: Part[]): string | null {
+  if (parts.some(p => !p.text && (p.inlineData || p.fileData))) return null;
+  return parts.map(p => p.text ?? '').filter(Boolean).join('\n\n');
 }
 
 /**
