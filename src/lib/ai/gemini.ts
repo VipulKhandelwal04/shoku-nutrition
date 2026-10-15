@@ -38,10 +38,12 @@ export function aiModel(): string {
 
 /**
  * Models to try in order. The main Flash model is often "experiencing high demand" (503); Flash-Lite is fast and
- * rarely overloaded, so it is the fallback. Override the fallback with GEMINI_FALLBACK_MODEL (empty = none).
+ * rarely overloaded, so it is the fallback. It is pinned to a stable version: the "-latest" alias is swapped by Google
+ * on each release, and in Oct 2026 it rejected our requests with a bare 400. Override with GEMINI_FALLBACK_MODEL
+ * (empty = none).
  */
 export function aiModels(): string[] {
-  const fallback = process.env.GEMINI_FALLBACK_MODEL ?? 'gemini-flash-lite-latest';
+  const fallback = process.env.GEMINI_FALLBACK_MODEL ?? 'gemini-3.5-flash-lite';
   return [...new Set([aiModel(), fallback].filter(Boolean))];
 }
 
@@ -115,6 +117,9 @@ export async function generateJson<T>(
         console.error(`[ai] ${models[m]} upstream ${status}: ${reason}`);
         // A rejected key is a setup problem, not the user's input: say "not set up" instead of "try rewording".
         if (/api[ _]?key/i.test(reason)) throw new AiNotConfigured();
+        // The main model took this request and was only busy, so a 400 from a fallback means that model can't take
+        // something we send, not that the request is bad. Keep the "busy" status and move on (next model, then Groq).
+        if (status === 400 && lastUpstream) break;
         lastUpstream = new AiUpstream(status);
         if (RETRYABLE.has(status)) break; // next model
         throw lastUpstream;

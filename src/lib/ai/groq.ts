@@ -1,7 +1,8 @@
 import 'server-only';
 // Groq: the backup for AI Assist when every Gemini model is overloaded or failing. Text only (photos stay with
-// Gemini). Groq's API is OpenAI-compatible; JSON mode plus the schema in the instructions, and the caller still
-// validates the answer with zod. The key stays on the server and is never logged.
+// Gemini). Groq's API is OpenAI-compatible. Models with Structured Outputs get the schema as a json_schema response
+// format; the rest get JSON mode plus the schema in the instructions. Either way the caller validates with zod.
+// The key stays on the server and is never logged.
 
 const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -10,8 +11,11 @@ export function isGroqConfigured(): boolean {
 }
 
 export function groqModel(): string {
-  return process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  return process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 }
+
+/** Groq models that take a json_schema response format (Structured Outputs); others only take JSON mode. */
+const STRUCTURED = /^(openai\/gpt-oss|qwen\/qwen3)/;
 
 /** Groq answered with an HTTP error. */
 export class GroqError extends Error {
@@ -20,8 +24,10 @@ export class GroqError extends Error {
 
 /** The request body for a JSON answer that fits `jsonSchema`. Pure, so it is tested. */
 export function groqRequest(opts: { system: string; text: string; jsonSchema: Record<string, unknown>; temperature: number; model?: string }) {
+  const model = opts.model ?? groqModel();
+  const structured = STRUCTURED.test(model);
   return {
-    model: opts.model ?? groqModel(),
+    model,
     messages: [
       {
         role: 'system',
@@ -29,7 +35,12 @@ export function groqRequest(opts: { system: string; text: string; jsonSchema: Re
       },
       { role: 'user', content: opts.text },
     ],
-    response_format: { type: 'json_object' },
+    // Best-effort (not strict): strict mode refuses schema keywords we use, such as maxItems.
+    response_format: structured
+      ? { type: 'json_schema', json_schema: { name: 'answer', schema: opts.jsonSchema, strict: false } }
+      : { type: 'json_object' },
+    // gpt-oss reasons before answering; low effort keeps it to a few seconds.
+    ...(model.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' } : {}),
     temperature: opts.temperature,
     max_completion_tokens: 8000,
   };
