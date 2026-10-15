@@ -2,10 +2,10 @@ import { planOutput, planRequest, type PlanResponse, type PlanRow } from '@/lib/
 import { generateJson } from '@/lib/ai/gemini';
 import { guardAi, recordUsage } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson } from '@/lib/ai/http';
-import { candidateLines, cuisineBrief, mealCandidates } from '@/lib/ai/candidates';
+import { candidateLines, cuisineBrief, feedbackBrief, mealCandidates } from '@/lib/ai/candidates';
 import { repairPlan, type RepairResult } from '@/lib/ai/plan';
 import { PLAN_SYSTEM } from '@/lib/ai/prompts';
-import { getFlags, getFoods } from '@/lib/data/queries';
+import { getFeedbackForSuggestions, getFlags, getFoods } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
 import { OPEN_CUISINES, cuisinePrefsOf } from '@/lib/preferences';
 import { MEALS, GOALS, type Food, type Meal } from '@/lib/nutrition';
@@ -30,8 +30,11 @@ export async function POST(request: Request) {
   if (!profile?.targets) return fail(409, 'Finish setting up your goal first, then AI Assist can tailor a plan.');
   const targets = profile.targets;
 
-  const cuisines = isOn(await getFlags(), 'cuisines', 'plans') ? cuisinePrefsOf(profile) : OPEN_CUISINES;
-  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: preferences, cuisines });
+  const flags = await getFlags();
+  const cuisines = isOn(flags, 'cuisines', 'plans') ? cuisinePrefsOf(profile) : OPEN_CUISINES;
+  const feedback = await getFeedbackForSuggestions(flags, profile);
+  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: preferences, cuisines, feedback });
+  const fbBrief = feedbackBrief(set, feedback);
   if (set.candidates.length < 6) return fail(422, 'Too few foods fit those preferences. Loosen one and try again.');
   const foodsById = set.eligible;
   const allowed = (f: Food) => set.eligible.has(f.id);
@@ -42,6 +45,7 @@ export async function POST(request: Request) {
     restrictions: profile.restrictions ?? [],
     targets: { kcal: targets.kcal, protein_g: targets.p, carbs_g: targets.c, fat_g: targets.f },
     ...(cuisineBrief(set) ? { cuisines: cuisineBrief(set) } : {}),
+    ...(fbBrief ? { feedback: fbBrief } : {}),
   };
   const catalogue = candidateLines(set);
 
@@ -73,7 +77,7 @@ export async function POST(request: Request) {
       const f = foodsById.get(i.foodId)!;
       return { foodId: f.id, name: f.name, unit: f.unit, icon: f.icon, q: i.q, kcal: Math.round(f.kcal * i.q) };
     })])) as Record<Meal, PlanRow[]>;
-    return ok<PlanResponse>({ plan: result.plan, rows, kcal: result.kcal, target: targets.kcal, note: note.trim().slice(0, 200) || null, cuisines: set.preferred });
+    return ok<PlanResponse>({ plan: result.plan, rows, kcal: result.kcal, target: targets.kcal, note: note.trim().slice(0, 200) || null, cuisines: set.preferred, feedback: !!fbBrief });
   } catch (err) {
     return errorResponse(err, 'plan');
   } finally {

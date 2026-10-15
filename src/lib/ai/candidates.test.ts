@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SEED_FOODS } from '../seed-foods';
-import { candidateLines, mealCandidates } from './candidates';
+import { candidateLines, feedbackBrief, mealCandidates } from './candidates';
+import { feedbackSummary } from './feedback';
 
 const ids = (rules: Parameters<typeof mealCandidates>[1]) => new Set(mealCandidates(SEED_FOODS, rules).candidates.map(c => c.food.id));
 
@@ -95,6 +96,47 @@ describe('mealCandidates with cuisine preferences', () => {
     expect(set.eligible.has('frittata')).toBe(false); // egg-based: diet says veg
     expect(set.eligible.has('caprese')).toBe(false); // paneer-based: lactose-free
     expect(set.thin).toBe(true);
+  });
+});
+
+describe('mealCandidates with meal feedback', () => {
+  const at = '2026-10-15T08:00:00Z';
+  const feedback = feedbackSummary([
+    { rating: 'no', food_ids: ['paneer'], title: 'Paneer tikka', created_at: at },
+    { rating: 'like', food_ids: ['curd'], title: 'Curd rice', created_at: at },
+    { rating: 'like', food_ids: ['chicken'], title: 'Chicken curry', created_at: at },
+  ]);
+
+  it('liked foods move up, "not for me" moves down, and nothing is removed', () => {
+    const set = mealCandidates(SEED_FOODS, { diet: 'nonveg', restrictions: [], feedback });
+    const ids = set.candidates.map(c => c.food.id);
+    expect(ids.length).toBe(SEED_FOODS.length);
+    expect(ids.indexOf('curd')).toBeLessThan(2);
+    expect(ids.at(-1)).toBe('paneer');
+    expect(set.liked.map(f => f.id)).toContain('curd');
+    expect(set.disliked.map(f => f.id)).toEqual(['paneer']);
+  });
+
+  it('diet still wins: a liked food the diet rules out stays out', () => {
+    const set = mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [], feedback });
+    expect(set.eligible.has('chicken')).toBe(false);
+    expect(set.liked.map(f => f.id)).not.toContain('chicken');
+    expect(set.eligible.has('paneer')).toBe(true); // disliked, but still a candidate
+  });
+
+  it('combines with cuisine preferences: a disliked preferred food sinks below liked ones', () => {
+    const set = mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [], feedback, cuisines: { mode: 'familiar', chosen: [] } });
+    const w = (id: string) => set.candidates.find(c => c.food.id === id)!.weight;
+    expect(w('curd')).toBeGreaterThan(w('dal'));
+    expect(w('paneer')).toBeLessThan(w('dal'));
+  });
+
+  it('feedbackBrief names liked and not-for-me foods, and is null without feedback', () => {
+    const set = mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [], feedback });
+    const brief = feedbackBrief(set, feedback)!;
+    expect(brief.notForMe).toEqual([SEED_FOODS.find(f => f.id === 'paneer')!.name]);
+    expect(brief.likedMeals).toContain('Curd rice');
+    expect(feedbackBrief(mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [] }), undefined)).toBeNull();
   });
 });
 

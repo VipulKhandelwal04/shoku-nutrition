@@ -48,6 +48,8 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
     cuisines: { value: CuisinePrefs; choices: string[] } | null;
     activity: { useWorkouts: boolean; askFirst: boolean };
     ratings: FeedbackRow[] | null;
+    /** "Remember meal feedback", or null while learning from feedback is switched off. */
+    remember: boolean | null;
   };
 }) {
   const [open, setOpen] = useState<SheetKind | null>(null);
@@ -228,7 +230,7 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
       </Sheet>
       {prefs.ratings && (
         <Sheet open={open === 'ratings'} onClose={() => setOpen(null)} title="Meal feedback" labelledBy="pm-ratings-title">
-          <RatingsList ratings={prefs.ratings} />
+          <RatingsList ratings={prefs.ratings} remember={prefs.remember} />
         </Sheet>
       )}
 

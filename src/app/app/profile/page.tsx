@@ -5,6 +5,7 @@ import { isOn } from '@/lib/flags';
 import { BADGES, GOALS, cuisineOf, dayCounts, recommend, streakInfo } from '@/lib/nutrition';
 import { CUISINE_CHOICES, cuisinePrefsOf, cuisineSummary } from '@/lib/preferences';
 import { Icon } from '@/components/ui/Icon';
+import { BrandIcon, Wordmark } from '@/components/brand/Brand';
 import { DIETS, RESTRICTIONS, RESTRICTION_SLUGS, bodyOf, pickTargets, type Restriction } from '@/components/app/insights/insights';
 import { userToday } from '@/components/app/insights/server';
 import type { BodyValues } from './ProfileForms';
@@ -79,7 +80,7 @@ export default async function ProfilePage() {
       <section className={s.member} aria-label="Your Shoku card">
         <Image src="/img/hero.webp" alt="" fill sizes="(max-width: 720px) 100vw, 680px" className={s.cardPhoto} />
         <div className={s.cardTop}>
-          <span className={s.cardBrand}><span lang="ja" aria-hidden="true">食</span> Shoku</span>
+          <span className={s.cardBrand}><BrandIcon size={26} /> <Wordmark className={s.cardWord} /></span>
           <span className={s.cardSince}>Since {since}</span>
         </div>
         <p className={s.cardGoal}>{goal}</p>
@@ -109,6 +110,7 @@ export default async function ProfilePage() {
           cuisines: cuisinesOn ? { value: cuisines, choices: cuisineChoices } : null,
           activity,
           ratings: isOn(flags, 'feedback') || ratings.length ? ratings : null,
+          remember: isOn(flags, 'feedback', 'learning') ? profile.remember_feedback !== false : null,
         }}
       />
 

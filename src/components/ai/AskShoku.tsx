@@ -207,6 +207,7 @@ function Answer({ data, rateIdeas }: { data: AskResponse; rateIdeas: boolean }) 
     c.diet,
     ...(c.avoiding.length ? [`Avoiding ${c.avoiding.join(', ')}`] : []),
     ...(c.cuisines?.length ? [`Leaning ${c.cuisines.join(', ')}`] : []),
+    ...(c.feedback ? ['Your meal feedback'] : []),
   ];
   return (
     <div className={s.result}>

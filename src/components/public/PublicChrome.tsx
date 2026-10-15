@@ -1,20 +1,16 @@
 // Shared top bar and footer for the public pages (home, login, privacy, terms). Server Components.
 import Link from 'next/link';
+import { BrandIcon, Wordmark } from '@/components/brand/Brand';
 import styles from './PublicChrome.module.css';
 
-export function Wordmark({ className = '' }: { className?: string }) {
-  return (
-    <span className={`${styles.word} ${className}`}>
-      SH<span>O</span>KU
-    </span>
-  );
-}
+export { Wordmark };
 
 export function TopBar({ signedIn = false, solid = false }: { signedIn?: boolean; solid?: boolean }) {
   return (
     <header className={`${styles.bar} ${solid ? styles.solid : ''}`}>
       <div className={styles.barInner}>
         <Link href="/" className={styles.home} aria-label="Shoku home">
+          <BrandIcon size={32} />
           <Wordmark />
         </Link>
         {signedIn ? (

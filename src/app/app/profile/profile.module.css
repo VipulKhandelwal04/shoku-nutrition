@@ -13,8 +13,8 @@
 .cardPhoto { object-fit: cover; z-index: -2; opacity: .55; filter: saturate(1.2); }
 .member::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(125deg, rgba(255, 63, 108, .55) 0%, rgba(120, 18, 52, .55) 38%, rgba(10, 10, 12, .82) 78%); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .cardTop { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.cardBrand { display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 18px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.cardBrand span { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; font-size: 20px; letter-spacing: 0; }
+.cardBrand { display: inline-flex; align-items: center; gap: 8px; }
+.cardWord { font-size: 20px; letter-spacing: .08em; }
 .cardSince { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, .78); padding: 5px 10px; border-radius: 999px; background: rgba(0, 0, 0, .28); border: 1px solid rgba(255, 255, 255, .14); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .cardGoal { font-family: var(--display); font-size: clamp(40px, 11vw, 58px); font-weight: 800; line-height: .9; text-transform: uppercase; margin: auto 0 14px; padding-top: 26px; text-wrap: balance; }
 .cardFacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .18); }

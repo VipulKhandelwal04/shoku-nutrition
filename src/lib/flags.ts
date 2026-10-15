@@ -59,6 +59,7 @@ export const FEATURE_FLAGS = {
     children: {
       meals: { title: 'Rate logged meals', body: 'From a logged food on Today or Diary.' },
       ideas: { title: 'Rate Ask Shoku ideas', body: 'From an idea card in Ask Shoku.' },
+      learning: { title: 'Learn from feedback', body: 'Ask Shoku and Tune my plan favour liked foods and push “not for me” down (never removed). Members can turn it off.' },
     },
   },
 } as const;
