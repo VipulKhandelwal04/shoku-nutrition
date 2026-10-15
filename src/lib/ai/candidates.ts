@@ -1,7 +1,7 @@
 // Meal candidates: the one place that decides which catalogue foods a suggestion may use, and how strongly to
 // prefer each. Every suggestion surface (Ask Shoku, Tune my plan, and later Plan my week and recipes) asks here,
 // so diet and restriction rules can't drift between features. Pure; safe to test with the seed catalogue.
-import { DEFAULT_CUISINE, cuisineOf, type Diet, type Food } from '../nutrition';
+import { DEFAULT_CUISINE, cuisineOf, recipeNutrition, type Diet, type Food, type Macros, type RecipeIngredient } from '../nutrition';
 import type { CuisinePrefs } from '../preferences';
 import type { FeedbackSummary } from './feedback';
 import { dietAllows, isExcluded, parseExclusions, type Exclusions } from './plan';
@@ -17,7 +17,12 @@ export type CandidateRules = {
   cuisines?: CuisinePrefs;
   /** Meal feedback. Soft: liked foods rise, "not for me" sinks, nothing is removed. Missing = no feedback. */
   feedback?: FeedbackSummary;
+  /** Active recipes. A recipe is a candidate only when every one of its ingredients is. */
+  recipes?: Recipe[];
 };
+
+/** What the candidates module needs from a recipe. */
+export type Recipe = { id: string; name: string; cuisine: string; servings: number; steps: string[]; ingredients: RecipeIngredient[] };
 
 /** An eligible food and how strongly to prefer it (1 = neutral). Weights only ever reorder, never exclude. */
 export type Candidate = { food: Food; weight: number };
@@ -35,7 +40,12 @@ export type CandidateSet = {
   /** Eligible foods the member liked / rated "not for me", in candidate order. */
   liked: Food[];
   disliked: Food[];
+  /** Recipes whose ingredients all passed the hard rules (diet, restrictions, "no X"). */
+  recipes: Recipe[];
 };
+
+/** Cooking fat doesn't make a dish: ignored when matching a meal to a recipe, and only diet applies to it. */
+const MINOR_INGREDIENTS = new Set(['oil']);
 
 /** A preferred cuisine's foods get this weight; everything else stays at 1. */
 export const PREFERRED_WEIGHT = 2;
@@ -79,6 +89,11 @@ export function mealCandidates(foods: Food[], rules: CandidateRules): CandidateS
     thin: preferred.length > 0 && preferredCount < THIN_CUISINE,
     liked: candidates.filter(c => fb(c.food) > 1).map(c => c.food),
     disliked: candidates.filter(c => fb(c.food) < 1).map(c => c.food),
+    recipes: (rules.recipes ?? []).filter(r => r.ingredients.length > 0 && r.ingredients.every(i =>
+      candidates.some(c => c.food.id === i.foodId)
+      // Cooking oil only has to fit the diet: its "ghee" search alias would otherwise rule out every recipe for a
+      // lactose-free member. Members cook with the fat that suits them; the main ingredients carry the rules.
+      || (MINOR_INGREDIENTS.has(i.foodId) && foods.some(f => f.id === i.foodId && dietAllows(rules.diet, f.diet))))),
   };
 }
 
@@ -98,4 +113,56 @@ export function feedbackBrief(set: Pick<CandidateSet, 'liked' | 'disliked'>, fee
 /** The cuisine part of a prompt brief, or null when the member is open to all cuisines. */
 export function cuisineBrief(set: Pick<CandidateSet, 'preferred' | 'thin'>): { prefer: string[]; fewMatches: boolean } | null {
   return set.preferred.length ? { prefer: set.preferred, fewMatches: set.thin } : null;
+}
+
+// ---------- Recipes as meals ----------
+
+/** A meal matches a recipe when it has at least this share of the recipe's main ingredients (and at least two). */
+export const RECIPE_MATCH = 0.6;
+
+/** The recipe a meal (its food ids) is best described by, or null. Prefers the fullest, then the biggest overlap. */
+export function matchRecipe<R extends Pick<Recipe, 'ingredients'>>(foodIds: string[], recipes: R[]): R | null {
+  const have = new Set(foodIds);
+  let best: { r: R; share: number; hits: number } | null = null;
+  for (const r of recipes) {
+    const main = r.ingredients.map(i => i.foodId).filter(id => !MINOR_INGREDIENTS.has(id));
+    if (!main.length) continue;
+    const hits = main.filter(id => have.has(id)).length;
+    const share = hits / main.length;
+    if (share < RECIPE_MATCH || hits < Math.min(2, main.length)) continue;
+    if (!best || share > best.share || (share === best.share && hits > best.hits)) best = { r, share, hits };
+  }
+  return best?.r ?? null;
+}
+
+/** A recipe ready to show and log: ingredient names and units, nutrition per serving and its diet. */
+export type RecipeCard = {
+  id: string; name: string; cuisine: string; servings: number; steps: string[]; diet: Diet;
+  /** Quantities for the whole recipe, in each food's own servings. */
+  ingredients: { foodId: string; name: string; unit: string; icon: string; q: number }[];
+  perServing: Macros;
+};
+
+export function recipeCard(r: Recipe, foodsById: Map<string, Food>): RecipeCard {
+  const n = recipeNutrition(r.ingredients, r.servings, foodsById);
+  return {
+    id: r.id, name: r.name, cuisine: r.cuisine, servings: r.servings, steps: r.steps, diet: n.diet, perServing: n.perServing,
+    ingredients: r.ingredients.flatMap(i => {
+      const f = foodsById.get(i.foodId);
+      return f ? [{ foodId: f.id, name: f.name, unit: f.unit, icon: f.icon, q: i.q }] : [];
+    }),
+  };
+}
+
+/** Diary items for logging `servings` of a recipe to a meal: each ingredient scaled from the whole recipe. */
+export function recipeItems(r: Pick<Recipe, 'ingredients' | 'servings'>, servings: number): { foodId: string; quantity: number }[] {
+  const k = servings / Math.max(1, r.servings);
+  return r.ingredients
+    .map(i => ({ foodId: i.foodId, quantity: Math.round(i.q * k * 100) / 100 }))
+    .filter(i => i.quantity > 0);
+}
+
+/** Recipe lines for prompts: name|cuisine|ingredient ids, so the model can build an idea from a recipe. */
+export function recipeLines(recipes: Recipe[]): string {
+  return recipes.slice(0, 40).map(r => [r.name, r.cuisine, r.ingredients.map(i => i.foodId).join(' ')].join('|')).join('\n');
 }

@@ -3,9 +3,9 @@ import { askOutput, askRequest, type AskContext, type AskResponse } from '@/lib/
 import { generateJson } from '@/lib/ai/gemini';
 import { guardAi, recordUsage } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson, todayIst } from '@/lib/ai/http';
-import { candidateLines, cuisineBrief, feedbackBrief, mealCandidates } from '@/lib/ai/candidates';
+import { candidateLines, cuisineBrief, feedbackBrief, matchRecipe, mealCandidates, recipeCard, recipeLines } from '@/lib/ai/candidates';
 import { ASK_SYSTEM } from '@/lib/ai/prompts';
-import { getFeedbackForSuggestions, getFlags, getFoods } from '@/lib/data/queries';
+import { getActiveRecipes, getFeedbackForSuggestions, getFlags, getFoods } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
 import { OPEN_CUISINES, cuisinePrefsOf } from '@/lib/preferences';
 import { GOALS, MEALS, totals } from '@/lib/nutrition';
@@ -42,7 +42,12 @@ export async function POST(request: Request) {
   const flags = await getFlags();
   const cuisines = isOn(flags, 'cuisines', 'ask') ? cuisinePrefsOf(profile) : OPEN_CUISINES;
   const feedback = await getFeedbackForSuggestions(flags, profile);
-  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: question, cuisines, feedback });
+  const withRecipes = isOn(flags, 'recipes', 'detail');
+  const foods = await getFoods();
+  const set = mealCandidates(foods, {
+    diet: profile.diet, restrictions: profile.restrictions ?? [], request: question, cuisines, feedback,
+    recipes: withRecipes ? await getActiveRecipes() : [],
+  });
   const fbBrief = feedbackBrief(set, feedback);
   if (set.candidates.length < 4) return fail(422, 'Too few foods fit that question. Loosen one condition and ask again.');
 
@@ -88,11 +93,16 @@ export async function POST(request: Request) {
         { text: `User's day: ${JSON.stringify(brief)}` },
         { text: `Question:\n<<<\n${question}\n>>>` },
         { text: `Catalogue (id|name|unit|kcal|protein g|cuisine):\n${catalogue}` },
+        ...(set.recipes.length ? [{ text: `Recipes they can make (name|cuisine|ingredient ids):\n${recipeLines(set.recipes)}` }] : []),
       ],
       temperature: 0.6,
       signal: request.signal,
     });
-    const ideas = repairIdeas(out.ideas.slice(0, MAX_IDEAS + 2), set.eligible);
+    const foodsById = new Map(foods.map(f => [f.id, f]));
+    const ideas = repairIdeas(out.ideas.slice(0, MAX_IDEAS + 2), set.eligible).map(idea => {
+      const match = matchRecipe(idea.items.map(i => i.foodId), set.recipes);
+      return match ? { ...idea, recipe: recipeCard(match, foodsById) } : idea;
+    });
     const answer = out.answer.replace(/\s+/g, ' ').trim().slice(0, 320);
     if (!answer && !ideas.length) return fail(502, 'Ask Shoku couldn’t find an answer this time. Try rewording.');
     success = true;

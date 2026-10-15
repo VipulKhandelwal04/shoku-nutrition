@@ -64,4 +64,5 @@ Rules:
 - If the day JSON has feedback: bring back likedMeals and likedFoods when they fit the question and the day; use notForMe foods only if the user asks for them or nothing else fits. When feedback shaped an idea, say so in its why (e.g. "You liked curd rice last time").
 - meal is the meal the idea is for (Breakfast, Lunch, Snacks or Dinner), usually the next one in the day unless they asked for a specific meal.
 - answer: one or two short, direct sentences. why: one sentence per idea tied to their day or request. Plain, warm, no health claims, no shaming, no weight talk.
+- If recipes are listed, an idea may be one of them: use its name as the title and build items from its ingredient ids (sized for one person). Only use recipes that fit the question and the day.
 - If the question is not about food or eating, say briefly what you can help with and return an empty ideas list.`;

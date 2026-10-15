@@ -20,8 +20,9 @@ import { PlanTunerEntry } from './PlanTunerEntry';
 import { WeekPlan, type WeekDayView, type WeekItem } from './WeekPlan';
 import { WeekPlanner } from '@/components/ai/WeekPlanner';
 import { buildWeek, isoWeekday, planKcal } from '@/lib/ai/plan';
-import { getWeekPlans } from '@/lib/data/queries';
-import { mealCandidates } from '@/lib/ai/candidates';
+import { getActiveRecipes, getWeekPlans } from '@/lib/data/queries';
+import { matchRecipe, mealCandidates, recipeCard } from '@/lib/ai/candidates';
+import { RecipeButton } from '@/components/app/recipes/MealDetail';
 import s from './compare.module.css';
 
 export const metadata = { title: 'Compare' };
@@ -79,6 +80,16 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const saved = parseStoredPlan(storedPlan, foodsById);
   const plan = filterPlan(saved ?? buildPlan(targets, goal, profile.diet, foodsById), foodsById, profile.diet, profile.restrictions ?? []);
   const check = planCheck(plan, dayEntries, foodsById);
+  // Recipes the member can have (all ingredients pass their rules); a plan meal that mostly is one opens it.
+  const recipesOn = isOn(flags, 'recipes', 'detail');
+  const recipes = recipesOn
+    ? mealCandidates(foods, { diet: profile.diet, restrictions: profile.restrictions ?? [], recipes: await getActiveRecipes() }).recipes
+    : [];
+  const recipeFor = (items: { foodId: string }[]) => {
+    const r = recipes.length ? matchRecipe(items.map(i => i.foodId), recipes) : null;
+    return r ? recipeCard(r, foodsById) : undefined;
+  };
+  const canLogRecipe = isOn(flags, 'recipes', 'log');
   const week = planView === 'week' ? await weekView(plan) : null;
 
   /** Seven days from today: a saved weekday wins over the generated day; each meal lists its swap options. */
@@ -106,7 +117,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
         for (const d of generated) if (d.plan[meal].length && !versions.some(v => sig(v) === sig(d.plan[meal]))) versions.push(d.plan[meal]);
         const at = versions.findIndex(v => sig(v) === sig(plan[meal]));
         const alternatives = [...versions.slice(at + 1), ...versions.slice(0, Math.max(0, at))].filter(v => sig(v) !== sig(plan[meal]));
-        return { meal, items: toItems(plan[meal]), alternatives: alternatives.map(toItems) };
+        return { meal, items: toItems(plan[meal]), alternatives: alternatives.map(toItems), recipe: recipeFor(plan[meal]) };
       });
       return { key, label, weekday, kcal: planKcal(plan, foodsById), saved: !!own, plan, meals };
     });
@@ -196,7 +207,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
           <WeekPlanner />
         </div>
       )}
-      <WeekPlan days={week} today={today} target={targets.kcal} canEdit={isOn(flags, 'week', 'edit')} />
+      <WeekPlan days={week} today={today} target={targets.kcal} canEdit={isOn(flags, 'week', 'edit')} canLogRecipe={canLogRecipe} />
     </>
   ) : (
     <>
@@ -221,6 +232,12 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
       {check.rows.map(row => (
         <div key={row.meal} className={s.meal}>
           <h3 className={s.mealTitle}>{row.meal}</h3>
+          {(() => {
+            const card = recipeFor(plan[row.meal]);
+            return card ? (
+              <p className={s.recipeLine}>Recipe: <RecipeButton recipe={card} meal={row.meal} day={day} canLog={canLogRecipe && day <= today} /></p>
+            ) : null;
+          })()}
           {row.items.length === 0 && <p className="muted">Nothing planned.</p>}
           <ul className={s.planList}>
             {row.items.map(i => (

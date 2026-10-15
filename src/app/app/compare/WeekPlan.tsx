@@ -6,19 +6,21 @@ import { useTransition } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { LogButton } from '@/components/app/insights/LogButton';
+import { RecipeButton } from '@/components/app/recipes/MealDetail';
+import type { RecipeCard } from '@/lib/ai/candidates';
 import { resetWeekDay, restoreWeekDay, saveWeekDay } from '@/lib/data/week';
 import { MEALS, type Meal, type Plan } from '@/lib/nutrition';
 import s from './compare.module.css';
 
 export type WeekItem = { foodId: string; name: string; unit: string; q: number; kcal: number };
-export type WeekMealView = { meal: Meal; items: WeekItem[]; alternatives: WeekItem[][] };
+export type WeekMealView = { meal: Meal; items: WeekItem[]; alternatives: WeekItem[][]; recipe?: RecipeCard };
 export type WeekDayView = { key: string; label: string; weekday: number; kcal: number; saved: boolean; plan: Plan; meals: WeekMealView[] };
 
 const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 const qty = (n: number) => (Math.round(n * 100) / 100).toString();
 const line = (items: WeekItem[]) => items.map(i => `${i.name} ${qty(i.q)} ${i.unit}`).join(' · ');
 
-export function WeekPlan({ days, today, target, canEdit }: { days: WeekDayView[]; today: string; target: number; canEdit: boolean }) {
+export function WeekPlan({ days, today, target, canEdit, canLogRecipe = false }: { days: WeekDayView[]; today: string; target: number; canEdit: boolean; canLogRecipe?: boolean }) {
   const toast = useToast();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -66,6 +68,7 @@ export function WeekPlan({ days, today, target, canEdit }: { days: WeekDayView[]
                     <span className={s.weekMealText}>
                       <span className={s.weekMealName}>{m.meal}</span>
                       <span>{m.items.length ? line(m.items) : 'Nothing planned'}</span>
+                      {m.recipe && <RecipeButton recipe={m.recipe} meal={m.meal} day={today} canLog={canLogRecipe && d.key === today} />}
                     </span>
                     <span className={s.weekMealActions}>
                       {canEdit && m.alternatives.length > 0 && (

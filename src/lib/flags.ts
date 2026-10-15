@@ -56,6 +56,14 @@ export const FEATURE_FLAGS = {
       edit: { title: 'Edit the week', body: 'Swap a meal on any day (saved for that weekday) and log today’s planned meals in one tap. “Back to suggested” always works.' },
     },
   },
+  recipes: {
+    title: 'Recipes',
+    body: 'Active recipes from Admin → Recipes reach members as meals. Diet and restrictions apply through the ingredients.',
+    children: {
+      detail: { title: 'Meal detail', body: 'Matching Ask Shoku ideas and plan meals open a recipe: ingredients, steps, nutrition and why it fits.' },
+      log: { title: 'Log a recipe', body: '“Log to {meal}” logs the ingredients, scaled to the servings chosen, with Undo.' },
+    },
+  },
   cuisines: {
     title: 'Cuisines',
     body: 'Cuisine preferences in Profile → Food style. Diet, allergies and “no X” stay strict either way.',

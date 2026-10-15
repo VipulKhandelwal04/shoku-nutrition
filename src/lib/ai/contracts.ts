@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { MEALS, type Meal, type Plan } from '../nutrition';
 import type { AiSuggestion } from './match';
+import type { RecipeCard } from './candidates';
 
 export type { AiSuggestion } from './match';
 export type AiApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -84,7 +85,8 @@ export const askRequest = z.object({
   useWorkouts: z.boolean().optional(),
 });
 export type AskItem = { foodId: string; name: string; unit: string; icon: string; q: number; kcal: number; p: number };
-export type AskIdea = { title: string; meal: Meal; why: string; items: AskItem[]; kcal: number; p: number };
+/** `recipe` is set when the idea matches an active recipe the member can have: it opens the meal detail. */
+export type AskIdea = { title: string; meal: Meal; why: string; items: AskItem[]; kcal: number; p: number; recipe?: RecipeCard };
 /** What Shoku looked at, shown under the answer so the grounding is visible. */
 export type AskContext = {
   workouts: { label: string; minutes: number; kcal: number }[];
