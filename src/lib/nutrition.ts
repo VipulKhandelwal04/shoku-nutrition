@@ -5,6 +5,12 @@ export const MEALS = ['Breakfast', 'Lunch', 'Snacks', 'Dinner'] as const;
 export type Meal = (typeof MEALS)[number];
 
 export type Diet = 'veg' | 'egg' | 'nonveg';
+
+/** The catalogue began Indian-only, so a food without a cuisine is Indian. */
+export const DEFAULT_CUISINE = 'Indian';
+export function cuisineOf(f: Pick<Food, 'cuisine'>): string {
+  return f.cuisine?.trim() || DEFAULT_CUISINE;
+}
 export type GroupKey = 'cer' | 'pul' | 'milk' | 'veg' | 'fruit' | 'nuts' | 'oil';
 
 export type Food = {
@@ -24,6 +30,8 @@ export type Food = {
   /** Raw-weight food-group grams (ml for milk) per serving. Empty for custom foods. */
   groups: Partial<Record<GroupKey, number>>;
   custom?: boolean;
+  /** e.g. 'Indian', 'Italian'. Missing on seed rows and before the cuisine migration: read it with cuisineOf. */
+  cuisine?: string;
 };
 
 export type Entry = { id: string; meal: Meal; quantity: number; food: Food };
