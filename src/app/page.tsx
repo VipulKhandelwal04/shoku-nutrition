@@ -1,6 +1,5 @@
 // Public home: splash → landing with a feature tour → sign in with Google.
 // Always renders: if Supabase isn't configured or a query fails, built-in content is used instead.
-import { BrandIcon } from '@/components/brand/Brand';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: { absolute: 'Shoku · Meal by meal' },
   description:
-    'Shoku is Japanese for a meal. A food diary for Indian plates: log rotis, dal and curd in seconds and see your day against India’s My Plate guide.',
+    'A food diary for Indian plates: log rotis, dal and curd in seconds and see what your day still needs.',
   openGraph: {
     title: 'Shoku · Meal by meal',
     description: 'A food diary for Indian plates. Log a meal in seconds and see which food groups your day is missing.',
@@ -93,7 +92,6 @@ export default async function Home() {
         <section className={styles.hero} aria-labelledby="hero-title">
           <Image src="/img/hero.webp" alt="" fill loading="eager" fetchPriority="high" quality={60} sizes="100vw" className={styles.heroPhoto} />
           <div className={styles.heroInner}>
-            <p className={styles.kicker}><BrandIcon size={22} /> shoku · Japanese for a meal</p>
             <h1 id="hero-title" className={styles.heroTitle}>
               Meal by
               <br />
@@ -115,7 +113,7 @@ export default async function Home() {
         <section id="tour" className={styles.section} aria-labelledby="tour-title">
           <div className={styles.head}>
             <h2 id="tour-title" className={styles.h2}>Inside Shoku</h2>
-            <p className={styles.lede}>Swipe, use the arrows, or focus the slides and press ← →.</p>
+            <p className={styles.lede}>Swipe or use the arrows to look around.</p>
           </div>
           <TourCarousel slides={slides} />
         </section>
@@ -172,13 +170,13 @@ export default async function Home() {
           <div className={styles.plateCopy}>
             <h2 id="plate-title" className={styles.h2}>Food groups first.</h2>
             <p className={styles.lede}>
-              Shoku reads your day against <strong>ICMR-NIN’s My Plate for the Day</strong>, India’s own guide, scaled to your target.
+              Shoku reads your day as seven food groups, scaled to your own calorie target.
               Until the day is over, a gap reads “so far”, because dinner hasn’t happened yet.
             </p>
           </div>
           <div className={styles.plateCard}>
             <div className={styles.plateTop}>
-              <span className="label">My Plate guide · reference day</span>
+              <span className="label">Reference day</span>
               <span className="label">2,000 kcal</span>
             </div>
             <ul className={styles.groups}>
@@ -193,7 +191,7 @@ export default async function Home() {
                 </li>
               ))}
             </ul>
-            <p className={styles.plateFoot}>Raw-weight amounts from the guide. Shoku scales them to your own calorie target.</p>
+            <p className={styles.plateFoot}>Raw-weight amounts for a 2,000 kcal day. Shoku scales them to your own target.</p>
           </div>
         </section>
 

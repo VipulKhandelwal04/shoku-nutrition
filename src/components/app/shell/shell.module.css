@@ -42,6 +42,10 @@
   .brandName { font-size: 22px; }
   .adminLink { padding: 0 12px; }
 }
+/* Phones: the top bar keeps brand, search and you. Admins reach the console from Profile → Admin console. */
+@media (max-width: 560px) {
+  .adminLink { display: none; }
+}
 /* The wordmark stays on every screen; on the narrowest phones it just gets smaller. */
 @media (max-width: 370px) {
   .brand { gap: 7px; }

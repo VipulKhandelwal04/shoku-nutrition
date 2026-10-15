@@ -9,7 +9,8 @@ export function WaterPanel() {
   const { water, targets, addWater, isToday } = useDiary();
   const goal = targets.water > 0 ? targets.water : 2500;
   const left = Math.max(0, Math.ceil((goal - water) / GLASS));
-  const glasses = 8;
+  // One drawn glass per 250 ml of the goal, so the row matches "N more glasses to go" (capped for very high goals).
+  const glasses = Math.min(16, Math.max(1, Math.ceil(goal / GLASS)));
   return (
     <section className={`panel ${s.water}`} aria-labelledby="water-h">
       <div className={s.waterHeading}>
@@ -21,7 +22,7 @@ export function WaterPanel() {
       </p>
       <div className={s.glasses} role="img" aria-label={`${water} ml of ${goal} ml logged`}>
         {Array.from({ length: glasses }, (_, i) => (
-          <Icon key={i} name="glass" className={water / goal > i / glasses ? s.filled : ''} />
+          <Icon key={i} name="glass" className={water > (i * goal) / glasses ? s.filled : ''} />
         ))}
       </div>
       <div className={s.waterControls}>

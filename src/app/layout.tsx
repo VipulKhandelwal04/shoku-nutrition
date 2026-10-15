@@ -7,7 +7,7 @@ const body = Inter({ subsets: ['latin'], variable: '--font-body' });
 
 export const metadata: Metadata = {
   title: { default: 'Shoku · Meal by meal', template: '%s · Shoku' },
-  description: 'Shoku (Japanese for a meal) is a food diary for Indian plates: log in seconds and see your day against India’s My Plate guide.',
+  description: 'Shoku is a food diary for Indian plates: log meals in seconds and see what your day still needs.',
   applicationName: 'Shoku',
 };
 

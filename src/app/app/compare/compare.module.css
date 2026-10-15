@@ -78,8 +78,6 @@
 .splitLegend dt { display: flex; align-items: center; }
 .splitLegend dd { margin: 0; }
 .splitLegend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
-.sources { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 4px; }
-.sources a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13px; font-weight: 600; }
 
 @media (max-width: 1020px) {
   .layout { grid-template-columns: minmax(0, 1fr); }

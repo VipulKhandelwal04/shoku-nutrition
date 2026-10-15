@@ -64,7 +64,7 @@ export function GoalCard({ goal, targets, recommended, bmi, bmiNote }: {
       </table>
 
       {bmi !== null && (
-        <p className={s.bmiLine}><strong>BMI {bmi.toFixed(1)}</strong> · {bmiNote} <span className="muted">(ICMR cut-offs for Indian adults)</span></p>
+        <p className={s.bmiLine}><strong>BMI {bmi.toFixed(1)}</strong> · {bmiNote} <span className="muted">(cut-offs for Indian adults)</span></p>
       )}
 
       <div className={s.goalActions}>

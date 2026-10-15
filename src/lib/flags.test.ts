@@ -25,10 +25,10 @@ describe('isOn', () => {
     expect(isOn(f, 'compare', 'plan')).toBe(false);
   });
   it('respects a secondary switched off under a primary that is on', () => {
-    const f = mergeFlags({ apps: { on: true, strava: false } });
-    expect(isOn(f, 'apps')).toBe(true);
-    expect(isOn(f, 'apps', 'strava')).toBe(false);
-    expect(isOn(f, 'apps', 'upcoming')).toBe(true);
+    const f = mergeFlags({ workouts: { on: true, manual: false } });
+    expect(isOn(f, 'workouts')).toBe(true);
+    expect(isOn(f, 'workouts', 'manual')).toBe(false);
+    expect(isOn(f, 'workouts', 'timeline')).toBe(true);
   });
 });
 
