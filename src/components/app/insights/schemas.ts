@@ -29,7 +29,7 @@ export const targetsSchema = z.object({ kcal: ranged('kcal'), p: ranged('p'), c:
 export const bodySchema = z.object({
   goal: z.enum(['lose', 'fit', 'muscle'], { error: 'Pick a goal' }),
   sex: z.enum(['female', 'male'], { error: 'Pick the body type for the calorie estimate' }),
-  age: z.number({ error: 'Enter your age' }).int('Age: use whole years').min(18, 'Katori is for adults 18 and over').max(100, 'Age: 18–100 years'),
+  age: z.number({ error: 'Enter your age' }).int('Age: use whole years').min(18, 'Shoku is for adults 18 and over').max(100, 'Age: 18–100 years'),
   height: z.number({ error: 'Enter your height' }).min(120, 'Height: 120–230 cm').max(230, 'Height: 120–230 cm'),
   weight: z.number({ error: 'Enter your weight' }).min(30, 'Weight: 30–300 kg').max(300, 'Weight: 30–300 kg'),
   activity: z.enum(['sedentary', 'light', 'moderate', 'high'], { error: 'Pick an activity level' }),

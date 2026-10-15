@@ -4,14 +4,14 @@ import { LegalPage, SUPPORT_EMAIL } from '@/components/public/Legal';
 
 export const metadata: Metadata = {
   title: 'Privacy',
-  description: 'What Katori stores, why, who processes it, and how to get your data out.',
+  description: 'What Shoku stores, why, who processes it, and how to get your data out.',
 };
 
 export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy" updated="15 October 2026">
       <p>
-        Katori is an independent nutrition-tracking project. This page explains, in plain words, what we keep and why. We don’t sell your data and
+        Shoku is an independent nutrition-tracking project. This page explains, in plain words, what we keep and why. We don’t sell your data and
         we don’t show ads.
       </p>
 
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           us. We use them to create your account and show who is signed in.
         </li>
         <li>
-          <strong>Your profile.</strong> The goal, body details, activity level, diet and food restrictions you enter, and the targets Katori
+          <strong>Your profile.</strong> The goal, body details, activity level, diet and food restrictions you enter, and the targets Shoku
           works out from them.
         </li>
         <li>
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
 
       <h2>Health information</h2>
       <p>
-        Nutrition values are estimates. Katori does not give medical advice. See the <Link href="/terms">Terms</Link>.
+        Nutrition values are estimates. Shoku does not give medical advice. See the <Link href="/terms">Terms</Link>.
       </p>
 
       <h2>Contact</h2>

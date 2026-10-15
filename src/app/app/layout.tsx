@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: LayoutProps<'/app'>) {
   const name = profile.display_name?.trim() || profile.email?.split('@')[0] || 'You';
   return (
     <ToastProvider>
-      <Splash quotes={quotes.map(q => ({ text: q.text, author: q.author }))} storageKey="katori-app-splash" />
+      <Splash quotes={quotes.map(q => ({ text: q.text, author: q.author }))} storageKey="shoku-app-splash" />
       <AppChrome user={{ name, avatarUrl: profile.avatar_url, isAdmin: profile.role === 'admin' }}>
         {children}
       </AppChrome>

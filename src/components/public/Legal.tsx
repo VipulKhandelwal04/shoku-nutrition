@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { Footer, TopBar } from './PublicChrome';
 import styles from './Legal.module.css';
 
-// TODO(owner): replace with a real, monitored support inbox before launch.
-export const SUPPORT_EMAIL = 'support@katori.app';
+// Set NEXT_PUBLIC_SUPPORT_EMAIL to a real, monitored inbox (kept out of the public repo). The fallback is a placeholder.
+export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@shoku.app';
 
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: ReactNode }) {
   return (

@@ -1,4 +1,4 @@
-// Pure helpers that map AI Assist's proposed foods onto the Katori catalogue. No I/O: unit tested.
+// Pure helpers that map AI Assist's proposed foods onto the Shoku catalogue. No I/O: unit tested.
 import type { Food } from '../nutrition';
 
 /** What the model proposes for one food on the plate or in the sentence. */

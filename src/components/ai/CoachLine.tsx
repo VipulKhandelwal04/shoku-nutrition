@@ -6,7 +6,7 @@ import { AiBadge } from './AiBadge';
 import { callAi } from './api';
 import styles from './ai.module.css';
 
-const cacheKey = (day: string) => `katori:coach:${day}`;
+const cacheKey = (day: string) => `shoku:coach:${day}`;
 
 function readCache(day: string): string | null {
   try {

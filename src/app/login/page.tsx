@@ -9,12 +9,12 @@ import styles from '@/components/public/Login.module.css';
 
 export const metadata: Metadata = {
   title: 'Sign in',
-  description: 'Sign in to Katori with Google to log your meals and track your plate.',
+  description: 'Sign in to Shoku with Google to log your meals and track your plate.',
   robots: { index: false },
 };
 
 const ERRORS: Record<string, string> = {
-  disabled: 'This account is paused. Contact the Katori team.',
+  disabled: 'This account is paused. Contact the Shoku team.',
   oauth: 'Google sign-in didn’t finish. Try again.',
   signups_closed: 'New sign-ups are paused right now.',
 };
@@ -31,9 +31,9 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
         <Image src="/img/hero.webp" alt="" fill priority sizes="(max-width: 860px) 100vw, 55vw" className={styles.img} />
         <div className={styles.photoCopy}>
           <p className={styles.photoLine}>
-            Eat like
+            Meal by
             <br />
-            you <span>train.</span>
+            <span>meal.</span>
           </p>
         </div>
       </div>
@@ -45,7 +45,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
           </Link>
           <Wordmark className={styles.word} />
           <div className={styles.titles}>
-            <h1 className={styles.title}>Sign in to Katori</h1>
+            <h1 className={styles.title}>Sign in to Shoku</h1>
             <p className={styles.sub}>Your meals, your streak and your plan, on every device.</p>
           </div>
 
@@ -59,9 +59,9 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
 
           <p className={styles.consent}>
             By continuing you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy policy</Link>. Google shares your name,
-            email and profile photo with Katori. Nothing is posted anywhere.
+            email and profile photo with Shoku. Nothing is posted anywhere.
           </p>
-          <p className={styles.fine}>Nutrition values are estimates. Katori does not give medical advice.</p>
+          <p className={styles.fine}>Nutrition values are estimates. Shoku does not give medical advice.</p>
         </div>
       </div>
     </main>

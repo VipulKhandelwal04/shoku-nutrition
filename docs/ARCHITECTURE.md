@@ -1,7 +1,14 @@
-# Katori architecture
+# Shoku architecture
 
-Katori is a nutrition tracker for Indian plates with a Cult-inspired look: black, one hot-pink accent
-(`--accent: #ff3f6c`), Barlow Condensed uppercase display type over Inter. Voice: punchy, motivating, **never shaming**.
+Shoku (食, Japanese for "food, a meal") is a food diary for Indian plates with a Cult-inspired look: black, one
+hot-pink accent (`--accent: #ff3f6c`), Barlow Condensed uppercase display type over Inter.
+
+**Voice:** the meal is the unit. Plain, specific, **never shaming**. The name's meaning shows up as one idea (meal by
+meal), not as Japanese decoration: 食 appears in the splash and the hero kicker only. Keep "katori" as the Indian bowl
+serving unit (catalogue, AI matching), never as the brand.
+
+**Copy rules (no AI slop):** no "not just X", "unlock your", "journey", "elevate", "seamless", "with intent"; no
+three-beat slogans ("Show up. Stack days."); no eyebrow label over every heading; no em dashes in UI text.
 
 ## Stack
 - **Next.js 16 App Router** (TypeScript, `src/`). `proxy.ts` (not middleware) refreshes the Supabase session and

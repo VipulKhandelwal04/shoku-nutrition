@@ -31,8 +31,8 @@ export function AdminNav({ name, email }: { name: string; email: string | null }
   return (
     <>
       <aside className={s.side}>
-        <Link href="/admin" className={s.brand} aria-label="Katori admin home">
-          <span className={s.brandName}>Katori</span>
+        <Link href="/admin" className={s.brand} aria-label="Shoku admin home">
+          <span className={s.brandName}>Shoku</span>
           <span className={s.brandTag}>Admin</span>
         </Link>
         <nav aria-label="Admin" className={s.nav}>{links()}</nav>
@@ -47,8 +47,8 @@ export function AdminNav({ name, email }: { name: string; email: string | null }
 
       <header className={s.mobileTop}>
         <div className={s.mobileBar}>
-          <Link href="/admin" className={s.brand} aria-label="Katori admin home">
-            <span className={s.brandName}>Katori</span>
+          <Link href="/admin" className={s.brand} aria-label="Shoku admin home">
+            <span className={s.brandName}>Shoku</span>
             <span className={s.brandTag}>Admin</span>
           </Link>
           <span className={s.mobileWho} title={email ?? undefined}>{name}</span>

@@ -6,9 +6,9 @@ const display = Barlow_Condensed({ subsets: ['latin'], weight: ['600', '700', '8
 const body = Inter({ subsets: ['latin'], variable: '--font-body' });
 
 export const metadata: Metadata = {
-  title: { default: 'Katori · Eat like you train', template: '%s · Katori' },
-  description: 'Katori is a nutrition tracker built for Indian plates: log in seconds, snap your meal, and see your plate against India’s My Plate guide.',
-  applicationName: 'Katori',
+  title: { default: 'Shoku · Meal by meal', template: '%s · Shoku' },
+  description: 'Shoku (食, Japanese for a meal) is a food diary for Indian plates: log in seconds and see your day against India’s My Plate guide.',
+  applicationName: 'Shoku',
 };
 
 export const viewport: Viewport = { themeColor: '#050506', colorScheme: 'dark', viewportFit: 'cover' };

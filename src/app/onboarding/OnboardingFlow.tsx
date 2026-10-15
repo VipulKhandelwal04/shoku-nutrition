@@ -62,7 +62,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
     if (current === 'goal' && !d.goal) e.goal = 'Pick the goal that fits you best.';
     if (current === 'body') {
       if (!d.sex) e.sex = 'Pick one: it changes the calorie estimate.';
-      for (const k of ['age', 'height', 'weight'] as const) { const m = bodyError(d, k); if (m) e[k] = k === 'age' && Number(d.age) < 18 && d.age !== '' ? 'Katori is for adults 18 and over.' : m; }
+      for (const k of ['age', 'height', 'weight'] as const) { const m = bodyError(d, k); if (m) e[k] = k === 'age' && Number(d.age) < 18 && d.age !== '' ? 'Shoku is for adults 18 and over.' : m; }
     }
     if (current === 'activity' && !d.activity) e.activity = 'Pick the closest match. You can change it later.';
     if (current === 'targets' && d.targets) {
@@ -138,18 +138,18 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
             {STEPS.map((k, i) => <li key={k} data-state={i < step ? 'done' : i === step ? 'now' : 'next'} />)}
           </ol>
         </div>
-        <span className={s.brand} aria-hidden="true">Katori</span>
+        <span className={s.brand} aria-hidden="true">Shoku</span>
       </div>
 
       <form className={s.card} onSubmit={next} noValidate aria-labelledby="ob-title">
         {current === 'welcome' && (
-          <StepBody eyebrow="Let’s set you up" title={`Hey ${firstName ?? 'there'}. Let’s fuel your kind of fit.`} headingRef={heading}>
+          <StepBody eyebrow="Let’s set you up" title={`Hi ${firstName ?? 'there'}. Let’s set up your meals.`} headingRef={heading}>
             <ul className={s.promises}>
-              <li><Icon name="bolt" /><span><strong>Log Indian plates in seconds.</strong> Roti, dal, poha, biryani: all on the menu.</span></li>
+              <li><Icon name="bolt" /><span><strong>Log Indian plates in seconds.</strong> Roti, dal, poha and biryani are already in the food list.</span></li>
               <li><Icon name="plate" /><span><strong>See your plate vs India’s guide.</strong> Food groups from ICMR-NIN’s My Plate, scaled to you.</span></li>
-              <li><Icon name="star" /><span><strong>Stack days.</strong> Three meals logged and the day counts toward your streak.</span></li>
+              <li><Icon name="star" /><span><strong>Three meals, one day.</strong> Log three meals and the day counts toward your streak.</span></li>
             </ul>
-            <p className={s.fine}>Six quick steps, about a minute. Katori is built for adults 18 and over.</p>
+            <p className={s.fine}>Six quick steps, about a minute. Shoku is built for adults 18 and over.</p>
           </StepBody>
         )}
 

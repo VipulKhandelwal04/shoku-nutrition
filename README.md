@@ -1,4 +1,4 @@
-# Katori
+# Shoku
 
 A nutrition tracker for Indian plates. Log rotis, dal, sabzi and curd in seconds, see which food groups your
 plate is missing, and build a streak one counted day (3+ meals) at a time.
@@ -9,7 +9,7 @@ plate is missing, and build a streak one counted day (3+ meals) at a time.
   Every result is a suggestion you confirm.
 - **Admin:** food catalogue, splash quotes + tour, users and roles, AI Assist switch, limits and usage
 
-Nutrition values are estimates. Katori does not give medical advice.
+Nutrition values are estimates. Shoku does not give medical advice.
 
 ## Stack
 

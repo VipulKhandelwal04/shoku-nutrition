@@ -1,5 +1,5 @@
 'use client';
-// CONTRACT (owned by the public workstream). Myntra-style launch splash with a rotating fitness quote.
+// Myntra-style launch splash: the SHOKU wordmark over 食 with a rotating quote.
 // Shows once per browser session, is skippable, and respects reduced motion. Signature is fixed.
 //
 // How it stays safe:
@@ -46,10 +46,10 @@ function InlineScript({ html }: { html: string }) {
   return <script type={typeof window === 'undefined' ? 'text/javascript' : 'text/plain'} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-export function Splash({ quotes, storageKey = 'katori-splash' }: { quotes: Pick<Quote, 'text' | 'author'>[]; storageKey?: string }) {
+export function Splash({ quotes, storageKey = 'shoku-splash' }: { quotes: Pick<Quote, 'text' | 'author'>[]; storageKey?: string }) {
   const list = (quotes ?? []).filter(q => q && q.text && q.text.trim()).slice(0, 24);
   const pool = list.length ? list : FALLBACK_QUOTES;
-  const id = 'katori-splash';
+  const id = 'shoku-splash';
 
   const [phase, setPhase] = useState<Phase>('show');
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -95,10 +95,10 @@ export function Splash({ quotes, storageKey = 'katori-splash' }: { quotes: Pick<
         Skip<span className="sr-only"> intro</span>
       </button>
       <div className={styles.overlay} aria-hidden="true" onClick={leave}>
-        <div className={styles.glow} />
+        <span className={styles.kanji} lang="ja">食</span>
         <div className={styles.inner}>
           <p className={styles.word}>
-            KAT<span>O</span>RI
+            SH<span>O</span>KU
           </p>
           <div className={styles.quotes}>
             {pool.map((q, i) => (

@@ -1,4 +1,4 @@
-/* Admin console. Dense operator UI on the Katori tokens: black surfaces, one pink accent, condensed caps for numbers and headings. */
+/* Admin console. Dense operator UI on the Shoku tokens: black surfaces, one pink accent, condensed caps for numbers and headings. */
 
 /* ---------- Shell ---------- */
 .shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100dvh; }

@@ -1,4 +1,4 @@
-// Public home: splash → Cult-style landing with a feature tour → sign in to unlock.
+// Public home: splash → landing with a feature tour → sign in with Google.
 // Always renders: if Supabase isn't configured or a query fails, built-in content is used instead.
 import type { Metadata } from 'next';
 import Image from 'next/image';
@@ -23,17 +23,17 @@ const siteUrl = (() => {
 
 export const metadata: Metadata = {
   metadataBase: siteUrl,
-  title: { absolute: 'Katori · Eat like you train' },
+  title: { absolute: 'Shoku · Meal by meal' },
   description:
-    'A nutrition tracker built for Indian plates. Log rotis, dal and curd in seconds, snap your plate, and see your day against India’s My Plate guide. Sign in with Google.',
+    'Shoku (食) is Japanese for a meal. A food diary for Indian plates: log rotis, dal and curd in seconds and see your day against India’s My Plate guide.',
   openGraph: {
-    title: 'Katori · Eat like you train',
-    description: 'Log Indian meals in seconds, see your plate against India’s My Plate guide, and stack days that count.',
+    title: 'Shoku · Meal by meal',
+    description: 'A food diary for Indian plates. Log a meal in seconds and see which food groups your day is missing.',
     type: 'website',
-    siteName: 'Katori',
+    siteName: 'Shoku',
     images: [{ url: '/img/hero.webp', alt: 'A thali of Indian food on a dark table' }],
   },
-  twitter: { card: 'summary_large_image', title: 'Katori · Eat like you train', images: ['/img/hero.webp'] },
+  twitter: { card: 'summary_large_image', title: 'Shoku · Meal by meal', images: ['/img/hero.webp'] },
 };
 
 async function safe<T>(load: () => Promise<T>, fallback: T): Promise<T> {
@@ -45,16 +45,16 @@ async function safe<T>(load: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 const STEPS = [
-  { title: 'Sign in with Google', body: 'One tap. No forms, no passwords to remember.' },
-  { title: 'Set your goal', body: 'Lose, maintain or build. Katori turns it into a daily target for calories, protein and food groups.' },
-  { title: 'Log, see, adjust', body: 'Tap your usuals, see what your plate is missing, and pick the next katori with intent.' },
+  { title: 'Sign in with Google', body: 'Use the Google account you already have. There’s no password to set.' },
+  { title: 'Set your goal', body: 'Lose, maintain or build. Shoku turns it into a daily target for calories, protein and food groups.' },
+  { title: 'Log each meal', body: 'Tap your usuals after you eat. Shoku shows which food groups the day still needs before your next meal.' },
 ] as const;
 
 const AI_FEATURES: { icon: IconName; title: string; body: string; soon: string }[] = [
   { icon: 'camera', title: 'Snap your plate', body: 'Take a photo. AI Assist suggests the dishes and portions it sees.', soon: 'Take a photo and get suggested dishes and portions.' },
   { icon: 'type', title: 'Type it in plain words', body: '“2 rotis, dal, a bowl of curd.” It becomes entries you can edit.', soon: 'Write “2 rotis, dal, a bowl of curd” and get entries to edit.' },
-  { icon: 'sliders', title: 'A plan tailored to you', body: 'A day of meals shaped by your goal, diet and the foods you eat.', soon: 'A day of meals shaped by your goal, diet and usual foods.' },
-  { icon: 'spark', title: 'A daily coach line', body: 'One short, kind nudge about what would round out your day.', soon: 'One short, kind nudge about what would round out your day.' },
+  { icon: 'sliders', title: 'A plan from your foods', body: 'A day of meals built from your goal, your diet and the foods you already eat.', soon: 'A day of meals built from your goal, your diet and the foods you already eat.' },
+  { icon: 'spark', title: 'A daily coach line', body: 'One line on what the rest of today’s meals could add.', soon: 'One line on what the rest of today’s meals could add.' },
 ];
 
 export default async function Home() {
@@ -73,7 +73,7 @@ export default async function Home() {
 
   const primary = signedIn ? (
     <Link href="/app" className="btn accent big">
-      Open Katori <Icon name="arrow" size="sm" />
+      Open Shoku <Icon name="arrow" size="sm" />
     </Link>
   ) : (
     <Link href="/login" className="btn accent big">
@@ -92,14 +92,14 @@ export default async function Home() {
         <section className={styles.hero} aria-labelledby="hero-title">
           <Image src="/img/hero.webp" alt="" fill priority sizes="100vw" className={styles.heroPhoto} />
           <div className={styles.heroInner}>
-            <p className={styles.kicker}>Nutrition for Indian plates</p>
+            <p className={styles.kicker}><span lang="ja">食</span> shoku · Japanese for a meal</p>
             <h1 id="hero-title" className={styles.heroTitle}>
-              Eat like
+              Meal by
               <br />
-              you <span>train.</span>
+              <span>meal.</span>
             </h1>
             <p className={styles.heroSub}>
-              Rotis, dal, sabzi, curd. Log your real food in seconds, see what your plate is missing, and stack days that count.
+              A food diary for Indian plates. Log rotis, dal and curd in seconds, and see what the day still needs before your next meal.
             </p>
             <div className={styles.heroActions}>
               {primary}
@@ -113,8 +113,7 @@ export default async function Home() {
         {/* ---------- Tour ---------- */}
         <section id="tour" className={styles.section} aria-labelledby="tour-title">
           <div className={styles.head}>
-            <p className={styles.eyebrow}>The tour</p>
-            <h2 id="tour-title" className={styles.h2}>What Katori does for you</h2>
+            <h2 id="tour-title" className={styles.h2}>Inside Shoku</h2>
             <p className={styles.lede}>Swipe, use the arrows, or focus the slides and press ← →.</p>
           </div>
           <TourCarousel slides={slides} />
@@ -123,8 +122,7 @@ export default async function Home() {
         {/* ---------- How it works ---------- */}
         <section className={styles.section} aria-labelledby="how-title">
           <div className={styles.head}>
-            <p className={styles.eyebrow}>How it works</p>
-            <h2 id="how-title" className={styles.h2}>Three steps. Then just eat.</h2>
+            <h2 id="how-title" className={styles.h2}>Set up once. Then log as you eat.</h2>
           </div>
           <ol className={styles.steps}>
             {STEPS.map((s, i) => (
@@ -149,8 +147,8 @@ export default async function Home() {
               </h2>
               <p className={styles.lede}>
                 {aiLive
-                  ? 'Shortcuts for the busy days. Everything AI Assist gives you is a suggestion: you check it, edit it, and only then is it saved.'
-                  : 'We’re switching AI Assist on gradually. Katori works fully without it, and when it reaches you, every result will be a suggestion you check before it’s saved.'}
+                  ? 'For days when tapping through a list is too slow. AI Assist only suggests: you check and edit each item, and nothing is saved until you confirm.'
+                  : 'AI Assist is switching on gradually. Everything else in Shoku works without it, and when it arrives, every result will be a suggestion you check before saving.'}
               </p>
             </div>
             <ul className={styles.aiGrid}>
@@ -171,11 +169,10 @@ export default async function Home() {
         {/* ---------- Plate vs plan ---------- */}
         <section className={`${styles.section} ${styles.split}`} aria-labelledby="plate-title">
           <div className={styles.plateCopy}>
-            <p className={styles.eyebrow}>Plate vs plan</p>
-            <h2 id="plate-title" className={styles.h2}>Not just calories. Food groups.</h2>
+            <h2 id="plate-title" className={styles.h2}>Food groups first.</h2>
             <p className={styles.lede}>
-              Katori reads your day against <strong>ICMR-NIN’s My Plate for the Day</strong>, India’s own guide, scaled to your target.
-              While the day is open, gaps read “so far”. Nobody gets scolded at lunch.
+              Shoku reads your day against <strong>ICMR-NIN’s My Plate for the Day</strong>, India’s own guide, scaled to your target.
+              Until the day is over, a gap reads “so far”, because dinner hasn’t happened yet.
             </p>
           </div>
           <div className={styles.plateCard}>
@@ -195,7 +192,7 @@ export default async function Home() {
                 </li>
               ))}
             </ul>
-            <p className={styles.plateFoot}>Raw-weight amounts from the guide. Katori scales them to your own calorie target.</p>
+            <p className={styles.plateFoot}>Raw-weight amounts from the guide. Shoku scales them to your own calorie target.</p>
           </div>
         </section>
 
@@ -210,10 +207,9 @@ export default async function Home() {
             <p className={styles.equals}>= day counts</p>
           </div>
           <div>
-            <p className={styles.eyebrow}>Streaks &amp; badges</p>
-            <h2 id="streak-title" className={styles.h2}>3 meals logged = the day counts.</h2>
+            <h2 id="streak-title" className={styles.h2}>Three meals and the day counts.</h2>
             <p className={styles.lede}>
-              No perfect macros required. Log any three meals and the day joins your streak. Missed one? Start the next. No guilt, no red marks.
+              Macros don’t have to be perfect. Log any three meals and the day joins your streak. If you miss a day, the next one starts a new streak, and nothing is marked red.
             </p>
             <ul className={styles.badges}>
               {BADGES.map(b => (
@@ -247,7 +243,7 @@ export default async function Home() {
               <br />
               is a <span>rep.</span>
             </h2>
-            <p className={styles.heroSub}>{signedIn ? 'Pick up where you left off.' : 'Sign in with Google and log your first meal in under a minute.'}</p>
+            <p className={styles.heroSub}>{signedIn ? 'Pick up where you left off.' : 'Sign in with Google and log today’s next meal.'}</p>
             <div className={styles.heroActions}>{primary}</div>
           </div>
         </section>

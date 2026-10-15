@@ -10,7 +10,7 @@ import type { DayRow, EntryRow, Profile } from '../../../lib/types';
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-export const TZ_COOKIE = 'katori-tz';
+export const TZ_COOKIE = 'shoku-tz';
 export const DEFAULT_TZ = 'Asia/Kolkata';
 
 export function validTimeZone(tz: string | undefined | null): string | null {

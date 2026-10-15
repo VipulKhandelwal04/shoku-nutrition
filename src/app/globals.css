@@ -1,4 +1,4 @@
-/* Katori design system: black, one hot-pink accent, condensed uppercase display type over Inter.
+/* Shoku design system: black, one hot-pink accent, condensed uppercase display type over Inter.
    Global = tokens + shared primitives only. Feature styles live in co-located CSS modules. */
 :root {
   color-scheme: dark;

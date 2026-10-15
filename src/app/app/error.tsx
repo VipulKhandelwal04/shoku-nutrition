@@ -6,7 +6,7 @@ import s from '@/components/app/shell/status.module.css';
 
 export default function AppError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
-    console.error('[katori/app]', error.digest ?? '', error);
+    console.error('[shoku/app]', error.digest ?? '', error);
   }, [error]);
   return (
     <section className={`panel ${s.status}`} aria-labelledby="app-error-h">

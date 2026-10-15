@@ -25,12 +25,18 @@
   overflow: hidden;
   cursor: pointer;
 }
-.glow {
+.kanji {
+  /* 食 (shoku): "food, a meal". The name itself is the backdrop, set large and quiet. */
   position: absolute;
-  inset: auto -20% -45% -20%;
-  height: 80%;
-  background: radial-gradient(closest-side, rgba(255, 63, 108, .28), transparent 70%);
+  right: -3vw;
+  bottom: -4vh;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif;
+  font-size: min(64vh, 82vw);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 63, 108, .26);
   pointer-events: none;
+  user-select: none;
 }
 .inner {
   position: relative;

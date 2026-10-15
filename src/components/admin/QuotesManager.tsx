@@ -91,7 +91,7 @@ export function QuotesManager({ quotes }: { quotes: Quote[] }) {
       <aside aria-label="Splash preview">
         <p className="label" style={{ marginBottom: 8 }}>Splash preview</p>
         <div className={s.splash} aria-hidden={preview ? undefined : true}>
-          <span className={s.splashBrand}>Katori</span>
+          <span className={s.splashBrand}>Shoku</span>
           <div>
             {preview ? (
               <>

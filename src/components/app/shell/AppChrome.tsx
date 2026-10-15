@@ -42,9 +42,9 @@ export function AppChrome({ user, children }: { user: ShellUser; children: React
       <a href="#main" className={s.skip}>Skip to content</a>
       <header className={s.topbar}>
         <div className={s.topbarInner}>
-          <Link href="/app" className={s.brand} aria-label="Katori, today">
+          <Link href="/app" className={s.brand} aria-label="Shoku, today">
             <span className={s.brandMark} aria-hidden="true">K</span>
-            <span className={s.brandName}>Katori</span>
+            <span className={s.brandName}>Shoku</span>
           </Link>
           <nav className={s.topLinks} aria-label="Main">
             {NAV.map(n => (

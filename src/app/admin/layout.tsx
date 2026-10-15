@@ -4,7 +4,7 @@ import s from '@/components/admin/admin.module.css';
 import { ToastProvider } from '@/components/ui/Toast';
 import { requireAdmin } from '@/lib/auth';
 
-export const metadata: Metadata = { title: { default: 'Admin', template: '%s · Katori admin' }, robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: { default: 'Admin', template: '%s · Shoku admin' }, robots: { index: false, follow: false } };
 
 export default async function AdminLayout({ children }: LayoutProps<'/admin'>) {
   // Signed-out visitors go to /login, non-admins to /app. Every server action re-checks on its own too.

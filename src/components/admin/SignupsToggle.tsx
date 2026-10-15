@@ -23,7 +23,7 @@ export function SignupsToggle({ initial }: { initial: boolean }) {
         <h2 id="signups-h">New sign-ups</h2>
         <p id="signups-d">
           {open
-            ? 'Open: anyone with a Google account can join Katori from the home page.'
+            ? 'Open: anyone with a Google account can join Shoku from the home page.'
             : 'Closed: new Google accounts are turned away with a friendly note. Existing members sign in as usual.'}
         </p>
         <p className="fine-print" style={{ marginTop: 8 }}>Close sign-ups to run a private beta or to pause growth while you fix something. Nobody already in loses access. Turned-away sign-ins can still appear in Users as not onboarded.</p>

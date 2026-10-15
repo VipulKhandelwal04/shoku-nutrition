@@ -67,7 +67,7 @@ export function TourCarousel({ slides }: { slides: SlideLite[] }) {
         tabIndex={0}
         role="region"
         aria-roledescription="carousel"
-        aria-label="Katori tour. Use the arrow keys to move between slides."
+        aria-label="Shoku tour. Use the arrow keys to move between slides."
         onKeyDown={onKey}
       >
         <ul className={styles.list}>

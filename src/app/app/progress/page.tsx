@@ -47,7 +47,7 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
       <header className={ins.intro}>
         <div>
           <p className={ins.eyebrow}>Consistency looks good on you</p>
-          <h1>Show up. Stack days.</h1>
+          <h1>Meal by meal</h1>
           <p>{MEALS_FOR_A_COUNTED_DAY} meals logged and the day counts. No need to close anything.</p>
         </div>
       </header>

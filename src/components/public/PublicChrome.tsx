@@ -5,7 +5,7 @@ import styles from './PublicChrome.module.css';
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
     <span className={`${styles.word} ${className}`}>
-      KAT<span>O</span>RI
+      SH<span>O</span>KU
     </span>
   );
 }
@@ -14,11 +14,11 @@ export function TopBar({ signedIn = false, solid = false }: { signedIn?: boolean
   return (
     <header className={`${styles.bar} ${solid ? styles.solid : ''}`}>
       <div className={styles.barInner}>
-        <Link href="/" className={styles.home} aria-label="Katori home">
+        <Link href="/" className={styles.home} aria-label="Shoku home">
           <Wordmark />
         </Link>
         {signedIn ? (
-          <Link href="/app" className={styles.signIn}>Open Katori</Link>
+          <Link href="/app" className={styles.signIn}>Open Shoku</Link>
         ) : (
           <Link href="/login" className={styles.signIn}>Sign in</Link>
         )}
@@ -38,7 +38,7 @@ export function Footer() {
             <Link href="/terms">Terms</Link>
           </nav>
         </div>
-        <p className={styles.disclaimer}>Nutrition values are estimates. Katori does not give medical advice.</p>
+        <p className={styles.disclaimer}>Nutrition values are estimates. Shoku does not give medical advice.</p>
         <p className={styles.small}>Built for Indian plates. Plate guidance follows ICMR-NIN’s My Plate for the Day.</p>
       </div>
     </footer>

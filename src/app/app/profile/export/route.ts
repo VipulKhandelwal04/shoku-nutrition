@@ -33,7 +33,7 @@ export async function GET() {
 
     const body = {
       exported_at: new Date().toISOString(),
-      app: 'Katori',
+      app: 'Shoku',
       profile: profile.data,
       entries,
       days,
@@ -45,12 +45,12 @@ export async function GET() {
     return new NextResponse(JSON.stringify(body, null, 2), {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Content-Disposition': `attachment; filename="katori-data-${stamp}.json"`,
+        'Content-Disposition': `attachment; filename="shoku-data-${stamp}.json"`,
         'Cache-Control': 'private, no-store',
       },
     });
   } catch (e) {
-    console.error('[katori] data export failed', e);
+    console.error('[shoku] data export failed', e);
     return NextResponse.json({ error: 'Couldn’t build your export. Try again in a moment.' }, { status: 500 });
   }
 }
