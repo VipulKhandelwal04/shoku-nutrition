@@ -2,7 +2,8 @@ import { planOutput, planRequest, type PlanResponse, type PlanRow } from '@/lib/
 import { generateJson } from '@/lib/ai/gemini';
 import { guardAi, recordUsage } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson } from '@/lib/ai/http';
-import { dietAllows, isExcluded, parseExclusions, repairPlan, type RepairResult } from '@/lib/ai/plan';
+import { candidateLines, mealCandidates } from '@/lib/ai/candidates';
+import { repairPlan, type RepairResult } from '@/lib/ai/plan';
 import { PLAN_SYSTEM } from '@/lib/ai/prompts';
 import { getFoods } from '@/lib/data/queries';
 import { MEALS, GOALS, type Food, type Meal } from '@/lib/nutrition';
@@ -27,11 +28,10 @@ export async function POST(request: Request) {
   if (!profile?.targets) return fail(409, 'Finish setting up your goal first, then AI Assist can tailor a plan.');
   const targets = profile.targets;
 
-  const exclusions = parseExclusions(profile.restrictions ?? [], preferences);
-  const allowed = (f: Food) => dietAllows(profile.diet, f.diet) && !isExcluded(f, exclusions);
-  const foods = (await getFoods()).filter(allowed);
-  if (foods.length < 6) return fail(422, 'Too few foods fit those preferences. Loosen one and try again.');
-  const foodsById = new Map(foods.map(f => [f.id, f]));
+  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: preferences });
+  if (set.candidates.length < 6) return fail(422, 'Too few foods fit those preferences. Loosen one and try again.');
+  const foodsById = set.eligible;
+  const allowed = (f: Food) => set.eligible.has(f.id);
 
   const brief = {
     goal: profile.goal ? GOALS[profile.goal].label : 'Stay fit',
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     restrictions: profile.restrictions ?? [],
     targets: { kcal: targets.kcal, protein_g: targets.p, carbs_g: targets.c, fat_g: targets.f },
   };
-  const catalogue = foods.map(f => [f.id, f.name, f.unit, Math.round(f.kcal), Math.round(f.p)].join('|')).join('\n');
+  const catalogue = candidateLines(set);
 
   let success = false;
   try {
