@@ -31,7 +31,8 @@ export function BrandOutline({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true" focusable="false">
       <g fill="none" stroke="currentColor" strokeWidth=".35" strokeLinecap="round">
-        <rect x="17.5" y="10" width="29" height="17" rx="8.5" />
+        {/* The handle stops where it meets the body, so the outline doesn't cross it. */}
+        <path d="M17.5 26.2V18.5a8.5 8.5 0 0 1 8.5-8.5h12a8.5 8.5 0 0 1 8.5 8.5v7.7" />
         <circle cx="32" cy="40" r="20" />
         <path d="M16 40h32a16 16 0 0 1-32 0z" />
         <path d="M25.5 35.5c-2.4-2.4 2.4-4.4 0-7.2c-1.4-1.6-.4-3 .8-4.3M32 35.5c-2.4-2.4 2.4-4.4 0-7.2c-1.4-1.6-.4-3 .8-4.3M38.5 35.5c-2.4-2.4 2.4-4.4 0-7.2c-1.4-1.6-.4-3 .8-4.3" />
