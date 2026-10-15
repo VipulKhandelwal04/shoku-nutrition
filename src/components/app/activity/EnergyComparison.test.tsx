@@ -17,7 +17,7 @@ it('lets a keyboard-accessible day button reveal that day’s full values', asyn
   await act(async () => first.click());
   expect(first.getAttribute('aria-pressed')).toBe('true');
   expect(container.querySelector('[aria-live]')?.textContent).toContain('Workouts: 450 kcal');
-  expect(container.textContent).toContain('not your total daily energy use');
+  expect(container.textContent).toContain('not total daily burn');
 });
 it('explains missing records without presenting zero as measured expenditure', async () => {
   await act(async () => root.render(createElement(EnergyComparison, { days: [

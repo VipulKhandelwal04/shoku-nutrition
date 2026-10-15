@@ -44,7 +44,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const period = sp.period === 'week' ? 'week' : 'day';
   const day = period === 'week' ? today : parseDayParam(sp.day, today, today);
   const tabParam = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab;
-  const initialTab = tabParam === 'nutrients' || tabParam === 'plan' ? tabParam : 'groups';
+  const initialTab = tabParam === 'groups' || tabParam === 'nutrients' || tabParam === 'plan' ? tabParam : 'overview';
   // Week view is refused (falls back to the day) while the Week plan feature is off.
   const weekOn = isOn(flags, 'week', 'view');
   const planView = weekOn && sp.plan === 'week' ? 'week' : 'day';
@@ -285,8 +285,8 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
       <DeviceTimeZone current={tz} />
       <header className={ins.intro}>
         <div>
-          <h1>Food, activity &amp; your plan</h1>
-          <p>Compare what you eat, your recorded workouts and your daily targets.</p>
+          <h1>Compare</h1>
+          <p>Your intake, activity and nutrition at a glance.</p>
         </div>
         <nav className={s.controls} aria-label="Choose the day">
           <div className={s.periodSeg}>
@@ -305,65 +305,74 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
         </nav>
       </header>
 
-      {isOn(flags, 'workouts') && <EnergyComparison key={`${period}-${day}`} days={energy} />}
+      <CompareTabs key={`${period}-${day}-${initialTab}`} initial={initialTab}
+        overview={<>
+          <div className={s.layout}>
+            <div className="stack">
+          {isOn(flags, 'workouts') && <EnergyComparison key={`${period}-${day}`} days={energy} />}
 
-      <div className={s.layout}>
-        <div className="stack">
-          <section className={`panel ${s.plate}`} aria-labelledby="plate-title">
-            <div className={s.plateHead}>
-              <h2 id="plate-title">{plateTitle}</h2>
-              <span className="muted">{periodNote}</span>
-            </div>
-            {empty ? (
-              <p className={s.bigLine}><span className="display">Fresh plate.</span> {period === 'week' ? 'Your averages land here once a day counts.' : 'Start with one of these.'}</p>
-            ) : (
-              <p className={s.bigLine}>
-                <span className="display">{onTrack} of 7</span> food groups on track
-              </p>
-            )}
-            {!empty && (
-              <div className={s.groupRows}>
-                {statuses.map(g => (
-                  <CompareRow key={g.key} label={g.label} eaten={g.eaten} target={g.target} unit={g.unit} kind={g.kind} status={g.status} />
-                ))}
-              </div>
-            )}
-            {period === 'day' && (
-              <div className={s.nextUp}>
-                <h3>Next up</h3>
-                {suggestions.length ? (
-                  <ul className={ins.suggest}>
-                    {suggestions.map(x => (
-                      <li key={x.foodId} className={ins.suggestItem}>
-                        <FoodTile icon={x.icon} />
-                        <div className={ins.suggestText}>
-                          <strong>{x.name}</strong>
-                          <small>{qty(x.quantity)} {unitFor(x.quantity, x.unit)} · {fmt(x.kcal)} kcal · {x.meal} · fills {x.fillsLabel.toLowerCase()}</small>
-                        </div>
-                        <LogButton day={day} items={[{ meal: x.meal, foodId: x.foodId, quantity: x.quantity }]}
-                          label={`Log ${qty(x.quantity)} ${unitFor(x.quantity, x.unit)} ${x.name} to ${x.meal}`} done={`${x.name} logged to ${x.meal}.`} />
-                      </li>
-                    ))}
-                  </ul>
+              <section className={`panel ${s.plate}`} aria-labelledby="plate-title">
+                <div className={s.plateHead}>
+                  <h2 id="plate-title">{plateTitle}</h2>
+                  <span className="muted">{periodNote}</span>
+                </div>
+                {empty ? (
+                  <p className={s.bigLine}><span className="display">Fresh plate.</span> {period === 'week' ? 'Your averages land here once a day counts.' : 'Start with one of these.'}</p>
                 ) : (
-                  <p className="muted">{empty ? 'Your plan is empty for your food style. Log anything from Today.' : 'Every group your plan covers is on track. Nice work.'}</p>
+                  <p className={s.bigLine}>
+                    <span className="display">{onTrack} of 7</span> food groups on track
+                  </p>
                 )}
-              </div>
-            )}
-          </section>
+                {!empty && (
+                  <details className={s.disclosure}><summary>View food-group progress</summary><div className={s.groupRows}>
+                    {statuses.map(g => (
+                      <CompareRow key={g.key} label={g.label} eaten={g.eaten} target={g.target} unit={g.unit} kind={g.kind} status={g.status} />
+                    ))}
+                  </div></details>
+                )}
+                {period === 'day' && (
+                  <div className={s.nextUp}>
+                    <h3>Next up</h3>
+                    {suggestions.length ? (
+                      <ul className={ins.suggest}>
+                        {suggestions.map(x => (
+                          <li key={x.foodId} className={ins.suggestItem}>
+                            <FoodTile icon={x.icon} />
+                            <div className={ins.suggestText}>
+                              <strong>{x.name}</strong>
+                              <small>{qty(x.quantity)} {unitFor(x.quantity, x.unit)} · {fmt(x.kcal)} kcal · {x.meal} · fills {x.fillsLabel.toLowerCase()}</small>
+                            </div>
+                            <LogButton day={day} items={[{ meal: x.meal, foodId: x.foodId, quantity: x.quantity }]}
+                              label={`Log ${qty(x.quantity)} ${unitFor(x.quantity, x.unit)} ${x.name} to ${x.meal}`} done={`${x.name} logged to ${x.meal}.`} />
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted">{empty ? 'Your plan is empty for your food style. Log anything from Today.' : 'Every group your plan covers is on track. Nice work.'}</p>
+                    )}
+                  </div>
+                )}
+              </section>
+            </div>
 
-          <CompareTabs
-            initial={initialTab}
-            groups={isOn(flags, 'compare', 'groups') ? groupsPanel : null}
-            nutrients={isOn(flags, 'compare', 'nutrients') ? nutrientsPanel : null}
-            plan={isOn(flags, 'compare', 'plan') ? planPanel : null}
-          />
-        </div>
+            <aside className={`stack ${s.side}`} aria-label="Goal and targets">
+              {isOn(flags, 'compare', 'goal') && <GoalCard goal={goal} targets={targets} recommended={rec ? pickTargets(rec) : null} bmi={rec?.bmi ?? null} bmiNote={rec ? bmiBand(rec.bmi) : null} />}
 
-        <aside className={`stack ${s.side}`} aria-label="Goal and targets">
-          {isOn(flags, 'compare', 'goal') && <GoalCard goal={goal} targets={targets} recommended={rec ? pickTargets(rec) : null} bmi={rec?.bmi ?? null} bmiNote={rec ? bmiBand(rec.bmi) : null} />}
 
-          <section className="panel panel-pad" aria-labelledby="split-title">
+              <details className={s.disclosure}>
+                <summary>About these numbers</summary>
+                <p className="note">
+                  Calories come from your age, height, weight, sex and activity, adjusted for {GOALS[goal].label.toLowerCase()}.
+                  Protein is 0.83 g per kg of body weight (1.6 g when building muscle), and fibre is at least 25 g.
+                  BMI bands use the lower cut-offs suited to Indian adults. These are general estimates for healthy adults:
+                  if you’re pregnant, breastfeeding or managing a health condition, use targets from your doctor or dietitian.
+                </p>
+              </details>
+            </aside>
+          </div></>}
+        groups={isOn(flags, 'compare', 'groups') ? groupsPanel : null}
+        nutrients={isOn(flags, 'compare', 'nutrients') ? <>{nutrientsPanel}
+          <section className={s.macroDetail} aria-labelledby="split-title">
             <h3 id="split-title" className={s.sideTitle}>Where your energy comes from</h3>
             <SplitBar label="You" split={you} />
             <SplitBar label={rec ? 'Recommended' : 'Your targets'} split={recSplit} />
@@ -377,18 +386,9 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
             </dl>
             <p className="fine-print">A balanced day gets about 15% of its energy from protein and no more than 30% from fat.</p>
           </section>
-
-          <section className="panel panel-pad" aria-labelledby="about-title">
-            <h3 id="about-title" className={s.sideTitle}>About these numbers</h3>
-            <p className="note">
-              Calories come from your age, height, weight, sex and activity, adjusted for {GOALS[goal].label.toLowerCase()}.
-              Protein is 0.83 g per kg of body weight (1.6 g when building muscle), and fibre is at least 25 g.
-              BMI bands use the lower cut-offs suited to Indian adults. These are general estimates for healthy adults:
-              if you’re pregnant, breastfeeding or managing a health condition, use targets from your doctor or dietitian.
-            </p>
-          </section>
-        </aside>
-      </div>
+</> : null}
+        plan={isOn(flags, 'compare', 'plan') ? planPanel : null}
+      />
     </div>
   );
 }

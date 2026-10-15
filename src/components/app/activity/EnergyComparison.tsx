@@ -56,9 +56,9 @@ export function EnergyComparison({ days }: { days: EnergyDay[] }) {
       ) : (
         <p className={s.empty}>Log a meal and connect Strava or add a workout. Your recorded intake and activity will appear together here.</p>
       )}
-      <p className={s.note}>Workout calories cover recorded exercise, not your total daily energy use. Missing logs mean incomplete data; this chart does not calculate a calorie deficit.</p>
+      <p className={s.note}>Exercise only, not total daily burn. Missing logs are not zero.</p>
       <details className={s.data}>
-        <summary>View daily numbers</summary>
+        <summary>Daily numbers & sources</summary>
         <div className={s.tableScroll}><table><caption className="sr-only">Recorded food intake and workout calories</caption><thead><tr><th scope="col">Day</th><th scope="col">Food intake</th><th scope="col">Workouts</th><th scope="col">Source</th></tr></thead><tbody>
           {days.map(d => <tr key={d.day}><th scope="row">{dateLabel(d.day, true)}</th><td>{value(d.intake)}</td><td>{value(d.burned)}</td><td>{d.sessions ? [d.imported ? 'Strava' : '', d.sessions > d.imported ? 'By hand' : ''].filter(Boolean).join(' + ') : 'Not logged'}</td></tr>)}
         </tbody></table></div>
