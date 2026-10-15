@@ -11,6 +11,7 @@ export default async function AppLayout({ children }: LayoutProps<'/app'>) {
   const ask = ai.features.ask ? {
     workouts: profile.use_workouts === false ? 'off' as const : profile.ask_workouts ? 'ask' as const : 'use' as const,
     rateIdeas: isOn(flags, 'feedback', 'ideas'),
+    logRecipes: isOn(flags, 'recipes', 'log'),
   } : null;
   const name = profile.display_name?.trim() || profile.email?.split('@')[0] || 'You';
   return (

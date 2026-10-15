@@ -118,3 +118,4 @@
 .weekFoot { display: flex; justify-content: flex-end; padding: 0 8px 10px; }
 .weekDay summary :global(.chip) { flex-shrink: 0; }
 @media (prefers-reduced-motion: reduce) { .weekDay summary::after { transition: none; } }
+.recipeLine { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -4px 0 6px; font-size: 13px; color: var(--muted); }

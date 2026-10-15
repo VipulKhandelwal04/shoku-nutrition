@@ -11,6 +11,7 @@ const FEATURES: { key: AiFeature; title: string; body: string }[] = [
   { key: 'plan', title: 'Tune my plan', body: 'Tailors the day plan to their goal and diet.' },
   { key: 'coach', title: 'Coach line', body: 'A short, encouraging nudge on the Today screen.' },
   { key: 'ask', title: 'Ask Shoku', body: 'Members ask for meal ideas from the top bar. Ideas use only catalogue foods that fit their diet.' },
+  { key: 'week', title: 'Plan my week', body: 'Builds seven days around the member’s usual training days. Nothing is saved until they confirm.' },
 ];
 
 /**

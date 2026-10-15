@@ -107,3 +107,17 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner, .spin { animation-duration: 2.4s; }
 }
+
+/* ---------- Plan my week ---------- */
+.weekIntro { color: var(--text-2); font-size: 14px; margin-bottom: 14px; }
+.weekList { list-style: none; margin: 10px 0 14px; padding: 0; display: grid; gap: 8px; }
+.weekItem { border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+.weekItem summary { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 8px 14px; cursor: pointer; list-style: none; }
+.weekItem summary::-webkit-details-marker { display: none; }
+.weekDayName { flex: 1; font-family: var(--display); font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.weekDayKcal { font-family: var(--display); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.weekDayKcal small { font-family: var(--body); font-size: 11px; color: var(--muted); font-weight: 500; }
+.weekDayMeals { margin: 0; padding: 0 14px 12px; display: grid; gap: 8px; }
+.weekDayMeals div { display: grid; gap: 2px; }
+.weekDayMeals dt { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.weekDayMeals dd { margin: 0; font-size: 14px; color: var(--text-2); overflow-wrap: anywhere; }

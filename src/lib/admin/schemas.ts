@@ -115,6 +115,8 @@ export const aiSettingsSchema = z.object({
   plan: z.boolean(),
   coach: z.boolean(),
   ask: z.boolean(),
+  // Added later: settings saved before "Plan my week" existed have no key, which means on.
+  week: z.boolean().default(true),
   daily_quota: z.preprocess(
     toNumber,
     z.number({ error: 'Enter a whole number' }).int('Use a whole number').min(1, 'At least 1 call a day').max(200, 'At most 200 calls a day'),

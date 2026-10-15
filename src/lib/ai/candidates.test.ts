@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SEED_FOODS } from '../seed-foods';
-import { candidateLines, feedbackBrief, mealCandidates } from './candidates';
+import { candidateLines, feedbackBrief, matchRecipe, mealCandidates, recipeCard, recipeItems } from './candidates';
 import { feedbackSummary } from './feedback';
 
 const ids = (rules: Parameters<typeof mealCandidates>[1]) => new Set(mealCandidates(SEED_FOODS, rules).candidates.map(c => c.food.id));
@@ -153,5 +153,47 @@ describe('candidateLines', () => {
     const [first] = SEED_FOODS;
     const set = mealCandidates([first, { ...first, id: 'pesto-pasta', name: 'Pesto pasta', cuisine: 'Italian' }], { diet: 'nonveg', restrictions: [] });
     expect(candidateLines(set).split('\n').map(l => l.split('|').pop())).toEqual(['Indian', 'Italian']);
+  });
+});
+
+describe('recipes as candidates', () => {
+  const recipe = (id: string, ingredients: [string, number][], servings = 2) => ({
+    id, name: id, cuisine: 'Indian', servings, steps: ['Cook.'], ingredients: ingredients.map(([foodId, q]) => ({ foodId, q })),
+  });
+  const dalRice = recipe('dal-rice', [['dal', 2], ['rice', 2], ['oil', 0.5]]);
+  const chickenCurry = recipe('chicken-curry', [['chicken', 2], ['rice', 2], ['oil', 1]]);
+  const eggBhurji = recipe('egg-bhurji', [['egg', 4], ['bread', 4]]);
+  const paneerRoti = recipe('paneer-roti', [['paneer-bhurji', 2], ['chapati', 4]]);
+  const recipes = [dalRice, chickenCurry, eggBhurji, paneerRoti];
+
+  it('keeps only recipes whose every ingredient fits the diet', () => {
+    const ids = (diet: 'veg' | 'egg' | 'nonveg') => mealCandidates(SEED_FOODS, { diet, restrictions: [], recipes }).recipes.map(r => r.id);
+    expect(ids('veg')).toEqual(['dal-rice', 'paneer-roti']);
+    expect(ids('egg')).toEqual(['dal-rice', 'egg-bhurji', 'paneer-roti']);
+    expect(ids('nonveg')).toEqual(['dal-rice', 'chicken-curry', 'egg-bhurji', 'paneer-roti']);
+  });
+
+  it('drops recipes an ingredient of which breaks a restriction or a "no X"', () => {
+    const lactose = mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: ['lactose-free'], recipes }).recipes.map(r => r.id);
+    expect(lactose).toEqual(['dal-rice']);
+    const noRice = mealCandidates(SEED_FOODS, { diet: 'nonveg', restrictions: [], request: 'no rice', recipes }).recipes.map(r => r.id);
+    expect(noRice).toEqual(['egg-bhurji', 'paneer-roti']);
+  });
+
+  it('matches a meal to the recipe it mostly contains, ignoring oil', () => {
+    expect(matchRecipe(['dal', 'rice', 'salad'], recipes)?.id).toBe('dal-rice');
+    expect(matchRecipe(['chicken', 'rice'], recipes)?.id).toBe('chicken-curry');
+    expect(matchRecipe(['rice', 'curd'], recipes)).toBeNull(); // one of two main ingredients is not enough
+    expect(matchRecipe(['oats', 'milk'], recipes)).toBeNull();
+  });
+
+  it('scales a recipe to the servings logged, and builds a card with names and per-serving nutrition', () => {
+    expect(recipeItems(dalRice, 1)).toEqual([{ foodId: 'dal', quantity: 1 }, { foodId: 'rice', quantity: 1 }, { foodId: 'oil', quantity: 0.25 }]);
+    expect(recipeItems(dalRice, 3)[0]).toEqual({ foodId: 'dal', quantity: 3 });
+    const byId = new Map(SEED_FOODS.map(f => [f.id, f]));
+    const card = recipeCard(dalRice, byId);
+    expect(card.ingredients.map(i => i.name)).toEqual(['dal', 'rice', 'oil'].map(id => byId.get(id)!.name));
+    expect(card.perServing.kcal).toBeCloseTo(byId.get('dal')!.kcal + byId.get('rice')!.kcal + byId.get('oil')!.kcal * 0.25, 0);
+    expect(card.diet).toBe('veg');
   });
 });

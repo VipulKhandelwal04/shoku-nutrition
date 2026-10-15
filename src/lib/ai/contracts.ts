@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { MEALS, type Meal, type Plan } from '../nutrition';
 import type { AiSuggestion } from './match';
+import type { RecipeCard } from './candidates';
 
 export type { AiSuggestion } from './match';
 export type AiApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -50,6 +51,30 @@ export const planOutput = z.object({
 
 export const coachOutput = z.object({ line: z.string() });
 
+// ---------- Plan my week ----------
+
+/** POST /api/ai/week ({ preferences }). Nothing is saved until the member confirms (saveAiWeek). */
+export const weekRequest = z.object({ preferences: z.string().trim().max(MAX_TEXT, `Keep it under ${MAX_TEXT} characters`).default('') });
+export type WeekDayResult = {
+  weekday: number;
+  /** "Mon", "Tue", … */
+  label: string;
+  training: boolean;
+  kcal: number;
+  target: number;
+  plan: Plan;
+  rows: Record<Meal, PlanRow[]>;
+};
+export type WeekResponse = { days: WeekDayResult[]; note: string | null; trainingDays: number[]; cuisines: string[]; feedback: boolean };
+
+export const weekOutput = z.object({
+  days: z.array(z.object({
+    weekday: z.number().describe('1 = Monday … 7 = Sunday'),
+    Breakfast: planMeal, Lunch: planMeal, Snacks: planMeal, Dinner: planMeal,
+  })).max(7),
+  note: z.string().describe('One short sentence on how the week is shaped'),
+});
+
 // ---------- Ask Shoku ----------
 
 /** POST /api/ai/ask ({ question, day }). Read-only: logging an idea goes through addEntries after the user taps it. */
@@ -60,7 +85,8 @@ export const askRequest = z.object({
   useWorkouts: z.boolean().optional(),
 });
 export type AskItem = { foodId: string; name: string; unit: string; icon: string; q: number; kcal: number; p: number };
-export type AskIdea = { title: string; meal: Meal; why: string; items: AskItem[]; kcal: number; p: number };
+/** `recipe` is set when the idea matches an active recipe the member can have: it opens the meal detail. */
+export type AskIdea = { title: string; meal: Meal; why: string; items: AskItem[]; kcal: number; p: number; recipe?: RecipeCard };
 /** What Shoku looked at, shown under the answer so the grounding is visible. */
 export type AskContext = {
   workouts: { label: string; minutes: number; kcal: number }[];

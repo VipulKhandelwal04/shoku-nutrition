@@ -4,6 +4,7 @@ import { FoodTile, Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
 import { FeedbackForm } from '@/components/app/feedback/FeedbackForm';
+import { RecipeButton } from '@/components/app/recipes/MealDetail';
 import { MAX_TEXT, type AskIdea, type AskResponse } from '@/lib/ai/contracts';
 import { addEntries, deleteEntries } from '@/lib/data/diary';
 import { dateKey } from '@/lib/nutrition';
@@ -26,7 +27,7 @@ type Phase =
 const n = (v: number) => Math.round(v).toLocaleString('en-IN');
 
 /** The member's settings, from Profile. `workouts`: use them, ask first each time, or leave them out. */
-export type AskOptions = { workouts: 'use' | 'ask' | 'off'; rateIdeas: boolean };
+export type AskOptions = { workouts: 'use' | 'ask' | 'off'; rateIdeas: boolean; logRecipes: boolean };
 
 /**
  * Ask Shoku: a search field in the top bar (an icon on phones) that opens a sheet with a grounded answer and
@@ -191,13 +192,13 @@ export function AskShoku({ options }: { options: AskOptions }) {
           </div>
         )}
 
-        {phase.kind === 'done' && <Answer data={phase.data} rateIdeas={options.rateIdeas} />}
+        {phase.kind === 'done' && <Answer data={phase.data} rateIdeas={options.rateIdeas} logRecipes={options.logRecipes} />}
       </Sheet>
     </div>
   );
 }
 
-function Answer({ data, rateIdeas }: { data: AskResponse; rateIdeas: boolean }) {
+function Answer({ data, rateIdeas, logRecipes }: { data: AskResponse; rateIdeas: boolean; logRecipes: boolean }) {
   const c = data.context;
   const used = [
     ...(c.workoutsUse === 'off' ? ['Workouts left out · your setting'] : c.workoutsUse === 'skipped' ? ['Workouts left out this time'] : []),
@@ -218,7 +219,7 @@ function Answer({ data, rateIdeas }: { data: AskResponse; rateIdeas: boolean }) 
       </div>
       {data.ideas.length > 0 && (
         <ul className={s.ideas}>
-          {data.ideas.map((idea, i) => <IdeaCard key={`${idea.title}-${i}`} idea={idea} rate={rateIdeas} />)}
+          {data.ideas.map((idea, i) => <IdeaCard key={`${idea.title}-${i}`} idea={idea} rate={rateIdeas} logRecipes={logRecipes} />)}
         </ul>
       )}
       <p className="fine-print">Ideas use Shoku catalogue foods that fit your diet. Portions are estimates, not medical advice.</p>
@@ -226,7 +227,7 @@ function Answer({ data, rateIdeas }: { data: AskResponse; rateIdeas: boolean }) 
   );
 }
 
-function IdeaCard({ idea, rate }: { idea: AskIdea; rate: boolean }) {
+function IdeaCard({ idea, rate, logRecipes }: { idea: AskIdea; rate: boolean; logRecipes: boolean }) {
   const toast = useToast();
   const [state, setState] = useState<'idle' | 'saving' | 'logged'>('idle');
   const [rating, setRating] = useState<'closed' | 'open' | 'saved'>('closed');
@@ -266,6 +267,11 @@ function IdeaCard({ idea, rate }: { idea: AskIdea; rate: boolean }) {
         ))}
       </ul>
       {idea.why && <p className={s.why}>{idea.why}</p>}
+      {idea.recipe && (
+        <p className={s.recipeLine}>
+          Recipe: <RecipeButton recipe={idea.recipe} meal={idea.meal} day={dateKey()} why={idea.why} canLog={logRecipes} source="text_ai" />
+        </p>
+      )}
       <button type="button" className={`btn ${state === 'logged' ? '' : 'accent'} full`} onClick={log} disabled={state !== 'idle'} aria-busy={state === 'saving' || undefined}>
         {state === 'logged' ? <><Icon name="check" size="sm" /> Logged</> : state === 'saving' ? 'Logging…' : `Log to ${idea.meal}`}
       </button>

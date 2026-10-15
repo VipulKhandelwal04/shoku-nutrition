@@ -78,6 +78,10 @@ describe('foodSchema cuisine', () => {
 
 describe('aiSettingsSchema', () => {
   const base = { enabled: true, photo: true, text: true, plan: false, coach: true, ask: true };
+  it('keeps Plan my week switched off when saved off, and treats a missing key as on', () => {
+    expect(aiSettingsSchema.parse({ ...base, week: false, daily_quota: 25 }).week).toBe(false);
+    expect(aiSettingsSchema.parse({ ...base, daily_quota: 25 }).week).toBe(true);
+  });
   it('keeps Ask Shoku switched off when saved off', () => {
     expect(aiSettingsSchema.parse({ ...base, ask: false, daily_quota: 25 }).ask).toBe(false);
   });

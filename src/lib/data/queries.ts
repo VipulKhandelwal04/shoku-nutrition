@@ -1,6 +1,7 @@
 import 'server-only';
 import { isOn, mergeFlags, type FeatureFlags } from '../flags';
 import { feedbackSummary, type FeedbackSummary } from '../ai/feedback';
+import type { Recipe } from '../ai/candidates';
 import { cache } from 'react';
 import { createClient } from '../supabase/server';
 import type { FeedbackRow } from '../preferences';
@@ -95,9 +96,9 @@ export const getAiAssist = cache(async (): Promise<AiAssistStatus> => {
   const configured = !!process.env.GEMINI_API_KEY;
   const on = s.enabled && configured;
   return {
-    available: on && (s.photo || s.text || s.plan || s.coach || s.ask),
+    available: on && (s.photo || s.text || s.plan || s.coach || s.ask || s.week),
     configured,
-    features: { photo: on && s.photo, text: on && s.text, plan: on && s.plan, coach: on && s.coach, ask: on && s.ask },
+    features: { photo: on && s.photo, text: on && s.text, plan: on && s.plan, coach: on && s.coach, ask: on && s.ask, week: on && s.week },
     dailyQuota: s.daily_quota,
   };
 });
@@ -147,3 +148,14 @@ export async function getWeekPlans(): Promise<Map<number, unknown>> {
   if (error) return new Map();
   return new Map((data ?? []).map(r => [Number(r.weekday), r.plan as unknown]));
 }
+
+/** Active recipes members may see (RLS: active only). Empty when none, or when the read fails. */
+export const getActiveRecipes = cache(async (): Promise<Recipe[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('recipes').select('id, name, cuisine, servings, steps, ingredients').eq('active', true).order('name');
+  if (error) return [];
+  return (data ?? []).map(r => ({
+    id: r.id as string, name: r.name as string, cuisine: r.cuisine as string, servings: Number(r.servings), steps: (r.steps ?? []) as string[],
+    ingredients: ((r.ingredients ?? []) as { foodId: string; q: number }[]).map(i => ({ foodId: String(i.foodId), q: Number(i.q) })),
+  }));
+});
