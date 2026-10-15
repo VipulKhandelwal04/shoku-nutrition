@@ -52,7 +52,8 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
       <header className={ins.intro}>
         <div>
           <h1>Progress</h1>
-          <p>{MEALS_FOR_A_COUNTED_DAY} meals logged and the day counts. No need to close anything.</p>
+          {/* The first-week card says this for new members, so the intro line only shows after that. */}
+          {!isNew && <p>Log {MEALS_FOR_A_COUNTED_DAY} meals in a day and it counts toward your streak.</p>}
         </div>
       </header>
 

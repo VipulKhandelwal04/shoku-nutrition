@@ -11,7 +11,7 @@ export default function TermsPage() {
   return (
     <LegalPage title="Terms" updated="15 October 2026">
       <p>
-        Shoku is an independent project that helps you log meals and see your plate against India’s ICMR-NIN My Plate guide. By signing in, you
+        Shoku is an independent project that helps you log meals and see how your day compares with your targets. By signing in, you
         agree to these terms.
       </p>
 

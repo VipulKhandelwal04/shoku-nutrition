@@ -35,7 +35,6 @@ export function Footer() {
           </nav>
         </div>
         <p className={styles.disclaimer}>Nutrition values are estimates. Shoku does not give medical advice.</p>
-        <p className={styles.small}>Built for Indian plates. Plate guidance follows ICMR-NIN’s My Plate for the Day.</p>
       </div>
     </footer>
   );

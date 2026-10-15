@@ -106,9 +106,10 @@ function MealCard({ meal, full }: { meal: Meal; full: boolean }) {
               );
             })}
           </ul>
-        ) : (
-          <p className={s.emptyMeal}>Nothing logged yet. Tap + to add your first food.</p>
-        )}
+        ) : all.length ? (
+          // On an empty day the page says "nothing logged" once; per-meal lines only help once other meals have food.
+          <p className={s.emptyMeal}>Nothing here yet.</p>
+        ) : null}
       </div>
     </article>
   );

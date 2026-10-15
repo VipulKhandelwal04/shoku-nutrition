@@ -161,7 +161,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const contributions = groupContributions(entries);
   const groupsPanel = (
     <>
-      <p className={s.panelNote}>{periodNote} · ICMR-NIN My Plate for the Day, scaled to {fmt(targets.kcal)} kcal</p>
+      <p className={s.panelNote}>Food-group targets for {fmt(targets.kcal)} kcal a day</p>
       {emptyNote}
       <ul className={s.contribList}>
         {statuses.map(g => {
@@ -172,9 +172,12 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
                 <strong>{g.label}</strong>
                 <span className="muted">{g.kind === 'limit' ? 'Up to' : 'At least'} {fmt(g.target)} {g.unit}</span>
               </div>
-              <p className={s.contribFoods}>
-                {items.length ? items.map(c => `${c.name} ${fmt(c.amount)} ${g.unit}`).join(' · ') : 'Nothing from this group yet.'}
-              </p>
+              {/* With nothing logged the note above says so once; no "nothing yet" line under every group. */}
+              {(items.length > 0 || !empty) && (
+                <p className={s.contribFoods}>
+                  {items.length ? items.map(c => `${c.name} ${fmt(c.amount)} ${g.unit}`).join(' · ') : 'Nothing from this group yet.'}
+                </p>
+              )}
             </li>
           );
         })}
@@ -186,7 +189,6 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const fibreTarget = rec?.fibre ?? 25;
   const nutrientsPanel = (
     <>
-      <p className={s.panelNote}>{periodNote}</p>
       {emptyNote}
       <CompareRow label="Calories" eaten={t.kcal} target={targets.kcal} unit="kcal" kind="target" status={nutrientStatus(t.kcal, targets.kcal, 'target', dayOpen)} />
       <CompareRow label="Protein" eaten={t.p} target={targets.p} unit="g" kind="atleast" status={nutrientStatus(t.p, targets.p, 'atleast', dayOpen)} />
@@ -224,7 +226,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
           </p>
           <p className="fine-print">
             {savedToday ? `Your saved ${new Date(`${day}T12:00:00`).toLocaleDateString('en-IN', { weekday: 'long' })} from your week plan. Check each item before you log it.`
-              : saved ? 'Your saved plan, tailored with AI Assist. Check each item before you log it.' : `A ${profile.diet === 'veg' ? 'veg' : profile.diet === 'egg' ? 'eggetarian' : 'non-veg'} day built on ICMR-NIN’s plate, scaled to ${fmt(targets.kcal)} kcal.`}
+              : saved ? 'Your saved plan, tailored with AI Assist. Check each item before you log it.' : `A ${profile.diet === 'veg' ? 'veg' : profile.diet === 'egg' ? 'eggetarian' : 'non-veg'} day built from balanced Indian meals, scaled to ${fmt(targets.kcal)} kcal.`}
             {(profile.restrictions ?? []).length > 0 && ' Foods that clearly clash with your restrictions are left out.'}
           </p>
         </div>
@@ -274,8 +276,8 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
       <DeviceTimeZone current={tz} />
       <header className={ins.intro}>
         <div>
-          <h1>Your plate vs the guide</h1>
-          <p>Your meals against your plan and the ICMR-NIN guide for Indians.</p>
+          <h1>Your plate vs your plan</h1>
+          <p>What you ate against your daily targets.</p>
         </div>
         <nav className={s.controls} aria-label="Choose the day">
           <div className={s.periodSeg}>
@@ -347,7 +349,7 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
           />
         </div>
 
-        <aside className={`stack ${s.side}`} aria-label="Goal and sources">
+        <aside className={`stack ${s.side}`} aria-label="Goal and targets">
           {isOn(flags, 'compare', 'goal') && <GoalCard goal={goal} targets={targets} recommended={rec ? pickTargets(rec) : null} bmi={rec?.bmi ?? null} bmiNote={rec ? bmiBand(rec.bmi) : null} />}
 
           <section className="panel panel-pad" aria-labelledby="split-title">
@@ -362,21 +364,17 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
                 </div>
               ))}
             </dl>
-            <p className="fine-print">ICMR-NIN suggests about 15% of energy from protein and up to 30% from fat.</p>
+            <p className="fine-print">A balanced day gets about 15% of its energy from protein and no more than 30% from fat.</p>
           </section>
 
           <section className="panel panel-pad" aria-labelledby="about-title">
             <h3 id="about-title" className={s.sideTitle}>About these numbers</h3>
             <p className="note">
-              Calories use the Mifflin-St Jeor estimate and your activity level, adjusted for {GOALS[goal].label.toLowerCase()}.
-              Protein uses ICMR’s 0.83 g per kg body weight (1.6 g/kg when building muscle). Fibre uses the WHO minimum of 25 g.
-              BMI uses ICMR’s cut-offs for Indian adults. These are general estimates for healthy adults: if you’re pregnant,
-              breastfeeding or managing a health condition, use targets from your doctor or dietitian.
+              Calories come from your age, height, weight, sex and activity, adjusted for {GOALS[goal].label.toLowerCase()}.
+              Protein is 0.83 g per kg of body weight (1.6 g when building muscle), and fibre is at least 25 g.
+              BMI bands use the lower cut-offs suited to Indian adults. These are general estimates for healthy adults:
+              if you’re pregnant, breastfeeding or managing a health condition, use targets from your doctor or dietitian.
             </p>
-            <ul className={s.sources}>
-              <li><a href="https://www.nin.res.in/brief/Policy%20Brief%20My%20Plate%20J18%2024.pdf" target="_blank" rel="noopener noreferrer">ICMR-NIN · My Plate for the Day <Icon name="arrow" size="sm" /><span className="sr-only"> (opens in a new tab)</span></a></li>
-              <li><a href="https://nutritionconnect.org/resource-center/dietary-guidelines-indians-2024-edition-icmr-nin" target="_blank" rel="noopener noreferrer">ICMR-NIN · Dietary Guidelines for Indians 2024 <Icon name="arrow" size="sm" /><span className="sr-only"> (opens in a new tab)</span></a></li>
-            </ul>
           </section>
         </aside>
       </div>

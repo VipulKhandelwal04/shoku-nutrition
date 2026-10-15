@@ -203,7 +203,7 @@ export function FoodSheet({ food, open, categories, cuisines, onClose }: { food:
 
           <fieldset className={s.fieldset}>
             <legend>Food groups per serving</legend>
-            <p className="field-help" style={{ margin: '0 0 12px' }}>Raw weight that counts toward each My Plate group. Leave blank for none.</p>
+            <p className="field-help" style={{ margin: '0 0 12px' }}>Raw weight that counts toward each food group. Leave blank for none.</p>
             <div className={s.formGrid4}>
               {GROUPS.map(g => (
                 <div className="field" key={g.key}>

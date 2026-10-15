@@ -1,14 +1,13 @@
 import Image from 'next/image';
 import { requireOnboarded } from '@/lib/auth';
-import { getConnections, getEarnedBadges, getFlags, getFoods, getMealsByDay, getRatings, isStravaConfigured } from '@/lib/data/queries';
+import { getConnections, getFlags, getFoods, getRatings, isStravaConfigured } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
-import { BADGES, GOALS, cuisineOf, dayCounts, recommend, streakInfo } from '@/lib/nutrition';
+import { GOALS, cuisineOf, recommend } from '@/lib/nutrition';
 import { CUISINE_CHOICES, cuisinePrefsOf, cuisineSummary } from '@/lib/preferences';
 import { Icon } from '@/components/ui/Icon';
 import { BrandIcon, Wordmark } from '@/components/brand/Brand';
 import { DIETS, bodyOf, pickTargets } from '@/components/app/insights/insights';
 import { RESTRICTIONS, RESTRICTION_SLUGS, type Restriction } from '@/lib/restrictions';
-import { userToday } from '@/components/app/insights/server';
 import type { BodyValues } from './ProfileForms';
 import { ProfileMenu } from './ProfileMenu';
 import s from './profile.module.css';
@@ -20,10 +19,7 @@ const GOOGLE_PHOTO = /^https:\/\/lh3\.googleusercontent\.com\//;
 
 export default async function ProfilePage() {
   const profile = await requireOnboarded('/app/profile');
-  const { today } = await userToday();
-  const [mealsByDay, badges, connections, flags, ratings, foods] = await Promise.all([
-    getMealsByDay(today, 365), getEarnedBadges(), getConnections(), getFlags(), getRatings(), getFoods(),
-  ]);
+  const [connections, flags, ratings, foods] = await Promise.all([getConnections(), getFlags(), getRatings(), getFoods()]);
   const cuisinesOn = isOn(flags, 'cuisines');
   const cuisines = cuisinePrefsOf(profile);
   // The common cuisines plus whatever the catalogue has; anything already chosen stays pickable.
@@ -44,9 +40,6 @@ export default async function ProfilePage() {
   const goal = GOALS[profile.goal ?? 'fit'].label;
   const diet = DIETS.find(d => d.key === (profile.diet ?? 'veg'))?.label ?? 'Veg';
   const since = new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-
-  const streak = streakInfo(mealsByDay, today);
-  const daysCounted = Object.values(mealsByDay).filter(dayCounts).length;
 
   const plan = [
     { label: 'Goal and body', value: [goal, profile.weight_kg ? `${Number(profile.weight_kg)} kg` : null].filter(Boolean).join(' · '), sheet: 'body' as const, icon: 'user' as const },
@@ -77,7 +70,7 @@ export default async function ProfilePage() {
         {profile.email && <p className={s.email}>{profile.email}</p>}
       </header>
 
-      {/* Member card, after Cult's pass card: what Shoku is set up to do for you. */}
+      {/* Member card: what Shoku is set up to do for you. Streaks and badges live on Progress. */}
       <section className={s.member} aria-label="Your Shoku card">
         <Image src="/img/hero.webp" alt="" fill sizes="(max-width: 720px) 100vw, 680px" className={s.cardPhoto} />
         <div className={s.cardTop}>
@@ -92,13 +85,6 @@ export default async function ProfilePage() {
         </dl>
       </section>
 
-      <dl className={s.stats} aria-label="Your streaks">
-        <div><dt><Icon name="flame" size="sm" /> Streak</dt><dd>{streak.current}<small>{streak.current === 1 ? 'day' : 'days'}</small></dd></div>
-        <div><dt><Icon name="star" size="sm" /> Best</dt><dd>{streak.best}<small>{streak.best === 1 ? 'day' : 'days'}</small></dd></div>
-        <div><dt><Icon name="checkCircle" size="sm" /> Counted</dt><dd>{daysCounted}<small>{daysCounted === 1 ? 'day' : 'days'}</small></dd></div>
-        <div><dt><Icon name="bolt" size="sm" /> Badges</dt><dd>{badges.length}<small>of {BADGES.length}</small></dd></div>
-      </dl>
-
       <ProfileMenu
         plan={plan}
         initial={initial}
@@ -106,7 +92,6 @@ export default async function ProfilePage() {
         recommended={recommended}
         isAdmin={profile.role === 'admin'}
         strava={{ configured: isStravaConfigured() && isOn(flags, 'apps', 'strava'), connection: connections.find(c => c.provider === 'strava') ?? null }}
-        upcoming={isOn(flags, 'apps', 'upcoming')}
         prefs={{
           cuisines: cuisinesOn ? { value: cuisines, choices: cuisineChoices } : null,
           activity,

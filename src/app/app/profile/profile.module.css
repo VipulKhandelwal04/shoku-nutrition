@@ -1,4 +1,4 @@
-/* Profile: a Cult-style member screen. Identity, the Shoku card, a streak strip, then grouped glass rows. */
+/* Profile: a member screen. Identity, the Shoku card, then grouped glass rows. */
 .wrap { max-width: 680px; margin: 0 auto; display: grid; gap: 22px; }
 
 /* ---------- Identity ---------- */
@@ -24,15 +24,6 @@
 .cardFacts small { font-size: 14px; font-weight: 700; color: rgba(255, 255, 255, .78); }
 .cardText { text-transform: uppercase; }
 
-/* ---------- Stats strip ---------- */
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--glass-edge), var(--glass-shadow); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
-.stats div { padding: 16px 8px 14px; text-align: center; min-width: 0; }
-.stats div + div { border-left: 1px solid var(--line); }
-.stats dt { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.stats dt :global(.icon) { width: 14px; height: 14px; color: var(--accent); }
-.stats dd { margin: 6px 0 0; font-family: var(--display); font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; justify-content: center; gap: 4px; }
-.stats small { font-family: var(--body); font-size: 11px; font-weight: 600; color: var(--muted); }
-
 /* ---------- Grouped rows ---------- */
 .groupTitle { font-family: var(--body); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); margin: 0 0 8px 6px; }
 .group { list-style: none; margin: 0; padding: 0; border-radius: 22px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--glass-edge), var(--glass-shadow); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
@@ -41,7 +32,6 @@
 .row:hover { background: rgba(255, 255, 255, .05); color: var(--text); }
 .row:active { background: rgba(255, 255, 255, .09); }
 .row:focus-visible { outline-offset: -3px; border-radius: 22px; }
-.rowStatic, .rowStatic:hover, .rowStatic:active { background: transparent; cursor: default; }
 .rowIcon { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex-shrink: 0; background: var(--accent-soft); color: var(--accent-text); }
 .rowText { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .rowLabel { font-size: 15px; font-weight: 600; }
@@ -91,8 +81,17 @@
   .grid3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .grid3 > :first-child { grid-column: 1 / -1; }
 }
+/* Phones: identity becomes one compact row so the card and settings start above the fold. */
+@media (max-width: 480px) {
+  .wrap { gap: 18px; }
+  .identity { grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; justify-items: start; align-items: center; text-align: left; column-gap: 14px; row-gap: 2px; padding-top: 0; }
+  .avatarRing { grid-row: 1 / span 2; margin-bottom: 0; }
+  .avatar { width: 56px; height: 56px; font-size: 22px; border-width: 2px; }
+  .name { font-size: 26px; align-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .email { align-self: start; }
+  .member { min-height: 0; padding: 18px; }
+  .cardGoal { font-size: 38px; padding-top: 18px; margin-bottom: 12px; }
+}
 @media (max-width: 400px) {
-  .stats dd { font-size: 26px; }
-  .stats dt { font-size: 10px; letter-spacing: .04em; }
   .cardFacts dd { font-size: 22px; }
 }

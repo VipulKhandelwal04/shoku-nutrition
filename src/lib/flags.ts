@@ -44,7 +44,6 @@ export const FEATURE_FLAGS = {
     body: 'The Connected apps list in Profile.',
     children: {
       strava: { title: 'Strava', body: 'Connect Strava and import workouts. Disconnecting always stays available.' },
-      upcoming: { title: 'Coming-soon apps', body: 'Lists Samsung Health, Apple Health and Garmin as coming soon.' },
     },
   },
   week: {

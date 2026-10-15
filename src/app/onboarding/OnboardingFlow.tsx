@@ -147,7 +147,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
           <StepBody eyebrow="Let’s set you up" title={`Hi ${firstName ?? 'there'}. Let’s set up your meals.`} headingRef={heading}>
             <ul className={s.promises}>
               <li><Icon name="bolt" /><span><strong>Log Indian plates in seconds.</strong> Roti, dal, poha and biryani are already in the food list.</span></li>
-              <li><Icon name="plate" /><span><strong>See your plate vs India’s guide.</strong> Food groups from ICMR-NIN’s My Plate, scaled to you.</span></li>
+              <li><Icon name="plate" /><span><strong>See what your day still needs.</strong> Food groups and targets scaled to you.</span></li>
               <li><Icon name="star" /><span><strong>Three meals, one day.</strong> Log three meals and the day counts toward your streak.</span></li>
             </ul>
             <p className={s.fine}>Six quick steps, about a minute. Shoku is built for adults 18 and over.</p>
@@ -264,7 +264,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
             </dl>
             <p className={s.explain}>
               We estimate what you burn from your age, height, weight and activity, then adjust for your goal.
-              Protein follows ICMR’s 0.83 g per kg of body weight (1.6 g when building muscle), fat is about 30% of energy
+              Protein is 0.83 g per kg of body weight (1.6 g when building muscle), fat is about 30% of energy
               and carbs fill the rest.
             </p>
 
@@ -300,7 +300,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
               <span>{bmiBand(rec.bmi)}</span>
             </div>
             <p className="fine-print">
-              ICMR uses lower BMI cut-offs for Indian adults: 23 and 25 instead of the global 25 and 30. BMI is a rough screen, not a diagnosis.
+              For Indian adults we use lower BMI cut-offs: 23 and 25 instead of the usual 25 and 30. BMI is a rough screen, not a diagnosis.
             </p>
             <p className="note" style={{ marginTop: 16 }}>
               These are general estimates for healthy adults. Pregnant, breastfeeding or managing a condition? Use targets from your doctor or dietitian.

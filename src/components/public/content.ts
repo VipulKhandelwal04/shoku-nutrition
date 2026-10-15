@@ -19,7 +19,7 @@ export const FALLBACK_QUOTES: QuoteLite[] = [
 export const FALLBACK_SLIDES: SlideLite[] = [
   { id: -1, title: 'Log a meal in seconds', body: 'Your usual foods sit one tap away. Roti, dal, curd: tap plus and they’re in today’s diary.', image_url: '/img/lunch.webp' },
   { id: -2, title: 'Snap your plate', body: 'Take a photo and AI Assist suggests the dishes and portions. Nothing is saved until you confirm.', image_url: '/img/breakfast.webp' },
-  { id: -3, title: 'Your plate vs your plan', body: 'See which food groups today’s meals have covered against India’s My Plate guide, and what to add next.', image_url: '/img/hero.webp' },
+  { id: -3, title: 'Your plate vs your plan', body: 'See which food groups today’s meals have covered and what to add next.', image_url: '/img/hero.webp' },
   { id: -4, title: 'Three meals, one day', body: 'Log any three meals and the day joins your streak. A slow day doesn’t cost you anything.', image_url: '/img/dinner.webp' },
 ];
 
