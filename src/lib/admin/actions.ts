@@ -15,6 +15,7 @@ import {
   invalid,
   moveSchema,
   quoteSchema,
+  recipeSchema,
   roleSchema,
   SLUG_RE,
   tourSlideSchema,
@@ -44,6 +45,71 @@ function dbError(err: { message: string; code?: string } | null, fallback: strin
   if (err.code === '42501' || /row-level security|permission denied|Admins only/i.test(err.message)) return DENIED;
   if (err.code === '23514') return { ok: false, error: 'A value is outside the allowed range. Check the fields and try again.' };
   return { ok: false, error: `${fallback} (${err.message})` };
+}
+
+// ---------------------------------------------------------------- Recipes
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Validates a recipe and checks every ingredient is a catalogue food (not a member's custom food). */
+type RecipeParse =
+  | { ok: false; result: ActionResult }
+  | { ok: true; id?: string; value: { name: string; cuisine: string; servings: number; steps: string[]; ingredients: { foodId: string; q: number }[]; active: boolean } };
+
+async function recipeFromInput(a: Admin, input: unknown): Promise<RecipeParse> {
+  const parsed = recipeSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, result: invalid(parsed.error) };
+  const v = parsed.data;
+  const ids = v.ingredients.map(i => i.foodId);
+  const { data, error } = await a.supabase.from('foods').select('id').is('owner_id', null).in('id', ids);
+  if (error) return { ok: false, result: dbError(error, 'Could not check the ingredients') };
+  const known = new Set((data ?? []).map(f => (f as { id: string }).id));
+  const unknown = ids.filter(id => !known.has(id));
+  if (unknown.length) {
+    return { ok: false, result: { ok: false, error: `Not in the catalogue: ${unknown.join(', ')}. Add the food in Foods first.`, fieldErrors: { ingredients: 'Every ingredient must be a catalogue food.' } } };
+  }
+  return { ok: true, value: { name: v.name, cuisine: v.cuisine, servings: v.servings, steps: v.steps, ingredients: v.ingredients, active: v.active }, id: v.id };
+}
+
+export async function createRecipe(input: unknown): Promise<ActionResult> {
+  const a = await admin();
+  if (!a) return DENIED;
+  const r = await recipeFromInput(a, input);
+  if (!r.ok) return r.result;
+  const { error } = await a.supabase.from('recipes').insert(r.value);
+  if (error) return dbError(error, 'Could not add the recipe');
+  return done({ message: `${r.value.name} added${r.value.active ? '' : ' as a hidden draft'}.` });
+}
+
+export async function updateRecipe(input: unknown): Promise<ActionResult> {
+  const a = await admin();
+  if (!a) return DENIED;
+  const r = await recipeFromInput(a, input);
+  if (!r.ok) return r.result;
+  if (!r.id) return { ok: false, error: 'Unknown recipe.' };
+  const { data, error } = await a.supabase.from('recipes').update({ ...r.value, updated_at: new Date().toISOString() }).eq('id', r.id).select('id');
+  if (error) return dbError(error, 'Could not save the recipe');
+  if (!data?.length) return { ok: false, error: 'That recipe no longer exists. Refresh and try again.' };
+  return done({ message: `${r.value.name} saved.` });
+}
+
+export async function setRecipeActive(id: string, active: boolean): Promise<ActionResult> {
+  const a = await admin();
+  if (!a) return DENIED;
+  if (typeof id !== 'string' || !UUID_RE.test(id) || typeof active !== 'boolean') return { ok: false, error: 'Unknown recipe.' };
+  const { data, error } = await a.supabase.from('recipes').update({ active, updated_at: new Date().toISOString() }).eq('id', id).select('name');
+  if (error) return dbError(error, 'Could not change the recipe');
+  if (!data?.length) return { ok: false, error: 'That recipe no longer exists.' };
+  const name = (data[0] as { name: string }).name;
+  return done({ message: active ? `${name} is active.` : `${name} hidden.` });
+}
+
+export async function deleteRecipe(id: string): Promise<ActionResult> {
+  const a = await admin();
+  if (!a) return DENIED;
+  if (typeof id !== 'string' || !UUID_RE.test(id)) return { ok: false, error: 'Unknown recipe.' };
+  const { error } = await a.supabase.from('recipes').delete().eq('id', id);
+  if (error) return dbError(error, 'Could not delete the recipe');
+  return done({ message: 'Recipe deleted.' });
 }
 
 // ---------------------------------------------------------------- Foods

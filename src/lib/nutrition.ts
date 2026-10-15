@@ -276,3 +276,37 @@ export const EXERCISE_CREDIT = 0.5;
 export function exerciseCredit(burnedKcal: number): number {
   return Math.max(0, Math.round(burnedKcal * EXERCISE_CREDIT));
 }
+
+// ---------- Recipes ----------
+
+/** One ingredient: a catalogue food and how many of its servings the whole recipe uses. */
+export type RecipeIngredient = { foodId: string; q: number };
+
+export type RecipeNutrition = {
+  /** For the whole recipe and for one serving. */
+  total: Macros;
+  perServing: Macros;
+  /** Strictest diet of the ingredients (any chicken makes it non-veg). */
+  diet: Diet;
+  /** Ingredient food ids no longer in the catalogue; they add nothing. */
+  missing: string[];
+};
+
+const DIET_RANK: Record<Diet, number> = { veg: 0, egg: 1, nonveg: 2 };
+
+/** Recipe nutrition is always computed: ingredients × quantity, then ÷ servings. Never typed in. */
+export function recipeNutrition(ingredients: RecipeIngredient[], servings: number, foodsById: Map<string, Food>): RecipeNutrition {
+  const missing: string[] = [];
+  let diet: Diet = 'veg';
+  const total = ingredients.reduce<Macros>((acc, i) => {
+    const f = foodsById.get(i.foodId);
+    if (!f) { missing.push(i.foodId); return acc; }
+    if (DIET_RANK[f.diet] > DIET_RANK[diet]) diet = f.diet;
+    const n = nutrition(f, i.q);
+    return { kcal: acc.kcal + n.kcal, p: acc.p + n.p, c: acc.c + n.c, f: acc.f + n.f, fibre: acc.fibre + n.fibre };
+  }, { kcal: 0, p: 0, c: 0, f: 0, fibre: 0 });
+  const per = Math.max(1, Math.round(servings) || 1);
+  const div = (m: Macros): Macros => ({ kcal: round1(m.kcal / per), p: round1(m.p / per), c: round1(m.c / per), f: round1(m.f / per), fibre: round1(m.fibre / per) });
+  const r = (m: Macros): Macros => ({ kcal: round1(m.kcal), p: round1(m.p), c: round1(m.c), f: round1(m.f), fibre: round1(m.fibre) });
+  return { total: r(total), perServing: div(total), diet, missing };
+}

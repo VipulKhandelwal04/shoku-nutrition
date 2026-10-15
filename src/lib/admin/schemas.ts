@@ -151,3 +151,36 @@ export function invalid(error: z.ZodError): ActionResult {
   const first = Object.values(fe)[0];
   return { ok: false, error: first ?? 'Check the highlighted fields.', fieldErrors: fe };
 }
+
+// ---------------------------------------------------------------- Recipes
+export const MAX_STEPS = 30;
+export const MAX_INGREDIENTS = 30;
+
+const ingredientSchema = z.object({
+  foodId: z.string().trim().min(1, 'Pick a food').max(80).regex(/^[a-z0-9-]+$/, 'Pick a food from the catalogue'),
+  q: num('Quantity', 0, 100, { exclusiveMin: true }),
+});
+
+/**
+ * A recipe from the admin form. Steps come as one string per step (blank lines dropped); ingredients are catalogue
+ * foods with a quantity in that food's servings for the whole recipe. There is no nutrition field on purpose:
+ * nutrition is computed from the ingredients.
+ */
+export const recipeSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: text('Name', 1, 120),
+  cuisine: text('Cuisine', 1, 40),
+  servings: z.preprocess(toNumber, z.number({ error: 'Servings: enter a number' }).int('Servings: a whole number').min(1, 'At least 1 serving').max(20, 'Up to 20 servings')),
+  steps: z
+    .array(z.string())
+    .transform(list => list.map(st => st.trim()).filter(Boolean))
+    .pipe(z.array(z.string().max(500, 'Keep each step under 500 characters')).min(1, 'Add at least one step').max(MAX_STEPS, `Up to ${MAX_STEPS} steps`)),
+  ingredients: z
+    .array(ingredientSchema)
+    .min(1, 'Add at least one ingredient')
+    .max(MAX_INGREDIENTS, `Up to ${MAX_INGREDIENTS} ingredients`)
+    .refine(list => new Set(list.map(i => i.foodId)).size === list.length, { message: 'Each food can appear once; change its quantity instead' }),
+  active: z.boolean().default(false),
+});
+export type RecipeInput = z.input<typeof recipeSchema>;
+export type RecipeValues = z.output<typeof recipeSchema>;
