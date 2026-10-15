@@ -18,6 +18,7 @@ import { CompareTabs } from './CompareTabs';
 import { GoalCard } from './GoalCard';
 import { PlanTunerEntry } from './PlanTunerEntry';
 import { WeekPlan, type WeekDayView, type WeekItem } from './WeekPlan';
+import { WeekPlanner } from '@/components/ai/WeekPlanner';
 import { buildWeek, isoWeekday, planKcal } from '@/lib/ai/plan';
 import { getWeekPlans } from '@/lib/data/queries';
 import { mealCandidates } from '@/lib/ai/candidates';
@@ -189,6 +190,12 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const planPanel = week ? (
     <>
       {planToggle}
+      {ai.features.week && isOn(flags, 'week', 'ai') && (
+        <div className={s.tuner}>
+          <span className="chip accent"><Icon name="spark" size="sm" /> AI Assist</span>
+          <WeekPlanner />
+        </div>
+      )}
       <WeekPlan days={week} today={today} target={targets.kcal} canEdit={isOn(flags, 'week', 'edit')} />
     </>
   ) : (

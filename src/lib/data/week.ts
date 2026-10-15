@@ -4,9 +4,10 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { mealCandidates } from '../ai/candidates';
-import { repairPlan, type ProposedPlan } from '../ai/plan';
+import { dayTarget, repairPlan, usualTrainingDays, type ProposedPlan } from '../ai/plan';
+import { todayIst } from '../ai/http';
 import { FLAG_OFF, isOn } from '../flags';
-import { MEALS, type Plan } from '../nutrition';
+import { MEALS, shiftDate, type Plan } from '../nutrition';
 import { createClient } from '../supabase/server';
 import type { Profile } from '../types';
 import type { ActionResult } from './diary';
@@ -22,6 +23,13 @@ async function session() {
   return { supabase, user: data.user };
 }
 
+/** The member's usual training days (ISO weekdays), from the last four weeks of visible workouts. */
+async function trainingDaysFor(supabase: Awaited<ReturnType<typeof createClient>>): Promise<number[]> {
+  const today = todayIst();
+  const { data } = await supabase.from('workouts').select('day').eq('hidden', false).gte('day', shiftDate(today, -27)).lte('day', today);
+  return usualTrainingDays((data ?? []).map(w => w.day as string), today);
+}
+
 /** Saves a day of the week. Returns the repaired plan and what was saved before (for Undo). */
 export async function saveWeekDay(input: { weekday: number; plan: Plan }): Promise<ActionResult<{ plan: Plan; kcal: number; previous: Plan | null }>> {
   if (!isOn(await getFlags(), 'week', 'edit')) return { ok: false, error: FLAG_OFF };
@@ -33,8 +41,9 @@ export async function saveWeekDay(input: { weekday: number; plan: Plan }): Promi
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<Profile>();
   if (!profile?.targets) return { ok: false, error: 'Finish setting up your goal first.' };
   const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [] });
+  const trainingDays = await trainingDaysFor(supabase);
   const proposed = Object.fromEntries(MEALS.map(m => [m, parsed.data.plan[m].map(i => ({ foodId: i.foodId, servings: i.q }))])) as ProposedPlan;
-  const repaired = repairPlan(proposed, { foodsById: set.eligible, allowed: f => set.eligible.has(f.id), targetKcal: profile.targets.kcal });
+  const repaired = repairPlan(proposed, { foodsById: set.eligible, allowed: f => set.eligible.has(f.id), targetKcal: dayTarget(parsed.data.weekday, trainingDays, profile.targets.kcal) });
   if (!repaired.ok) return { ok: false, error: 'That swap would take the day too far from your target. Try another.' };
 
   const { data: before } = await supabase.from('week_plans').select('plan').eq('weekday', parsed.data.weekday).maybeSingle();
@@ -62,4 +71,56 @@ export async function restoreWeekDay(input: { weekday: number; previous: Plan | 
   if (!input.previous) return resetWeekDay(input.weekday);
   const r = await saveWeekDay({ weekday: input.weekday, plan: input.previous });
   return r.ok ? { ok: true, data: undefined } : r;
+}
+
+export type SavedWeekDay = { weekday: number; plan: Plan };
+
+/**
+ * "Use this week" after Plan my week: saves all seven days at once. Each day is re-checked against the member's
+ * diet and restrictions and repaired to that day's target (usual training days higher), computed here again.
+ * Returns the days saved before, for Undo.
+ */
+export async function saveAiWeek(input: { days: SavedWeekDay[] }): Promise<ActionResult<{ previous: SavedWeekDay[] }>> {
+  if (!isOn(await getFlags(), 'week', 'ai')) return { ok: false, error: FLAG_OFF };
+  const parsed = z.object({ days: z.array(z.object({ weekday, plan: planSchema })).min(1).max(7) }).safeParse(input);
+  if (!parsed.success || new Set(parsed.data.days.map(d => d.weekday)).size !== parsed.data.days.length) {
+    return { ok: false, error: 'That week looks incomplete. Build it again.' };
+  }
+  const { supabase, user } = await session();
+  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<Profile>();
+  if (!profile?.targets) return { ok: false, error: 'Finish setting up your goal first.' };
+
+  const trainingDays = await trainingDaysFor(supabase);
+  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [] });
+
+  const rows = [];
+  for (const d of parsed.data.days) {
+    const proposed = Object.fromEntries(MEALS.map(m => [m, d.plan[m].map(i => ({ foodId: i.foodId, servings: i.q }))])) as ProposedPlan;
+    const r = repairPlan(proposed, { foodsById: set.eligible, allowed: f => set.eligible.has(f.id), targetKcal: dayTarget(d.weekday, trainingDays, profile.targets.kcal) });
+    if (!r.ok) return { ok: false, error: 'One of those days no longer fits your targets. Build the week again.' };
+    rows.push({ user_id: user.id, weekday: d.weekday, plan: r.plan, updated_at: new Date().toISOString() });
+  }
+
+  const { data: before } = await supabase.from('week_plans').select('weekday, plan');
+  const { error } = await supabase.from('week_plans').upsert(rows);
+  if (error) return { ok: false, error: 'Couldn’t save your week. Try again.' };
+  revalidatePath('/app/compare');
+  return { ok: true, data: { previous: (before ?? []).map(b => ({ weekday: Number(b.weekday), plan: b.plan as Plan })) } };
+}
+
+/** Undo for saveAiWeek: the saved days go back to exactly what was there before. */
+export async function restoreWeekPlans(previous: SavedWeekDay[]): Promise<ActionResult> {
+  const { supabase, user } = await session();
+  if (!user) return { ok: false, error: 'Your session ended. Sign in again.' };
+  const parsed = z.array(z.object({ weekday, plan: z.record(z.string(), z.unknown()) })).max(7).safeParse(previous);
+  if (!parsed.success) return { ok: false, error: 'Couldn’t undo that.' };
+  const { error: delErr } = await supabase.from('week_plans').delete().eq('user_id', user.id);
+  if (delErr) return { ok: false, error: 'Couldn’t undo that. Try again.' };
+  if (parsed.data.length) {
+    const { error } = await supabase.from('week_plans').insert(parsed.data.map(d => ({ user_id: user.id, weekday: d.weekday, plan: d.plan })));
+    if (error) return { ok: false, error: 'Couldn’t undo that. Try again.' };
+  }
+  revalidatePath('/app/compare');
+  return { ok: true, data: undefined };
 }

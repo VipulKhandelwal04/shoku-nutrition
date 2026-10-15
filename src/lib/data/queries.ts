@@ -95,9 +95,9 @@ export const getAiAssist = cache(async (): Promise<AiAssistStatus> => {
   const configured = !!process.env.GEMINI_API_KEY;
   const on = s.enabled && configured;
   return {
-    available: on && (s.photo || s.text || s.plan || s.coach || s.ask),
+    available: on && (s.photo || s.text || s.plan || s.coach || s.ask || s.week),
     configured,
-    features: { photo: on && s.photo, text: on && s.text, plan: on && s.plan, coach: on && s.coach, ask: on && s.ask },
+    features: { photo: on && s.photo, text: on && s.text, plan: on && s.plan, coach: on && s.coach, ask: on && s.ask, week: on && s.week },
     dailyQuota: s.daily_quota,
   };
 });

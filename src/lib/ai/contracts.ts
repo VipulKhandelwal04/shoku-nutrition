@@ -50,6 +50,30 @@ export const planOutput = z.object({
 
 export const coachOutput = z.object({ line: z.string() });
 
+// ---------- Plan my week ----------
+
+/** POST /api/ai/week ({ preferences }). Nothing is saved until the member confirms (saveAiWeek). */
+export const weekRequest = z.object({ preferences: z.string().trim().max(MAX_TEXT, `Keep it under ${MAX_TEXT} characters`).default('') });
+export type WeekDayResult = {
+  weekday: number;
+  /** "Mon", "Tue", … */
+  label: string;
+  training: boolean;
+  kcal: number;
+  target: number;
+  plan: Plan;
+  rows: Record<Meal, PlanRow[]>;
+};
+export type WeekResponse = { days: WeekDayResult[]; note: string | null; trainingDays: number[]; cuisines: string[]; feedback: boolean };
+
+export const weekOutput = z.object({
+  days: z.array(z.object({
+    weekday: z.number().describe('1 = Monday … 7 = Sunday'),
+    Breakfast: planMeal, Lunch: planMeal, Snacks: planMeal, Dinner: planMeal,
+  })).max(7),
+  note: z.string().describe('One short sentence on how the week is shaped'),
+});
+
 // ---------- Ask Shoku ----------
 
 /** POST /api/ai/ask ({ question, day }). Read-only: logging an idea goes through addEntries after the user taps it. */

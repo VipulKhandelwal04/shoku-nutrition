@@ -229,3 +229,61 @@ export function swapMeal(
   ])) as ProposedPlan;
   return repairPlan(proposed, opts);
 }
+
+// ---------- AI week (Plan my week) ----------
+
+/** Training days get this much more energy, as more protein and carbs. */
+export const TRAINING_DAY_BOOST = 0.1;
+const WEEKS_LOOKED_AT = 4;
+
+/**
+ * Usual training days: ISO weekdays (1 = Monday) with a workout in at least half of the last four weeks.
+ * `workoutDays` are the days (YYYY-MM-DD) that had any visible workout; the window is the 28 days up to today.
+ */
+export function usualTrainingDays(workoutDays: string[], today: string): number[] {
+  const end = Date.parse(`${today}T12:00:00Z`);
+  const start = end - (WEEKS_LOOKED_AT * 7 - 1) * 86_400_000;
+  const perWeekday = new Map<number, Set<string>>();
+  for (const day of new Set(workoutDays)) {
+    const t = Date.parse(`${day}T12:00:00Z`);
+    if (!Number.isFinite(t) || t < start || t > end) continue;
+    const wd = isoWeekday(day);
+    perWeekday.set(wd, (perWeekday.get(wd) ?? new Set()).add(day));
+  }
+  return [...perWeekday].filter(([, days]) => days.size >= WEEKS_LOOKED_AT / 2).map(([wd]) => wd).sort((a, b) => a - b);
+}
+
+/** The calorie target for one weekday: training days get the boost. */
+export function dayTarget(weekday: number, trainingDays: number[], targetKcal: number): number {
+  return trainingDays.includes(weekday) ? Math.round(targetKcal * (1 + TRAINING_DAY_BOOST)) : targetKcal;
+}
+
+export type ProposedDay = { weekday: number } & Partial<ProposedPlan>;
+export type RepairedWeekDay = { weekday: number; plan: Plan; kcal: number; target: number; training: boolean; fallback: boolean };
+
+/**
+ * Repairs an AI week: for each weekday 1–7, keep only eligible foods, fix portions and land within the tolerance of
+ * that day's target (training days higher). A missing or unfixable day falls back to `fallback(weekday)`,
+ * repaired the same way.
+ */
+export function repairWeek(
+  proposed: ProposedDay[],
+  opts: { foodsById: Map<string, Food>; allowed: (f: Food) => boolean; targetKcal: number; trainingDays: number[]; fallback: (weekday: number) => Plan },
+): RepairedWeekDay[] {
+  const { foodsById, allowed, targetKcal, trainingDays, fallback } = opts;
+  const asProposal = (p: Plan): ProposedPlan => Object.fromEntries(MEALS.map(m => [m, p[m].map(i => ({ foodId: i.foodId, servings: i.q }))])) as ProposedPlan;
+  return [1, 2, 3, 4, 5, 6, 7].map(weekday => {
+    const target = dayTarget(weekday, trainingDays, targetKcal);
+    const training = trainingDays.includes(weekday);
+    const day = proposed.find(d => d.weekday === weekday);
+    if (day) {
+      const r = repairPlan(Object.fromEntries(MEALS.map(m => [m, day[m] ?? []])) as ProposedPlan, { foodsById, allowed, targetKcal: target });
+      if (r.ok) return { weekday, plan: r.plan, kcal: r.kcal, target, training, fallback: false };
+    }
+    const base = fallback(weekday);
+    const r = repairPlan(asProposal(base), { foodsById, allowed, targetKcal: target });
+    return r.ok
+      ? { weekday, plan: r.plan, kcal: r.kcal, target, training, fallback: true }
+      : { weekday, plan: base, kcal: planKcal(base, foodsById), target, training, fallback: true };
+  });
+}

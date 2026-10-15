@@ -36,6 +36,17 @@ Rules:
 - Breakfast, Lunch and Dinner must each have at least one food; Snacks can be small.
 - note: one short friendly sentence on how the plan reflects their preferences. No health claims.`;
 
+export const WEEK_SYSTEM = `${SAFETY}
+Task: build SEVEN days of meals (Breakfast, Lunch, Snacks, Dinner), weekday 1 = Monday to 7 = Sunday, for this user.
+Rules:
+- Use ONLY foodIds from the catalogue lines given (format: id|name|unit|kcal per unit|protein g per unit|cuisine). Every listed food already fits the user's diet and restrictions.
+- servings are in each food's unit, in steps of 0.5 (0.25 only when sensible). Keep portions realistic for one person.
+- Each day's total kcal must be within 10% of that day's target in targets_by_weekday. Training days (trainingDays) have a higher target: add the extra as protein and carbs (e.g. more dal, curd, rice, roti, eggs), especially around the main meals.
+- Vary the week: rotate grains, pulses, vegetables and fruit so no two days are the same, while keeping meals familiar and easy to cook.
+- Breakfast, Lunch and Dinner must each have at least one food; Snacks can be small.
+- If the user JSON has cuisines.prefer, lean toward foods of those cuisines. If it has feedback, favour likedFoods and likedMeals and use notForMe foods only when nothing else fits. Follow the user's preferences text where the catalogue allows; never include a food they said no to.
+- note: one short friendly sentence on how the week is shaped (e.g. around their training days). No health claims.`;
+
 export const COACH_SYSTEM = `${SAFETY}
 Task: write ONE encouraging line (max 110 characters) about the user's food day so far, from the JSON summary given.
 Voice: plain and warm, like a good coach who knows Indian food. Be specific: name one thing that went well or one easy next step (a food group or a meal still to log).

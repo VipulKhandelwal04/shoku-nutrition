@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MEALS, buildPlan, type Food } from '../nutrition';
 import { SEED_FOODS } from '../seed-foods';
-import { PLAN_TOLERANCE, buildWeek, dietAllows, isExcluded, isoWeekday, parseExclusions, planKcal, repairPlan, swapKey, swapMeal, type ProposedPlan } from './plan';
+import { PLAN_TOLERANCE, TRAINING_DAY_BOOST, buildWeek, dayTarget, dietAllows, isExcluded, isoWeekday, parseExclusions, planKcal, repairPlan, repairWeek, swapKey, swapMeal, usualTrainingDays, type ProposedPlan } from './plan';
 
 const byId = new Map<string, Food>(SEED_FOODS.map(f => [f.id, f]));
 const food = (id: string) => byId.get(id)!;
@@ -181,5 +181,64 @@ describe('swapMeal and isoWeekday', () => {
     expect(isoWeekday('2026-10-12')).toBe(1); // Monday
     expect(isoWeekday('2026-10-15')).toBe(4); // Thursday
     expect(isoWeekday('2026-10-18')).toBe(7); // Sunday
+  });
+});
+
+describe('usualTrainingDays', () => {
+  // 2026-10-15 is a Thursday. The window is the 28 days up to and including it.
+  it('keeps weekdays with a workout in at least two of the last four weeks', () => {
+    const days = ['2026-10-12', '2026-10-05', '2026-09-28', /* Mondays x3 */ '2026-10-14', /* one Wednesday */ '2026-10-11', '2026-10-04' /* Sundays x2 */];
+    expect(usualTrainingDays(days, '2026-10-15')).toEqual([1, 7]);
+  });
+  it('counts a day once however many workouts it had, and ignores days outside the window', () => {
+    expect(usualTrainingDays(['2026-10-13', '2026-10-13', '2026-10-13'], '2026-10-15')).toEqual([]);
+    expect(usualTrainingDays(['2026-09-01', '2026-09-08', '2026-09-15'], '2026-10-15')).toEqual([]);
+    expect(usualTrainingDays([], '2026-10-15')).toEqual([]);
+  });
+});
+
+describe('repairWeek', () => {
+  const eligible = SEED_FOODS.filter(f => dietAllows('veg', f.diet));
+  const foodsById = new Map(eligible.map(f => [f.id, f]));
+  const allowed = (f: Food) => foodsById.has(f.id);
+  const dayPlan = buildPlan({ kcal: 2000 }, 'fit', 'veg', foodsById);
+  const asDay = (weekday: number, extra: Partial<ProposedPlan> = {}) => ({
+    weekday,
+    ...Object.fromEntries(MEALS.map(m => [m, dayPlan[m].map(i => ({ foodId: i.foodId, servings: i.q }))])),
+    ...extra,
+  });
+  const opts = { foodsById, allowed, targetKcal: 2000, trainingDays: [2, 5], fallback: () => dayPlan };
+  const within = (kcal: number, target: number) => Math.abs(kcal - target) <= target * PLAN_TOLERANCE;
+
+  it('returns all seven weekdays, each within the tolerance of its own target', () => {
+    const week = repairWeek([1, 2, 3, 4, 5, 6, 7].map(d => asDay(d)), opts);
+    expect(week.map(d => d.weekday)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    for (const d of week) expect(within(d.kcal, d.target)).toBe(true);
+  });
+
+  it('gives usual training days a higher target', () => {
+    const week = repairWeek([1, 2, 3, 4, 5, 6, 7].map(d => asDay(d)), opts);
+    const tue = week.find(d => d.weekday === 2)!, wed = week.find(d => d.weekday === 3)!;
+    expect(tue.training).toBe(true);
+    expect(tue.target).toBe(Math.round(2000 * (1 + TRAINING_DAY_BOOST)));
+    expect(wed.target).toBe(2000);
+    expect(tue.kcal).toBeGreaterThan(wed.kcal);
+    expect(dayTarget(5, [2, 5], 2000)).toBe(2200);
+  });
+
+  it('drops ineligible foods and fixes silly portions', () => {
+    const week = repairWeek([asDay(1, { Dinner: [{ foodId: 'chicken', servings: 2 }, { foodId: 'chapati', servings: 30 }, { foodId: 'dal', servings: 1 }] })], opts);
+    const mon = week[0];
+    expect(mon.fallback).toBe(false);
+    expect(mon.plan.Dinner.map(i => i.foodId)).toEqual(['chapati', 'dal']);
+    expect(mon.plan.Dinner.find(i => i.foodId === 'chapati')!.q).toBeLessThanOrEqual(20);
+    expect(within(mon.kcal, mon.target)).toBe(true);
+  });
+
+  it('falls back for missing or unfixable days', () => {
+    const week = repairWeek([asDay(1, { Lunch: [{ foodId: 'chicken', servings: 1 }] })], opts);
+    expect(week[0].fallback).toBe(true); // lunch empty after dropping chicken
+    expect(week[3].fallback).toBe(true); // Thursday never proposed
+    expect(within(week[3].kcal, week[3].target)).toBe(true);
   });
 });

@@ -52,6 +52,7 @@ export const FEATURE_FLAGS = {
     body: 'A Day | Week toggle on Compare → Plan. Needs Compare and its Plan tab on.',
     children: {
       view: { title: 'Week view', body: 'Seven days built from the day plan, foods rotated for variety, each day kept near the calorie target.' },
+      ai: { title: 'Plan my week (AI)', body: 'AI Assist builds seven days, with more protein and carbs on usual training days. Also needs the AI Assist switch.' },
       edit: { title: 'Edit the week', body: 'Swap a meal on any day (saved for that weekday) and log today’s planned meals in one tap. “Back to suggested” always works.' },
     },
   },
