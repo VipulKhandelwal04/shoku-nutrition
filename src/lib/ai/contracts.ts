@@ -23,7 +23,7 @@ export const parseRequest = z.object({
 
 /** POST /api/ai/plan ({ preferences }). Nothing is saved until the user confirms (saveAiPlan). */
 export type PlanRow = { foodId: string; name: string; unit: string; icon: string; q: number; kcal: number };
-export type PlanResponse = { plan: Plan; rows: Record<Meal, PlanRow[]>; kcal: number; target: number; note: string | null };
+export type PlanResponse = { plan: Plan; rows: Record<Meal, PlanRow[]>; kcal: number; target: number; note: string | null; cuisines: string[] };
 export const planRequest = z.object({ preferences: z.string().trim().max(MAX_TEXT, `Keep it under ${MAX_TEXT} characters`).default('') });
 
 /** POST /api/ai/coach ({ day }). `ai` is false for the built-in line used on empty days (no AI call made). */
@@ -56,11 +56,21 @@ export const coachOutput = z.object({ line: z.string() });
 export const askRequest = z.object({
   question: z.string().trim().min(3, 'Ask a little more, e.g. “dinner after leg day”').max(MAX_TEXT, `Keep it under ${MAX_TEXT} characters`),
   day: DAY,
+  /** The member's answer when they asked to be asked before workouts are used. Ignored otherwise. */
+  useWorkouts: z.boolean().optional(),
 });
 export type AskItem = { foodId: string; name: string; unit: string; icon: string; q: number; kcal: number; p: number };
 export type AskIdea = { title: string; meal: Meal; why: string; items: AskItem[]; kcal: number; p: number };
 /** What Shoku looked at, shown under the answer so the grounding is visible. */
-export type AskContext = { workouts: { label: string; minutes: number; kcal: number }[]; eatenKcal: number; targetKcal: number; eatenProtein: number; targetProtein: number; diet: string; avoiding: string[] };
+export type AskContext = {
+  workouts: { label: string; minutes: number; kcal: number }[];
+  /** used: workouts were in the brief; off: the member's setting leaves them out; skipped: they said no this time. */
+  workoutsUse: 'used' | 'off' | 'skipped';
+  eatenKcal: number; targetKcal: number; eatenProtein: number; targetProtein: number;
+  diet: string; avoiding: string[];
+  /** Cuisines the ideas leaned toward (empty when open to all). */
+  cuisines: string[];
+};
 export type AskResponse = { answer: string; ideas: AskIdea[]; context: AskContext };
 
 export const askOutput = z.object({

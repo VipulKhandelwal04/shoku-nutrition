@@ -1,7 +1,8 @@
 // Meal candidates: the one place that decides which catalogue foods a suggestion may use, and how strongly to
 // prefer each. Every suggestion surface (Ask Shoku, Tune my plan, and later Plan my week and recipes) asks here,
 // so diet and restriction rules can't drift between features. Pure; safe to test with the seed catalogue.
-import { cuisineOf, type Diet, type Food } from '../nutrition';
+import { DEFAULT_CUISINE, cuisineOf, type Diet, type Food } from '../nutrition';
+import type { CuisinePrefs } from '../preferences';
 import { dietAllows, isExcluded, parseExclusions, type Exclusions } from './plan';
 
 /** What a member's settings and request say about the foods they may be offered. */
@@ -11,6 +12,8 @@ export type CandidateRules = {
   restrictions: string[];
   /** Free text from the request; only clearly negative phrases ("no paneer") become hard exclusions. */
   request?: string;
+  /** Cuisine preferences. Soft: they reorder, never remove. Missing = open to all. */
+  cuisines?: CuisinePrefs;
 };
 
 /** An eligible food and how strongly to prefer it (1 = neutral). Weights only ever reorder, never exclude. */
@@ -22,22 +25,55 @@ export type CandidateSet = {
   eligible: Map<string, Food>;
   /** The hard exclusions applied, in case a caller needs to re-check something (e.g. a saved plan). */
   exclusions: Exclusions;
+  /** Cuisines the member leans toward (empty when open to all). Shown in "What Shoku used". */
+  preferred: string[];
+  /** True when the preferred cuisines have too few eligible foods, so suggestions draw on the rest too. */
+  thin: boolean;
 };
 
+/** A preferred cuisine's foods get this weight; everything else stays at 1. */
+export const PREFERRED_WEIGHT = 2;
+/** Fewer preferred foods than this and the preference can't carry a meal on its own. */
+export const THIN_CUISINE = 8;
+
+/** Which cuisines a member leans toward. "Mostly familiar" means home-style Indian, the catalogue's home cuisine. */
+function preferredCuisines(prefs: CuisinePrefs | undefined): string[] {
+  if (!prefs || prefs.mode === 'open') return [];
+  if (prefs.mode === 'familiar') return [DEFAULT_CUISINE];
+  return [...new Set(prefs.chosen.map(c => c.trim()).filter(Boolean))];
+}
+
 /**
- * Hard rules remove foods: diet, saved restrictions and "no X" in the request. Everything left is a candidate with
- * a neutral weight for now; cuisine and feedback preferences will adjust weights without removing anything.
- * Order follows the catalogue so prompts stay stable.
+ * Hard rules remove foods: diet, saved restrictions and "no X" in the request. Everything left is a candidate.
+ * Cuisine preferences raise the weight of matching foods and move them first; nothing is removed for cuisine.
+ * Within the same weight, order follows the catalogue so prompts stay stable.
  */
 export function mealCandidates(foods: Food[], rules: CandidateRules): CandidateSet {
   const exclusions = parseExclusions(rules.restrictions, rules.request ?? '');
+  const preferred = preferredCuisines(rules.cuisines);
+  const want = new Set(preferred.map(c => c.toLowerCase()));
   const candidates = foods
     .filter(f => dietAllows(rules.diet, f.diet) && !isExcluded(f, exclusions))
-    .map(food => ({ food, weight: 1 }));
-  return { candidates, eligible: new Map(candidates.map(c => [c.food.id, c.food])), exclusions };
+    .map(food => ({ food, weight: want.has(cuisineOf(food).toLowerCase()) ? PREFERRED_WEIGHT : 1 }))
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => b.c.weight - a.c.weight || a.i - b.i)
+    .map(x => x.c);
+  const preferredCount = candidates.filter(c => c.weight > 1).length;
+  return {
+    candidates,
+    eligible: new Map(candidates.map(c => [c.food.id, c.food])),
+    exclusions,
+    preferred,
+    thin: preferred.length > 0 && preferredCount < THIN_CUISINE,
+  };
 }
 
 /** Catalogue lines for prompts: id|name|unit|kcal per unit|protein g per unit|cuisine, in candidate order. */
 export function candidateLines(set: Pick<CandidateSet, 'candidates'>): string {
   return set.candidates.map(({ food: f }) => [f.id, f.name, f.unit, Math.round(f.kcal), Math.round(f.p), cuisineOf(f)].join('|')).join('\n');
+}
+
+/** The cuisine part of a prompt brief, or null when the member is open to all cuisines. */
+export function cuisineBrief(set: Pick<CandidateSet, 'preferred' | 'thin'>): { prefer: string[]; fewMatches: boolean } | null {
+  return set.preferred.length ? { prefer: set.preferred, fewMatches: set.thin } : null;
 }

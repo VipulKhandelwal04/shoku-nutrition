@@ -2,6 +2,7 @@ import 'server-only';
 import { mergeFlags, type FeatureFlags } from '../flags';
 import { cache } from 'react';
 import { createClient } from '../supabase/server';
+import type { FeedbackRow } from '../preferences';
 import { DEFAULT_AI_SETTINGS, type AiAssistStatus, type AiSettings, type ConnectionStatus, type DayRow, type EntryRow, type FeatureSettings, type FoodRow, type Quote, type TourSlide, type WorkoutRow } from '../types';
 
 /** Catalogue foods plus the signed-in user's custom foods (RLS decides). */
@@ -112,3 +113,13 @@ export const getFeatureSettings = cache(async (): Promise<FeatureSettings> => {
   const { data } = await supabase.from('app_settings').select('value').eq('key', 'features').maybeSingle();
   return { signups_open: true, ...((data?.value as Partial<FeatureSettings>) ?? {}) };
 });
+
+/** The signed-in member's meal ratings, newest first. Empty when none or before the feedback migration. */
+export async function getRatings(limit = 100): Promise<FeedbackRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('meal_feedback')
+    .select('id, entry_id, kind, title, meal, food_ids, rating, tags, note, created_at')
+    .order('created_at', { ascending: false }).limit(limit);
+  if (error) return [];
+  return (data ?? []) as FeedbackRow[];
+}

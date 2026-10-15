@@ -228,3 +228,4 @@
 @media (max-width: 520px) {
   .workoutFields { grid-template-columns: minmax(0, 1fr); }
 }
+.rateBtn { width: 100%; }

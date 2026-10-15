@@ -24,6 +24,7 @@ export function DiaryView({ data }: { data: LogScreenData }) {
       days={data.days}
       mealsByDay={data.mealsByDay}
       defaultExpanded={[...MEALS]}
+      rateMeals={data.rateMeals}
     >
       <DiaryContent serverHour={data.serverHour} />
     </DiaryProvider>

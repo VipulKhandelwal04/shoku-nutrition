@@ -5,9 +5,10 @@ import { useDiary, type SheetView } from './DiaryProvider';
 import { FoodSearch, type SearchFilter } from './FoodSearch';
 import { PortionFooter, PortionForm } from './PortionForm';
 import { CustomFoodForm } from './CustomFoodForm';
+import { FeedbackForm } from '@/components/app/feedback/FeedbackForm';
 
 /** One native-dialog sheet whose content switches between search, portion and custom food. */
-export function LogSheets({ view, setView }: { view: SheetView | null; setView: Dispatch<SetStateAction<SheetView | null>> }) {
+export function LogSheets({ view, setView, rateMeals = false }: { view: SheetView | null; setView: Dispatch<SetStateAction<SheetView | null>>; rateMeals?: boolean }) {
   const { frequentIds } = useDiary();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SearchFilter>('all');
@@ -60,7 +61,20 @@ export function LogSheets({ view, setView }: { view: SheetView | null; setView: 
     title = view.entry ? 'Edit food' : 'Your portion';
     onBack = view.back ? backToSearch : undefined;
     body = <PortionForm key={`${view.food.id}-${view.entry?.id ?? 'new'}`} view={view} onDone={close} />;
-    footer = <PortionFooter view={view} onDone={close} />;
+    const entry = view.entry;
+    const onRate = rateMeals && entry ? () => setView({ kind: 'rate', meal: entry.meal, entry }) : undefined;
+    footer = <PortionFooter view={view} onDone={close} onRate={onRate} />;
+  } else if (view?.kind === 'rate') {
+    const { entry } = view;
+    title = 'How was it?';
+    onBack = () => setView({ kind: 'portion', food: entry.food, meal: entry.meal, entry });
+    body = (
+      <FeedbackForm
+        key={entry.id}
+        subject={{ kind: 'entry', entryId: entry.id, title: entry.food.name, meal: entry.meal, foodIds: entry.food_id ? [entry.food_id] : [] }}
+        onDone={close}
+      />
+    );
   } else if (view?.kind === 'custom') {
     title = 'Add your own food';
     onBack = backToSearch;

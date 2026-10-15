@@ -115,7 +115,7 @@ export function PortionForm({ view, onDone }: { view: PortionView; onDone: () =>
   );
 }
 
-export function PortionFooter({ view, onDone }: { view: PortionView; onDone: () => void }) {
+export function PortionFooter({ view, onDone, onRate }: { view: PortionView; onDone: () => void; onRate?: () => void }) {
   const { removeEntry } = useDiary();
   const { entry } = view;
   return (
@@ -123,6 +123,11 @@ export function PortionFooter({ view, onDone }: { view: PortionView; onDone: () 
       <button type="submit" form="portion-form" className="btn accent full">
         {entry ? 'Save changes' : 'Add to diary'} <Icon name="check" size="sm" />
       </button>
+      {entry && onRate && (
+        <button type="button" className={`btn-secondary ${s.rateBtn}`} onClick={onRate}>
+          <Icon name="heart" size="sm" /> How was it?
+        </button>
+      )}
       {entry && (
         <button
           type="button"

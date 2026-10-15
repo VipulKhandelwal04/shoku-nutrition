@@ -157,6 +157,7 @@ function PlanBody({ onUse }: { onUse: () => void }) {
             About {result.kcal} kcal <span className="muted">· target {result.target}</span>
           </h3>
           {result.note && <p className="muted">{result.note}</p>}
+          {result.cuisines?.length > 0 && <p className="fine-print">Leaning toward {result.cuisines.join(', ')} · from your Food style</p>}
           {MEALS.map(m => (
             <div key={m} className={styles.planMeal}>
               <p className="label">{m}</p>

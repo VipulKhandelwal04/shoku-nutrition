@@ -20,6 +20,11 @@ export type Profile = {
   targets: Targets | null;
   onboarded_at: string | null;
   created_at: string;
+  /** Meal-idea preferences (migration 0008). Optional so a missing column reads as today's behaviour. */
+  cuisine_mode?: string | null;
+  cuisines?: string[] | null;
+  use_workouts?: boolean | null;
+  ask_workouts?: boolean | null;
 };
 
 export type FoodRow = Food & { owner_id: string | null; active: boolean; updated_at?: string };

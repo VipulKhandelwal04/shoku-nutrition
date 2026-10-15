@@ -6,11 +6,13 @@ import type { Targets } from '@/lib/nutrition';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
+import type { CuisinePrefs, FeedbackRow } from '@/lib/preferences';
 import type { ConnectionStatus } from '@/lib/types';
+import { ActivitySwitches, CuisineForm, RatingsList } from './PreferenceForms';
 import { BodyForm, TargetsForm, type BodyValues } from './ProfileForms';
 import s from './profile.module.css';
 
-type SheetKind = 'body' | 'targets' | 'strava';
+type SheetKind = 'body' | 'targets' | 'strava' | 'style' | 'activity' | 'ratings';
 
 const STRAVA_MSG: Record<string, string> = {
   connected: 'Strava connected. Recent workouts are imported.',
@@ -32,7 +34,7 @@ const UPCOMING_APPS: { name: string; note: string; icon: IconName }[] = [
 ];
 
 /** iOS-style grouped settings list. Plan rows open their form in a sheet; the rest are links. */
-export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, strava, upcoming }: {
+export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, strava, upcoming, prefs }: {
   plan: PlanRow[];
   initial: BodyValues;
   targets: Targets;
@@ -41,6 +43,12 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
   strava: { configured: boolean; connection: ConnectionStatus | null };
   /** Feature flag: list the coming-soon health apps. */
   upcoming: boolean;
+  /** Meal-idea preferences. `cuisines` / `ratings` are null while their feature flag is off. */
+  prefs: {
+    cuisines: { value: CuisinePrefs; choices: string[] } | null;
+    activity: { useWorkouts: boolean; askFirst: boolean };
+    ratings: FeedbackRow[] | null;
+  };
 }) {
   const [open, setOpen] = useState<SheetKind | null>(null);
   const [busy, setBusy] = useState(false);
@@ -134,6 +142,25 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
       </section>
       )}
 
+      {/* Ratings stay listed (and deletable) even after Meal feedback is switched off, as long as some exist. */}
+      {prefs.ratings && (
+      <section aria-labelledby="pm-feedback">
+        <h2 id="pm-feedback" className={s.groupTitle}>What Shoku remembers</h2>
+        <ul className={s.group}>
+          <li>
+            <button type="button" className={s.row} onClick={() => setOpen('ratings')}>
+              <span className={s.rowIcon}><Icon name="heart" size="sm" /></span>
+              <span className={s.rowText}>
+                <span className={s.rowLabel}>Meal feedback</span>
+                <span className={s.rowValue}>{prefs.ratings.length ? `${prefs.ratings.length} ${prefs.ratings.length === 1 ? 'rating' : 'ratings'} · only you see them` : 'Rate meals to tell Shoku what works for you'}</span>
+              </span>
+              <Icon name="next" size="sm" className={s.chev} />
+            </button>
+          </li>
+        </ul>
+      </section>
+      )}
+
       <section aria-labelledby="pm-data">
         <h2 id="pm-data" className={s.groupTitle}>Data and privacy</h2>
         <ul className={s.group}>
@@ -142,7 +169,7 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
               <span className={s.rowIcon}><Icon name="download" size="sm" /></span>
               <span className={s.rowText}>
                 <span className={s.rowLabel}>Download my data</span>
-                <span className={s.rowValue}>Profile, diary, water and custom foods as JSON</span>
+                <span className={s.rowValue}>Profile, diary, water, workouts, ratings and custom foods as JSON</span>
               </span>
               <Icon name="next" size="sm" className={s.chev} />
             </a>
@@ -189,6 +216,21 @@ export function ProfileMenu({ plan, initial, targets, recommended, isAdmin, stra
           {busy ? 'Disconnecting…' : 'Disconnect Strava'}
         </button>
       </Sheet>
+
+      {prefs.cuisines && (
+        <Sheet open={open === 'style'} onClose={() => setOpen(null)} title="Food style" labelledBy="pm-style-title">
+          <CuisineForm key={JSON.stringify(prefs.cuisines.value)} initial={prefs.cuisines.value} choices={prefs.cuisines.choices} onSaved={() => { setOpen(null); router.refresh(); }} />
+          <button type="button" className={`btn-text ${s.linkBtn}`} onClick={() => setOpen('body')}>Diet and foods to skip are in Goal and body <Icon name="next" size="sm" /></button>
+        </Sheet>
+      )}
+      <Sheet open={open === 'activity'} onClose={() => { setOpen(null); router.refresh(); }} title="Workouts in meal ideas" labelledBy="pm-activity-title">
+        <ActivitySwitches initial={prefs.activity} />
+      </Sheet>
+      {prefs.ratings && (
+        <Sheet open={open === 'ratings'} onClose={() => setOpen(null)} title="Meal feedback" labelledBy="pm-ratings-title">
+          <RatingsList ratings={prefs.ratings} />
+        </Sheet>
+      )}
 
       <Sheet open={open === 'body'} onClose={() => setOpen(null)} title="Goal and body" labelledBy="pm-body-title">
         <BodyForm initial={initial} bare />

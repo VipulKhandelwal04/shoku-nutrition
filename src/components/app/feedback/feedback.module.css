@@ -1,0 +1,18 @@
+/* "How was it?" form: rating pills, quick tags, a short note. */
+.form { display: grid; gap: 4px; }
+.fieldset { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+.fieldset legend { padding: 0; }
+.ratings, .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { min-height: 38px; padding: 0 14px; font-size: 13px; }
+.form textarea { min-height: 64px; resize: vertical; }
+.compact .field { margin-bottom: 10px; }
+.compact :global(.fine-print) { margin-top: 6px; }
+
+/* Ratings list in Profile. */
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); }
+.itemText { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.itemTitle { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+.itemMeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 12px; }
+.itemNote { color: var(--text-2); font-size: 13px; overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: 14px; }

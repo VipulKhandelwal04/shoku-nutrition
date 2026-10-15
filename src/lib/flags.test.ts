@@ -31,3 +31,14 @@ describe('isOn', () => {
     expect(isOn(f, 'apps', 'upcoming')).toBe(true);
   });
 });
+
+describe('meal-idea flags', () => {
+  it('cuisines and meal feedback default to on, and their switches need the primary', () => {
+    expect(isOn(DEFAULT_FLAGS, 'cuisines', 'ask')).toBe(true);
+    expect(isOn(DEFAULT_FLAGS, 'feedback', 'ideas')).toBe(true);
+    const f = mergeFlags({ cuisines: { on: false }, feedback: { on: true, meals: false } });
+    expect(isOn(f, 'cuisines', 'plans')).toBe(false);
+    expect(isOn(f, 'feedback', 'meals')).toBe(false);
+    expect(isOn(f, 'feedback', 'ideas')).toBe(true);
+  });
+});
