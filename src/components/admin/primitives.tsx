@@ -46,7 +46,7 @@ export function useAdminAction() {
         }
         if (r.ok) {
           const undo = opts.undo;
-          toast(r.message ?? opts.success ?? 'Saved.', undo ? { undo: async () => { const u = await undo(); if (!u.ok) toast(u.error); } } : undefined);
+          toast(r.message ?? opts.success ?? 'Saved.', undo ? { undo: async () => { const u = await undo(); return u; } } : undefined);
         } else {
           toast(r.error);
         }

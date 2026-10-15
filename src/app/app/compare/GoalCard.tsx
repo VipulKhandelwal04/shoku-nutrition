@@ -31,7 +31,7 @@ export function GoalCard({ goal, targets, recommended, bmi, bmiNote }: {
     const res = await applyRecommendedTargets();
     if (!res.ok) { toast(res.error); return; }
     const prev = res.data.previous;
-    toast('Targets updated to the recommendation.', prev ? { undo: async () => { const r = await saveTargets(prev); if (!r.ok) toast(r.error); } } : undefined);
+    toast('Targets updated to the recommendation.', prev ? { undo: async () => { const r = await saveTargets(prev); return r; } } : undefined);
   });
 
   return (

@@ -1,9 +1,10 @@
 'use client';
+import { createPortal } from 'react-dom';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
-type Toast = { id: number; message: string; tone?: 'win'; undo?: () => void | Promise<void> };
-type Ctx = { show: (message: string, opts?: { tone?: 'win'; undo?: () => void | Promise<void> }) => void };
-
+export type UndoResult = { ok: true } | { ok: false; error: string };
+type Toast = { id: number; message: string; tone?: 'win'; undo?: () => Promise<UndoResult> };
+type Ctx = { show: (message: string, opts?: Omit<Toast, 'id' | 'message'>) => void };
 const ToastContext = createContext<Ctx | null>(null);
 
 export function useToast() {
@@ -12,60 +13,98 @@ export function useToast() {
   return ctx.show;
 }
 
-/**
- * Announces via role=status. Rendered with popover="manual" and re-raised on every show, so it sits in the
- * top layer above any open modal sheet and its Undo button stays clickable.
- */
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<Toast | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: number) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState(toast.message);
+  const [finished, setFinished] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const running = useRef(false);
+  // Recovery actions never expire and survive subsequent notifications.
+  useEffect(() => {
+    if (toast.undo || paused) return;
+    const timer = setTimeout(() => dismiss(toast.id), 5000);
+    return () => clearTimeout(timer);
+  }, [toast.id, toast.undo, paused, dismiss]);
 
+  async function undo() {
+    if (!toast.undo || running.current) return;
+    running.current = true;
+    setBusy(true);
+    try {
+      const result = await toast.undo();
+      setMessage(result.ok ? 'Undone.' : result.error);
+      setFinished(result.ok);
+    } catch {
+      setMessage('Couldn’t undo that. Check your connection and try again.');
+    } finally {
+      running.current = false;
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={`toast ${toast.tone === 'win' && !finished ? 'win' : ''}`}
+      onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setPaused(false); }}>
+      <span role="status" aria-live="polite" aria-atomic="true">{message}</span>
+      {toast.undo && !finished && <button type="button" onClick={undo} disabled={busy} aria-busy={busy}>{busy ? 'Undoing…' : 'Undo'}</button>}
+      <button type="button" disabled={busy} aria-label={`Dismiss notification: ${toast.message}`} onClick={() => dismiss(toast.id)}>Dismiss</button>
+    </div>
+  );
+}
+
+/** Persistent recovery notifications in the top layer, including inside modal sheets. */
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const nextId = useRef(0);
+  const [portal, setPortal] = useState<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const show = useCallback<Ctx['show']>((message, opts) => {
-    if (timer.current) clearTimeout(timer.current);
-    setToast({ id: Date.now(), message, tone: opts?.tone, undo: opts?.undo });
-    timer.current = setTimeout(() => setToast(null), opts?.undo ? 6000 : 3300);
+    const id = ++nextId.current;
+    setToasts(items => [...items, { id, message, ...opts }]);
+  }, []);
+  const dismiss = useCallback((id: number) => setToasts(items => items.filter(t => t.id !== id)), []);
+
+  useEffect(() => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    // The external portal host must be created after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPortal(container);
+    return () => container.remove();
   }, []);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || !toast) return;
-    // If a modal sheet is open, host the toast inside it so it isn't made inert by the modal.
+    if (!el || !portal) return;
+    if (!toasts.length) {
+      if (el.matches(':popover-open')) el.hidePopover();
+      return;
+    }
     const openDialog = document.querySelector<HTMLDialogElement>('dialog[open]');
     const host = openDialog ?? document.body;
     const raise = () => {
       try {
         if (el.matches(':popover-open')) el.hidePopover();
         el.showPopover();
-      } catch {
-        /* popover unsupported: fixed positioning still works outside modals */
-      }
+      } catch { /* Fixed positioning remains available without popover support. */ }
     };
-    if (el.parentElement !== host) host.appendChild(el);
+    if (portal.parentElement !== host) host.appendChild(portal);
     raise();
     if (!openDialog) return;
-    // When the sheet closes, bring the toast back to <body> so its Undo stays visible.
-    const onClose = () => {
-      document.body.appendChild(el);
-      raise();
-    };
+    const onClose = () => { document.body.appendChild(portal); raise(); };
     openDialog.addEventListener('close', onClose, { once: true });
     return () => openDialog.removeEventListener('close', onClose);
-  }, [toast]);
+  }, [toasts, portal]);
 
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div ref={ref} popover="manual" role="status" aria-live="polite" style={{ border: 0, padding: 0, margin: 0, background: 'transparent', inset: 'auto', overflow: 'visible' }}>
-        {toast && (
-          <div key={toast.id} className={`toast ${toast.tone === 'win' ? 'win' : ''}`}>
-            <span>{toast.message}</span>
-            {toast.undo && (
-              <button type="button" onClick={async () => { const u = toast.undo; setToast(null); await u?.(); show('Undone.'); }}>Undo</button>
-            )}
-          </div>
-        )}
-      </div>
+      {portal && createPortal(<div ref={ref} popover="manual" style={{ border: 0, padding: 0, margin: 0, background: 'transparent', inset: 'auto', overflow: 'visible' }}>
+        <div className="toast-stack" aria-label="Notifications">
+          {toasts.map(toast => <ToastItem key={toast.id} toast={toast} dismiss={dismiss} />)}
+        </div>
+      </div>, portal)}
     </ToastContext.Provider>
   );
 }

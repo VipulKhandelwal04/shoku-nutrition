@@ -77,12 +77,24 @@ export function Splash({ quotes, storageKey = 'shoku-splash' }: { quotes: Pick<Q
     const t = window.setTimeout(leave, HOLD_MS);
     timers.current.push(t);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') leave();
+      if (e.key === 'Escape' || e.key === 'Tab') {
+        // Hide synchronously before the browser moves keyboard focus underneath.
+        el.hidden = true;
+        setPhase('gone');
+      }
     };
-    window.addEventListener('keydown', onKey);
+    const onFocus = (e: FocusEvent) => {
+      if (e.target instanceof Node && !el.contains(e.target)) {
+        el.hidden = true;
+        setPhase('gone');
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    document.addEventListener('focusin', onFocus, true);
     const pending = timers.current;
     return () => {
-      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('focusin', onFocus, true);
       pending.forEach(window.clearTimeout);
     };
   }, []);

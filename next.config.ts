@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   // A stray package-lock.json in the home folder makes Next guess the wrong workspace root.
   turbopack: { root: import.meta.dirname },
   images: {
+    qualities: [60, 75],
     remotePatterns: [
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // Google profile photos
     ],

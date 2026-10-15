@@ -32,7 +32,7 @@ html { -webkit-text-size-adjust: 100%; scrollbar-color: var(--line-2) var(--bg);
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; position: relative; isolation: isolate; }
 /* Ambient plate light behind all glass. Fixed and pre-composited: it paints once, scrolling never repaints it. */
 body::before, body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-body::before { inset: -12%; background: url('/img/hero.webp') center / cover no-repeat; filter: blur(64px) saturate(1.5) brightness(.42); opacity: .55; transform: translateZ(0); }
+body::before { inset: -12%; background: url('/img/ambient.webp') center / cover no-repeat; filter: blur(64px) saturate(1.5) brightness(.42); opacity: .55; transform: translateZ(0); }
 body::after { background: linear-gradient(180deg, rgba(5, 5, 6, .35) 0%, rgba(5, 5, 6, .7) 55%, rgba(5, 5, 6, .9) 100%); }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 img { max-width: 100%; }
@@ -157,3 +157,11 @@ dialog.sheet[open]::backdrop { animation: fade .25s ease-out; }
   dialog.sheet[open], dialog.sheet[open]::backdrop, .toast { animation: fade .2s ease-out; }
   .btn:active, .btn-add:active { transform: none; }
 }
+
+/* Opaque public surfaces do not need the ambient plate layer. */
+body:has([data-opaque-page])::before { display: none; }
+.toast-stack { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); width: min(540px, calc(100vw - 32px)); max-height: 40dvh; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 8px; padding: 4px; }
+.toast-stack .toast { position: relative; inset: auto; transform: none; max-width: 100%; border-radius: 18px; padding: 8px 16px; flex-wrap: wrap; animation: fade .2s ease-out; }
+.toast-stack .toast span { flex: 1 1 180px; overflow-wrap: anywhere; }
+.toast-stack .toast button { min-width: 44px; }
+@media (max-width: 1000px) { .toast-stack { bottom: calc(96px + env(safe-area-inset-bottom)); } }

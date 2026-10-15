@@ -52,7 +52,7 @@ export function BodyForm({ initial, bare = false }: { initial: BodyValues; bare?
     if (!res.ok) { toast(res.error); return; }
     setOffer(null);
     const prev = res.data.previous;
-    toast('Targets updated.', prev ? { undo: async () => { const r = await saveTargets(prev); if (!r.ok) toast(r.error); } } : undefined);
+    toast('Targets updated.', prev ? { undo: async () => { const r = await saveTargets(prev); return r; } } : undefined);
   });
 
   return (
@@ -165,7 +165,7 @@ export function TargetsForm({ initial, recommended, bare = false }: { initial: T
     start(async () => {
       const res = await saveTargets(next);
       if (!res.ok) { setErrors({ form: res.error }); return; }
-      toast('Targets saved.', { undo: async () => { const r = await saveTargets(initial); if (r.ok) setV(toStrings(initial)); else toast(r.error); } });
+      toast('Targets saved.', { undo: async () => { const r = await saveTargets(initial); if (r.ok) setV(toStrings(initial)); return r; } });
     });
   }
 

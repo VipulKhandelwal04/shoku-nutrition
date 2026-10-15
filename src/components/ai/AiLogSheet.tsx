@@ -174,8 +174,13 @@ function AiLogBody({ mode, day, meal, foods, onLogged, onClose }: AiLogSheetProp
     toast(message, {
       tone: badge ? 'win' : undefined,
       undo: async () => {
-        await deleteEntries(saved);
-        if (supabase && photoPath) await supabase.storage.from('meal-photos').remove([photoPath]);
+        const result = await deleteEntries(saved);
+        if (!result.ok) return result;
+        if (supabase && photoPath) {
+          const { error } = await supabase.storage.from('meal-photos').remove([photoPath]);
+          if (error) return { ok: false, error: 'Meals removed, but the photo could not be deleted. Try Undo again to retry cleanup.' };
+        }
+        return { ok: true };
       },
     });
     onLogged?.(saved);

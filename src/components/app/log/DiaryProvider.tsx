@@ -121,14 +121,11 @@ export function DiaryProvider({ day, today, foods, frequentIds, targets, entries
     return n;
   }), []);
 
-  const undoAdd = useCallback((ids: string[], meal: Meal, origin?: HTMLElement | null) => {
-    startTransition(async () => {
-      applyOp({ t: 'remove', ids });
-      const r = await deleteEntries(ids);
-      if (!r.ok) toast(r.error);
-    });
-    focusKey(`add-${meal}`, 120, origin);
-  }, [applyOp, toast]);
+  const undoAdd = useCallback(async (ids: string[], meal: Meal, origin?: HTMLElement | null) => {
+    const result = await deleteEntries(ids);
+    if (result.ok) focusKey(`add-${meal}`, 120, origin);
+    return result;
+  }, []);
 
   const logItems = useCallback((items: { food: Food; foodId: string; meal: Meal; quantity: number }[], source: EntrySource, message: string) => {
     const now = new Date().toISOString();
@@ -177,11 +174,11 @@ export function DiaryProvider({ day, today, foods, frequentIds, targets, entries
       if (!r.ok) { toast(r.error); return; }
       const foodId = entry.food_id;
       toast(`Removed ${name}.`, foodId ? {
-        undo: () => logItems([{ food: entry.food, foodId, meal: entry.meal, quantity: entry.quantity }], entry.source, `${name} is back.`),
+        undo: () => addEntries({ day, items: [{ foodId, meal: entry.meal, quantity: entry.quantity, source: entry.source }] }),
       } : undefined);
     });
     focusKey(focusAfter ?? `add-${entry.meal}`, 160);
-  }, [applyOp, logItems, toast]);
+  }, [applyOp, day, toast]);
 
   const repeat = useCallback((meal: Meal) => {
     const src = yesterdayEntries.filter(e => e.meal === meal);

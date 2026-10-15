@@ -90,7 +90,7 @@ export default async function Home() {
       <main id="main">
         {/* ---------- Hero ---------- */}
         <section className={styles.hero} aria-labelledby="hero-title">
-          <Image src="/img/hero.webp" alt="" fill priority sizes="100vw" className={styles.heroPhoto} />
+          <Image src="/img/hero.webp" alt="" fill loading="eager" fetchPriority="high" quality={60} sizes="100vw" className={styles.heroPhoto} />
           <div className={styles.heroInner}>
             <p className={styles.kicker}><span lang="ja">食</span> shoku · Japanese for a meal</p>
             <h1 id="hero-title" className={styles.heroTitle}>

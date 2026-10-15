@@ -30,8 +30,8 @@ export function LogButton({ day, items, label, done }: {
         if (!res.ok) { toast(res.error); return; }
         const ids = res.data.ids;
         const badge = res.data.newBadges[0];
-        if (badge) toast(`${BADGE_NAMES[badge] ?? 'New badge'} unlocked. ${done}`, { tone: 'win', undo: async () => { await deleteEntries(ids); } });
-        else toast(done, { undo: async () => { const r = await deleteEntries(ids); if (!r.ok) toast(r.error); } });
+        if (badge) toast(`${BADGE_NAMES[badge] ?? 'New badge'} unlocked. ${done}`, { tone: 'win', undo: () => deleteEntries(ids) });
+        else toast(done, { undo: () => deleteEntries(ids) });
       })}
     >
       <Icon name="plus" size="sm" />

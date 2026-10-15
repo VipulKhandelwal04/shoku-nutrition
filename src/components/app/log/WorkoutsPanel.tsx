@@ -71,13 +71,13 @@ export function WorkoutsPanel({ day, isToday, data }: { day: string; isToday: bo
   const remove = (w: WorkoutRow) => start(async () => {
     const r = await removeWorkout(w.id);
     if (!r.ok) { toast(r.error); return; }
-    toast(`Removed ${w.label}.`, { undo: async () => { const u = await restoreWorkout(r.data.restore); if (!u.ok) toast(u.error); } });
+    toast(`Removed ${w.label}.`, { undo: async () => { const u = await restoreWorkout(r.data.restore); return u; } });
   });
 
   const lightBase = () => start(async () => {
     const r = await switchToLightBase();
     if (!r.ok) { toast(r.error); return; }
-    toast('Base target switched to light activity.', { undo: async () => { const u = await restoreBase(r.data.previous); if (!u.ok) toast(u.error); } });
+    toast('Base target switched to light activity.', { undo: async () => { const u = await restoreBase(r.data.previous); return u; } });
   });
 
   return (
@@ -166,7 +166,7 @@ function WorkoutSheet({ open, onClose, day, weightKg }: { open: boolean; onClose
       const r = await addWorkout({ day, kind, label: preset.label, minutes: mins, kcal, kcalSource: device !== null ? 'device' : 'estimate' });
       if (!r.ok) { setError(r.error); return; }
       toast(`Logged ${preset.label.toLowerCase()} · ${fmt(kcal)} kcal.`, {
-        undo: async () => { const u = await removeWorkout(r.data.id); if (!u.ok) toast(u.error); },
+        undo: async () => { const u = await removeWorkout(r.data.id); return u; },
       });
       setWatchKcal('');
       onClose();

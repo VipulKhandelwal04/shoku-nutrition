@@ -12,7 +12,7 @@ export function SignupsToggle({ initial }: { initial: boolean }) {
     const prev = open;
     setOpen(next);
     run(() => saveFeatureSettings({ signups_open: next }), {
-      undo: async () => { setOpen(prev); return saveFeatureSettings({ signups_open: prev }); },
+      undo: async () => { const result = await saveFeatureSettings({ signups_open: prev }); if (result.ok) setOpen(prev); return result; },
       onDone: r => { if (!r.ok) setOpen(prev); },
     });
   };

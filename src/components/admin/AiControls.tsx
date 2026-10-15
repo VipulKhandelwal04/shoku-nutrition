@@ -27,7 +27,7 @@ export function AiControls({ initial, configured }: { initial: AiSettings; confi
     setSettings(next);
     run(() => saveAiSettings(next), {
       success,
-      undo: async () => { setSettings(prev); setQuota(String(prev.daily_quota)); return saveAiSettings(prev); },
+      undo: async () => { const result = await saveAiSettings(prev); if (result.ok) { setSettings(prev); setQuota(String(prev.daily_quota)); } return result; },
       onDone: r => { if (!r.ok) setSettings(prev); },
     });
   };

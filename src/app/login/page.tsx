@@ -26,9 +26,9 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
   const error = errorKey ? (ERRORS[errorKey] ?? ERRORS.oauth) : null;
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} data-opaque-page>
       <div className={styles.photo}>
-        <Image src="/img/hero.webp" alt="" fill priority sizes="(max-width: 860px) 100vw, 55vw" className={styles.img} />
+        <Image src="/img/hero.webp" alt="" fill loading="eager" fetchPriority="high" quality={60} sizes="(max-width: 860px) 100vw, 55vw" className={styles.img} />
         <div className={styles.photoCopy}>
           <p className={styles.photoLine}>
             Meal by
