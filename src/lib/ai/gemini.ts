@@ -107,8 +107,11 @@ export async function generateJson<T>(
           attempt--;
           continue;
         }
+        const reason = upstreamReason(err);
+        console.error(`[ai] ${models[m]} upstream ${status}: ${reason}`);
+        // A rejected key is a setup problem, not the user's input: say "not set up" instead of "try rewording".
+        if (/api[ _]?key/i.test(reason)) throw new AiNotConfigured();
         lastUpstream = new AiUpstream(status);
-        console.error(`[ai] ${models[m]} upstream ${status}`);
         if (RETRYABLE.has(status)) break; // next model
         throw lastUpstream;
       }
@@ -120,6 +123,20 @@ export async function generateJson<T>(
   }
   if (lastUpstream) throw lastUpstream;
   throw new AiBadResponse();
+}
+
+/**
+ * Gemini's own one-line reason (e.g. "API key not valid", "Invalid JSON payload"), so a 400 in the logs says why.
+ * Gemini never echoes the key; anything that looks like one is masked anyway.
+ */
+export function upstreamReason(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  let msg = raw;
+  try {
+    const j = JSON.parse(raw.slice(raw.indexOf('{'))) as { error?: { message?: string; status?: string } };
+    if (j.error?.message) msg = `${j.error.status ?? ''} ${j.error.message}`.trim();
+  } catch { /* not JSON: keep the plain message */ }
+  return msg.replace(/AIza[0-9A-Za-z_-]{20,}/g, '[key]').replace(/\s+/g, ' ').slice(0, 240);
 }
 
 function isAbort(err: unknown): boolean {
