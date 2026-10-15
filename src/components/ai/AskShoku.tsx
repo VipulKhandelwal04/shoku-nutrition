@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { FoodTile, Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
+import { FeedbackForm } from '@/components/app/feedback/FeedbackForm';
 import { MAX_TEXT, type AskIdea, type AskResponse } from '@/lib/ai/contracts';
 import { addEntries, deleteEntries } from '@/lib/data/diary';
 import { dateKey } from '@/lib/nutrition';
@@ -17,17 +18,21 @@ const PROMPTS = [
 
 type Phase =
   | { kind: 'idle' }
+  | { kind: 'confirm'; question: string }
   | { kind: 'loading' }
   | { kind: 'error'; message: string; retry: boolean }
   | { kind: 'done'; data: AskResponse };
 
 const n = (v: number) => Math.round(v).toLocaleString('en-IN');
 
+/** The member's settings, from Profile. `workouts`: use them, ask first each time, or leave them out. */
+export type AskOptions = { workouts: 'use' | 'ask' | 'off'; rateIdeas: boolean };
+
 /**
  * Ask Shoku: a search field in the top bar (an icon on phones) that opens a sheet with a grounded answer and
  * up to three meal ideas built from catalogue foods. Logging an idea is one tap and can be undone.
  */
-export function AskShoku() {
+export function AskShoku({ options }: { options: AskOptions }) {
   const ids = useId();
   const barRef = useRef<HTMLInputElement>(null);
   const sheetInput = useRef<HTMLInputElement>(null);
@@ -36,6 +41,8 @@ export function AskShoku() {
   const [question, setQuestion] = useState('');
   const [asked, setAsked] = useState('');
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
+  // "Ask before using workouts": the answer holds until the sheet closes, so follow-ups don't ask again.
+  const [workoutChoice, setWorkoutChoice] = useState<boolean | null>(null);
 
   // "/" or Cmd/Ctrl+K jumps to Ask Shoku from anywhere that isn't already a text field.
   useEffect(() => {
@@ -63,6 +70,17 @@ export function AskShoku() {
   async function ask(text: string) {
     const q = text.trim().slice(0, MAX_TEXT);
     if (q.length < 3) { setPhase({ kind: 'error', message: 'Ask a little more, e.g. “dinner after leg day”.', retry: false }); setOpen(true); return; }
+    if (options.workouts === 'ask' && workoutChoice === null) {
+      setQuestion(q);
+      setAsked(q);
+      setOpen(true);
+      setPhase({ kind: 'confirm', question: q });
+      return;
+    }
+    await run(q, workoutChoice ?? undefined);
+  }
+
+  async function run(q: string, useWorkouts: boolean | undefined) {
     abort.current?.abort();
     const ctrl = new AbortController();
     abort.current = ctrl;
@@ -71,7 +89,7 @@ export function AskShoku() {
     setOpen(true);
     setPhase({ kind: 'loading' });
     try {
-      const r = await callAi<AskResponse>('/api/ai/ask', { question: q, day: dateKey() }, ctrl.signal);
+      const r = await callAi<AskResponse>('/api/ai/ask', { question: q, day: dateKey(), ...(useWorkouts === undefined ? {} : { useWorkouts }) }, ctrl.signal);
       if (ctrl.signal.aborted) return;
       setPhase(r.ok ? { kind: 'done', data: r.data } : { kind: 'error', message: r.error, retry: !FINAL_STATUSES.has(r.status) });
     } catch {
@@ -84,11 +102,21 @@ export function AskShoku() {
     void ask(question);
   }
 
+  function choose(use: boolean) {
+    if (phase.kind !== 'confirm') return;
+    setWorkoutChoice(use);
+    void run(phase.question, use);
+  }
+
   function close() {
     abort.current?.abort();
     setOpen(false);
-    if (phase.kind === 'loading') setPhase({ kind: 'idle' });
+    setWorkoutChoice(null);
+    if (phase.kind === 'loading' || phase.kind === 'confirm') setPhase({ kind: 'idle' });
   }
+
+  const reads = options.workouts === 'off' ? 'today’s meals and your targets' : options.workouts === 'ask'
+    ? 'today’s meals, your targets and, if you say yes, your workouts' : 'today’s meals, your workouts (including Strava) and your targets';
 
   return (
     <div className={s.ask}>
@@ -135,7 +163,17 @@ export function AskShoku() {
             <div className={s.promptRow}>
               {PROMPTS.map(p => <button key={p} type="button" className="pill-choice" onClick={() => void ask(p)}>{p}</button>)}
             </div>
-            <p className="fine-print">Shoku reads today’s meals, your workouts (including Strava) and your targets, then suggests foods from its catalogue that fit your diet.</p>
+            <p className="fine-print">Shoku reads {reads}, then suggests foods from its catalogue that fit your diet.</p>
+          </div>
+        )}
+
+        {phase.kind === 'confirm' && (
+          <div className={s.confirm} role="group" aria-labelledby={`${ids}-confirm`}>
+            <p id={`${ids}-confirm`}><strong>Use today’s workouts for this?</strong> Shoku can size ideas around what you did today. You asked to be checked with first.</p>
+            <div className={s.confirmRow}>
+              <button type="button" className="btn accent" onClick={() => choose(true)}>Yes, use them</button>
+              <button type="button" className="btn-secondary" onClick={() => choose(false)}>Leave them out</button>
+            </div>
           </div>
         )}
 
@@ -153,20 +191,22 @@ export function AskShoku() {
           </div>
         )}
 
-        {phase.kind === 'done' && <Answer data={phase.data} />}
+        {phase.kind === 'done' && <Answer data={phase.data} rateIdeas={options.rateIdeas} />}
       </Sheet>
     </div>
   );
 }
 
-function Answer({ data }: { data: AskResponse }) {
+function Answer({ data, rateIdeas }: { data: AskResponse; rateIdeas: boolean }) {
   const c = data.context;
   const used = [
+    ...(c.workoutsUse === 'off' ? ['Workouts left out · your setting'] : c.workoutsUse === 'skipped' ? ['Workouts left out this time'] : []),
     ...c.workouts.slice(0, 2).map(w => `${w.label} · ${n(w.kcal)} kcal`),
     `Eaten ${n(c.eatenKcal)} of ${n(c.targetKcal)} kcal`,
     `Protein ${n(c.eatenProtein)} / ${n(c.targetProtein)} g`,
     c.diet,
     ...(c.avoiding.length ? [`Avoiding ${c.avoiding.join(', ')}`] : []),
+    ...(c.cuisines?.length ? [`Leaning ${c.cuisines.join(', ')}`] : []),
   ];
   return (
     <div className={s.result}>
@@ -177,7 +217,7 @@ function Answer({ data }: { data: AskResponse }) {
       </div>
       {data.ideas.length > 0 && (
         <ul className={s.ideas}>
-          {data.ideas.map((idea, i) => <IdeaCard key={`${idea.title}-${i}`} idea={idea} />)}
+          {data.ideas.map((idea, i) => <IdeaCard key={`${idea.title}-${i}`} idea={idea} rate={rateIdeas} />)}
         </ul>
       )}
       <p className="fine-print">Ideas use Shoku catalogue foods that fit your diet. Portions are estimates, not medical advice.</p>
@@ -185,9 +225,10 @@ function Answer({ data }: { data: AskResponse }) {
   );
 }
 
-function IdeaCard({ idea }: { idea: AskIdea }) {
+function IdeaCard({ idea, rate }: { idea: AskIdea; rate: boolean }) {
   const toast = useToast();
   const [state, setState] = useState<'idle' | 'saving' | 'logged'>('idle');
+  const [rating, setRating] = useState<'closed' | 'open' | 'saved'>('closed');
 
   async function log() {
     setState('saving');
@@ -227,6 +268,13 @@ function IdeaCard({ idea }: { idea: AskIdea }) {
       <button type="button" className={`btn ${state === 'logged' ? '' : 'accent'} full`} onClick={log} disabled={state !== 'idle'} aria-busy={state === 'saving' || undefined}>
         {state === 'logged' ? <><Icon name="check" size="sm" /> Logged</> : state === 'saving' ? 'Logging…' : `Log to ${idea.meal}`}
       </button>
+      {rate && rating === 'closed' && (
+        <button type="button" className={`btn-text ${s.rateBtn}`} onClick={() => setRating('open')}>How does it sound?</button>
+      )}
+      {rate && rating === 'open' && (
+        <FeedbackForm compact subject={{ kind: 'idea', title: idea.title, meal: idea.meal, foodIds: idea.items.map(i => i.foodId) }} onDone={() => setRating('saved')} />
+      )}
+      {rate && rating === 'saved' && <p className="fine-print">Thanks. Saved to Profile → Meal feedback.</p>}
     </li>
   );
 }

@@ -47,6 +47,57 @@ describe('mealCandidates', () => {
   });
 });
 
+describe('mealCandidates with cuisine preferences', () => {
+  const paneer = SEED_FOODS.find(f => f.id === 'paneer')!;
+  const egg = SEED_FOODS.find(f => f.id === 'egg')!;
+  // A few non-Indian foods built from real seed rows, so nutrition and diet stay realistic.
+  const italian = [
+    { ...paneer, id: 'caprese', name: 'Caprese salad', cuisine: 'Italian' },
+    { ...egg, id: 'frittata', name: 'Frittata', cuisine: 'Italian' },
+  ];
+  const foods = [...SEED_FOODS, ...italian];
+  const order = (set: ReturnType<typeof mealCandidates>) => set.candidates.map(c => c.food.id);
+
+  it('open to all: every food neutral, catalogue order, no preferred cuisines', () => {
+    const set = mealCandidates(foods, { diet: 'nonveg', restrictions: [], cuisines: { mode: 'open', chosen: ['Italian'] } });
+    expect(set.candidates.every(c => c.weight === 1)).toBe(true);
+    expect(order(set)).toEqual(foods.map(f => f.id));
+    expect(set.preferred).toEqual([]);
+    expect(set.thin).toBe(false);
+  });
+
+  it('mostly familiar: Indian foods first, others kept after them', () => {
+    const set = mealCandidates(foods, { diet: 'nonveg', restrictions: [], cuisines: { mode: 'familiar', chosen: [] } });
+    expect(set.preferred).toEqual(['Indian']);
+    expect(order(set).slice(-2)).toEqual(['caprese', 'frittata']);
+    expect(set.candidates.length).toBe(foods.length);
+    expect(set.thin).toBe(false);
+  });
+
+  it('chosen cuisines: matching foods come first with a higher weight, the rest keep catalogue order', () => {
+    const set = mealCandidates(foods, { diet: 'nonveg', restrictions: [], cuisines: { mode: 'chosen', chosen: ['italian'] } });
+    expect(order(set).slice(0, 2)).toEqual(['caprese', 'frittata']);
+    expect(set.candidates[0].weight).toBeGreaterThan(set.candidates[2].weight);
+    expect(order(set).slice(2)).toEqual(SEED_FOODS.map(f => f.id));
+  });
+
+  it('falls back to the whole catalogue when chosen cuisines have too few foods', () => {
+    const set = mealCandidates(foods, { diet: 'nonveg', restrictions: [], cuisines: { mode: 'chosen', chosen: ['Italian', 'Thai'] } });
+    expect(set.thin).toBe(true);
+    expect(set.candidates.length).toBe(foods.length);
+    const none = mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [], cuisines: { mode: 'chosen', chosen: ['Korean'] } });
+    expect(none.thin).toBe(true);
+    expect(none.candidates.length).toBeGreaterThan(0);
+  });
+
+  it('diet and restrictions still win over a preferred cuisine', () => {
+    const set = mealCandidates(foods, { diet: 'veg', restrictions: ['lactose-free'], request: 'no egg', cuisines: { mode: 'chosen', chosen: ['Italian'] } });
+    expect(set.eligible.has('frittata')).toBe(false); // egg-based: diet says veg
+    expect(set.eligible.has('caprese')).toBe(false); // paneer-based: lactose-free
+    expect(set.thin).toBe(true);
+  });
+});
+
 describe('candidateLines', () => {
   it('writes one id|name|unit|kcal|protein|cuisine line per candidate', () => {
     const set = mealCandidates(SEED_FOODS, { diet: 'veg', restrictions: [] });

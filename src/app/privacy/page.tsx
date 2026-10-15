@@ -32,6 +32,10 @@ export default function PrivacyPage() {
           <strong>Meal photos.</strong> If you snap a plate, the photo is stored in a private storage area that only your account can read.
         </li>
         <li>
+          <strong>Meal feedback and preferences.</strong> Ratings you give meals or Ask Shoku ideas (like, okay or not for me, quick tags and an
+          optional note), the cuisines you lean toward, and whether Ask Shoku may use your workouts.
+        </li>
+        <li>
           <strong>AI Assist usage.</strong> A count of AI requests per day, so fair-use limits work.
         </li>
       </ul>
@@ -45,7 +49,9 @@ export default function PrivacyPage() {
       <h2>AI Assist</h2>
       <p>
         When you use AI Assist, the photo or text you submit is sent to <strong>Google Gemini</strong> to suggest foods and portions, a plan, or a
-        coach line. Only what you submit for that request is sent. Results are suggestions: nothing is saved to your diary until you confirm it.
+        coach line. Only what that request needs is sent: for Ask Shoku, that is your question, today’s meals and targets, your diet and the
+        foods you skip, your cuisine preferences, and your workouts unless you turn that off in your profile. Results are suggestions: nothing is
+        saved to your diary until you confirm it.
       </p>
 
       <h2>Workouts and Strava</h2>
@@ -58,7 +64,8 @@ export default function PrivacyPage() {
       <h2>Your control</h2>
       <ul>
         <li>Export your data at any time from your Profile in the app.</li>
-        <li>Delete diary entries whenever you like.</li>
+        <li>Delete diary entries and meal ratings whenever you like.</li>
+        <li>Choose in your profile whether Ask Shoku uses your workouts, or asks you first each time.</li>
         <li>
           To close your account and remove your data, email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
         </li>

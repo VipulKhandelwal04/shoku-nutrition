@@ -45,6 +45,22 @@ export const FEATURE_FLAGS = {
       upcoming: { title: 'Coming-soon apps', body: 'Lists Samsung Health, Apple Health and Garmin as coming soon.' },
     },
   },
+  cuisines: {
+    title: 'Cuisines',
+    body: 'Cuisine preferences in Profile → Food style. Diet, allergies and “no X” stay strict either way.',
+    children: {
+      ask: { title: 'In Ask Shoku', body: 'Ask Shoku leans toward the member’s cuisines.' },
+      plans: { title: 'In Tune my plan', body: 'AI day plans lean toward the member’s cuisines.' },
+    },
+  },
+  feedback: {
+    title: 'Meal feedback',
+    body: 'Members rate meals: like, okay or not for me, with quick tags and a note. Listed and deletable in Profile.',
+    children: {
+      meals: { title: 'Rate logged meals', body: 'From a logged food on Today or Diary.' },
+      ideas: { title: 'Rate Ask Shoku ideas', body: 'From an idea card in Ask Shoku.' },
+    },
+  },
 } as const;
 
 type Registry = typeof FEATURE_FLAGS;

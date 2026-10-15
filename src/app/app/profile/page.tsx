@@ -1,8 +1,9 @@
 import Image from 'next/image';
 import { requireOnboarded } from '@/lib/auth';
-import { getConnections, getEarnedBadges, getFlags, getMealsByDay, isStravaConfigured } from '@/lib/data/queries';
+import { getConnections, getEarnedBadges, getFlags, getFoods, getMealsByDay, getRatings, isStravaConfigured } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
-import { BADGES, GOALS, dayCounts, recommend, streakInfo } from '@/lib/nutrition';
+import { BADGES, GOALS, cuisineOf, dayCounts, recommend, streakInfo } from '@/lib/nutrition';
+import { CUISINE_CHOICES, cuisinePrefsOf, cuisineSummary } from '@/lib/preferences';
 import { Icon } from '@/components/ui/Icon';
 import { DIETS, RESTRICTIONS, RESTRICTION_SLUGS, bodyOf, pickTargets, type Restriction } from '@/components/app/insights/insights';
 import { userToday } from '@/components/app/insights/server';
@@ -18,7 +19,14 @@ const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 export default async function ProfilePage() {
   const profile = await requireOnboarded('/app/profile');
   const { today } = await userToday();
-  const [mealsByDay, badges, connections, flags] = await Promise.all([getMealsByDay(today, 365), getEarnedBadges(), getConnections(), getFlags()]);
+  const [mealsByDay, badges, connections, flags, ratings, foods] = await Promise.all([
+    getMealsByDay(today, 365), getEarnedBadges(), getConnections(), getFlags(), getRatings(), getFoods(),
+  ]);
+  const cuisinesOn = isOn(flags, 'cuisines');
+  const cuisines = cuisinePrefsOf(profile);
+  // The common cuisines plus whatever the catalogue has; anything already chosen stays pickable.
+  const cuisineChoices = [...new Set([...CUISINE_CHOICES, ...foods.filter(f => !f.custom).map(f => cuisineOf(f)), ...cuisines.chosen])];
+  const activity = { useWorkouts: profile.use_workouts !== false, askFirst: profile.ask_workouts === true };
 
   const body = bodyOf(profile);
   const recommended = body ? pickTargets(recommend(body)) : null;
@@ -41,7 +49,16 @@ export default async function ProfilePage() {
   const plan = [
     { label: 'Goal and body', value: [goal, profile.weight_kg ? `${Number(profile.weight_kg)} kg` : null].filter(Boolean).join(' · '), sheet: 'body' as const, icon: 'user' as const },
     { label: 'Daily targets', value: `${fmt(targets.kcal)} kcal · ${fmt(targets.p)} g protein`, sheet: 'targets' as const, icon: 'sliders' as const },
-    { label: 'Food style', value: [diet, ...restrictions.map(r => RESTRICTIONS.find(x => x.slug === r)?.label)].filter(Boolean).join(' · '), sheet: 'body' as const, icon: 'leaf' as const },
+    {
+      label: 'Food style',
+      value: [diet, ...restrictions.map(r => RESTRICTIONS.find(x => x.slug === r)?.label), cuisinesOn ? cuisineSummary(cuisines) : null].filter(Boolean).join(' · '),
+      sheet: cuisinesOn ? 'style' as const : 'body' as const, icon: 'leaf' as const,
+    },
+    {
+      label: 'Workouts in meal ideas',
+      value: !activity.useWorkouts ? 'Left out' : activity.askFirst ? 'Used · asks you first' : 'Used',
+      sheet: 'activity' as const, icon: 'bolt' as const,
+    },
   ];
 
   return (
@@ -88,6 +105,11 @@ export default async function ProfilePage() {
         isAdmin={profile.role === 'admin'}
         strava={{ configured: isStravaConfigured() && isOn(flags, 'apps', 'strava'), connection: connections.find(c => c.provider === 'strava') ?? null }}
         upcoming={isOn(flags, 'apps', 'upcoming')}
+        prefs={{
+          cuisines: cuisinesOn ? { value: cuisines, choices: cuisineChoices } : null,
+          activity,
+          ratings: isOn(flags, 'feedback') || ratings.length ? ratings : null,
+        }}
       />
 
       <p className={s.foot}>

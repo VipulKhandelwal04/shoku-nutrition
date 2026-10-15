@@ -21,7 +21,8 @@ function reduce(state: EntryRow[], op: Op): EntryRow[] {
 export type SheetView =
   | { kind: 'search'; meal: Meal; frequent: string[] }
   | { kind: 'portion'; food: Food; meal: Meal; entry?: EntryRow; back?: 'search' | 'custom' }
-  | { kind: 'custom'; meal: Meal; name: string };
+  | { kind: 'custom'; meal: Meal; name: string }
+  | { kind: 'rate'; meal: Meal; entry: EntryRow };
 
 export const isTemp = (id: string) => id.startsWith('tmp-');
 
@@ -82,7 +83,7 @@ export function useDiary(): Ctx {
   return ctx;
 }
 
-export function DiaryProvider({ day, today, foods, frequentIds, targets, entries: baseEntries, days, mealsByDay: baseMealsByDay, defaultExpanded = [], children }: {
+export function DiaryProvider({ day, today, foods, frequentIds, targets, entries: baseEntries, days, mealsByDay: baseMealsByDay, defaultExpanded = [], rateMeals = false, children }: {
   day: string;
   today: string;
   foods: Food[];
@@ -92,6 +93,8 @@ export function DiaryProvider({ day, today, foods, frequentIds, targets, entries
   days: DayRow[];
   mealsByDay: Record<string, number>;
   defaultExpanded?: Meal[];
+  /** Feature flag: "How was it?" on a logged food. */
+  rateMeals?: boolean;
   children: ReactNode;
 }) {
   const toast = useToast();
@@ -242,7 +245,7 @@ export function DiaryProvider({ day, today, foods, frequentIds, targets, entries
   return (
     <DiaryContext.Provider value={value}>
       {children}
-      <LogSheets view={view} setView={setView} />
+      <LogSheets view={view} setView={setView} rateMeals={rateMeals} />
     </DiaryContext.Provider>
   );
 }

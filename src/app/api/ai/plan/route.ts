@@ -2,10 +2,12 @@ import { planOutput, planRequest, type PlanResponse, type PlanRow } from '@/lib/
 import { generateJson } from '@/lib/ai/gemini';
 import { guardAi, recordUsage } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson } from '@/lib/ai/http';
-import { candidateLines, mealCandidates } from '@/lib/ai/candidates';
+import { candidateLines, cuisineBrief, mealCandidates } from '@/lib/ai/candidates';
 import { repairPlan, type RepairResult } from '@/lib/ai/plan';
 import { PLAN_SYSTEM } from '@/lib/ai/prompts';
-import { getFoods } from '@/lib/data/queries';
+import { getFlags, getFoods } from '@/lib/data/queries';
+import { isOn } from '@/lib/flags';
+import { OPEN_CUISINES, cuisinePrefsOf } from '@/lib/preferences';
 import { MEALS, GOALS, type Food, type Meal } from '@/lib/nutrition';
 import type { Profile } from '@/lib/types';
 
@@ -28,7 +30,8 @@ export async function POST(request: Request) {
   if (!profile?.targets) return fail(409, 'Finish setting up your goal first, then AI Assist can tailor a plan.');
   const targets = profile.targets;
 
-  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: preferences });
+  const cuisines = isOn(await getFlags(), 'cuisines', 'plans') ? cuisinePrefsOf(profile) : OPEN_CUISINES;
+  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: preferences, cuisines });
   if (set.candidates.length < 6) return fail(422, 'Too few foods fit those preferences. Loosen one and try again.');
   const foodsById = set.eligible;
   const allowed = (f: Food) => set.eligible.has(f.id);
@@ -38,6 +41,7 @@ export async function POST(request: Request) {
     diet: profile.diet,
     restrictions: profile.restrictions ?? [],
     targets: { kcal: targets.kcal, protein_g: targets.p, carbs_g: targets.c, fat_g: targets.f },
+    ...(cuisineBrief(set) ? { cuisines: cuisineBrief(set) } : {}),
   };
   const catalogue = candidateLines(set);
 
@@ -69,7 +73,7 @@ export async function POST(request: Request) {
       const f = foodsById.get(i.foodId)!;
       return { foodId: f.id, name: f.name, unit: f.unit, icon: f.icon, q: i.q, kcal: Math.round(f.kcal * i.q) };
     })])) as Record<Meal, PlanRow[]>;
-    return ok<PlanResponse>({ plan: result.plan, rows, kcal: result.kcal, target: targets.kcal, note: note.trim().slice(0, 200) || null });
+    return ok<PlanResponse>({ plan: result.plan, rows, kcal: result.kcal, target: targets.kcal, note: note.trim().slice(0, 200) || null, cuisines: set.preferred });
   } catch (err) {
     return errorResponse(err, 'plan');
   } finally {

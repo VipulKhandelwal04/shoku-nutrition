@@ -10,7 +10,7 @@ export async function GET() {
   const user = auth.user;
   if (!user) return NextResponse.json({ error: 'Sign in to download your data.' }, { status: 401 });
 
-  async function all(table: 'entries' | 'days' | 'workouts', order: string) {
+  async function all(table: 'entries' | 'days' | 'workouts' | 'meal_feedback', order: string) {
     const rows: Record<string, unknown>[] = [];
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await supabase.from(table).select('*').eq('user_id', user!.id).order(order).range(from, from + PAGE - 1);
@@ -21,7 +21,7 @@ export async function GET() {
   }
 
   try {
-    const [profile, foods, plan, badges, entries, days, workouts] = await Promise.all([
+    const [profile, foods, plan, badges, entries, days, workouts, feedback] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('foods').select('*').eq('owner_id', user.id).order('name'),
       supabase.from('user_plans').select('plan, note, updated_at').maybeSingle(),
@@ -29,6 +29,7 @@ export async function GET() {
       all('entries', 'created_at'),
       all('days', 'day'),
       all('workouts', 'created_at'),
+      all('meal_feedback', 'created_at'),
     ]);
     for (const r of [profile, foods, plan, badges]) if (r.error) throw new Error(r.error.message);
 
@@ -39,6 +40,7 @@ export async function GET() {
       entries,
       days,
       workouts,
+      meal_feedback: feedback,
       custom_foods: foods.data ?? [],
       meal_plan: plan.data ?? null,
       badges: badges.data ?? [],

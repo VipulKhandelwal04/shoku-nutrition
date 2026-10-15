@@ -3,9 +3,11 @@ import { askOutput, askRequest, type AskContext, type AskResponse } from '@/lib/
 import { generateJson } from '@/lib/ai/gemini';
 import { guardAi, recordUsage } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson, todayIst } from '@/lib/ai/http';
-import { candidateLines, mealCandidates } from '@/lib/ai/candidates';
+import { candidateLines, cuisineBrief, mealCandidates } from '@/lib/ai/candidates';
 import { ASK_SYSTEM } from '@/lib/ai/prompts';
-import { getFoods } from '@/lib/data/queries';
+import { getFlags, getFoods } from '@/lib/data/queries';
+import { isOn } from '@/lib/flags';
+import { OPEN_CUISINES, cuisinePrefsOf } from '@/lib/preferences';
 import { GOALS, MEALS, totals } from '@/lib/nutrition';
 import type { EntryRow, Profile, WorkoutRow } from '@/lib/types';
 
@@ -15,17 +17,19 @@ export const maxDuration = 60;
 const DIET_LABEL: Record<string, string> = { veg: 'Vegetarian', egg: 'Vegetarian + egg', nonveg: 'Eats everything' };
 
 /**
- * POST { question (≤ 300 chars), day } → { ok: true, data: AskResponse }.
+ * POST { question (≤ 300 chars), day, useWorkouts? } → { ok: true, data: AskResponse }.
  * Hybrid retrieval: hard filters first (diet, saved restrictions, any "no X" in the question) narrow the catalogue,
  * then Gemini picks from what is left using the user's day (meals, workouts, targets). The server re-checks every
  * food and portion. Read-only: nothing is logged until the user taps an idea.
+ * The member's settings decide the soft context: cuisine preferences reorder candidates (flag cuisines.ask), and
+ * workouts are left out when "use workouts" is off, or when "ask first" is on and they answered no.
  */
 export async function POST(request: Request) {
   const guard = await guardAi('ask');
   if (!guard.ok) return guard.response;
   const body = await readJson(request, askRequest);
   if (!body.ok) return body.response;
-  const { question, day } = body.data;
+  const { question, day, useWorkouts } = body.data;
 
   const [{ data: profile }, { data: entries, error: eErr }, { data: workouts, error: wErr }] = await Promise.all([
     guard.supabase.from('profiles').select('*').eq('id', guard.user.id).maybeSingle<Profile>(),
@@ -35,21 +39,27 @@ export async function POST(request: Request) {
   if (!profile?.targets) return fail(409, 'Finish setting up your goal first, then Ask Shoku can tailor ideas.');
   if (eErr || wErr) return fail(500, 'Couldn’t read your day. Try again.');
 
-  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: question });
+  const flags = await getFlags();
+  const cuisines = isOn(flags, 'cuisines', 'ask') ? cuisinePrefsOf(profile) : OPEN_CUISINES;
+  const set = mealCandidates(await getFoods(), { diet: profile.diet, restrictions: profile.restrictions ?? [], request: question, cuisines });
   if (set.candidates.length < 4) return fail(422, 'Too few foods fit that question. Loosen one condition and ask again.');
 
   const dayEntries = (entries ?? []) as Pick<EntryRow, 'meal' | 'food' | 'quantity'>[];
-  const dayWorkouts = (workouts ?? []) as Pick<WorkoutRow, 'label' | 'kind' | 'minutes' | 'kcal' | 'source'>[];
+  const workoutsUse: AskContext['workoutsUse'] =
+    profile.use_workouts === false ? 'off' : profile.ask_workouts && useWorkouts === false ? 'skipped' : 'used';
+  const dayWorkouts = workoutsUse === 'used' ? ((workouts ?? []) as Pick<WorkoutRow, 'label' | 'kind' | 'minutes' | 'kcal' | 'source'>[]) : [];
   const eaten = totals(dayEntries);
   const logged = MEALS.filter(m => dayEntries.some(e => e.meal === m));
   const isToday = day === todayIst();
 
   const context: AskContext = {
     workouts: dayWorkouts.map(w => ({ label: w.label, minutes: w.minutes, kcal: w.kcal })),
+    workoutsUse,
     eatenKcal: Math.round(eaten.kcal), targetKcal: profile.targets.kcal,
     eatenProtein: Math.round(eaten.p), targetProtein: profile.targets.p,
     diet: DIET_LABEL[profile.diet] ?? profile.diet,
     avoiding: (profile.restrictions ?? []).slice(0, 6),
+    cuisines: set.preferred,
   };
   const brief = {
     goal: profile.goal ? GOALS[profile.goal].label : 'Stay fit',
@@ -59,7 +69,10 @@ export async function POST(request: Request) {
     mealsLogged: logged,
     eaten: { kcal: context.eatenKcal, protein_g: context.eatenProtein },
     targets: { kcal: context.targetKcal, protein_g: context.targetProtein },
-    workouts: dayWorkouts.map(w => ({ what: w.label, type: w.kind, minutes: w.minutes, kcal_burned: w.kcal, from: w.source })),
+    // Left out entirely (not an empty list) when the member chose not to share workouts, so the model doesn't
+    // read "no workouts" as a rest day.
+    ...(workoutsUse === 'used' ? { workouts: dayWorkouts.map(w => ({ what: w.label, type: w.kind, minutes: w.minutes, kcal_burned: w.kcal, from: w.source })) } : {}),
+    ...(cuisineBrief(set) ? { cuisines: cuisineBrief(set) } : {}),
   };
   const catalogue = candidateLines(set);
 

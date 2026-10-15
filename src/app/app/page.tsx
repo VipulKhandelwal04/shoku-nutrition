@@ -17,7 +17,7 @@ export default async function TodayPage({ searchParams }: PageProps<'/app'>) {
   const targets = profile.targets!;
   return (
     <TodayView
-      data={{ ...data, targets, diet: profile.diet }}
+      data={{ ...data, targets, diet: profile.diet, rateMeals: isOn(flags, 'feedback', 'meals') }}
       ai={ai}
       show={{ workouts: isOn(flags, 'workouts'), water: isOn(flags, 'water') }}
       workouts={{

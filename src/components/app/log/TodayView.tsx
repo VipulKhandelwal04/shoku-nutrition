@@ -15,6 +15,8 @@ import { WorkoutsPanel, type WorkoutsData } from './WorkoutsPanel';
 import s from './log.module.css';
 
 export type LogScreenData = {
+  /** Feature flag: rate a logged food ("How was it?"). */
+  rateMeals?: boolean;
   serverToday: string;
   serverHour: number;
   requestedDay: string | null;
@@ -63,6 +65,7 @@ export function TodayView({ data, ai, workouts, show }: { data: LogScreenData; a
       entries={data.entries}
       days={data.days}
       mealsByDay={data.mealsByDay}
+      rateMeals={data.rateMeals}
     >
       <TodayContent data={data} ai={ai} workouts={workouts} show={show} />
     </DiaryProvider>

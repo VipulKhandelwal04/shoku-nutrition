@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { AskShoku } from '@/components/ai/AskShoku';
+import { AskShoku, type AskOptions } from '@/components/ai/AskShoku';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import s from './shell.module.css';
 
@@ -36,10 +36,10 @@ function initials(name: string) {
 }
 
 /**
- * `ask` turns on the Ask Shoku field in the top bar (admin flag on and Gemini configured).
+ * `ask` turns on the Ask Shoku field in the top bar (admin flag on and Gemini configured) with the member's settings.
  * `hide` lists nav destinations switched off by feature flags (e.g. '/app/compare').
  */
-export function AppChrome({ user, ask = false, hide = [], children }: { user: ShellUser; ask?: boolean; hide?: string[]; children: ReactNode }) {
+export function AppChrome({ user, ask = null, hide = [], children }: { user: ShellUser; ask?: AskOptions | null; hide?: string[]; children: ReactNode }) {
   const pathname = usePathname();
   const nav = NAV.filter(n => !hide.includes(n.href));
   const tabs = TABS.filter(t => !hide.includes(t.href));
@@ -53,7 +53,7 @@ export function AppChrome({ user, ask = false, hide = [], children }: { user: Sh
             <span className={s.brandMark} aria-hidden="true" lang="ja">食</span>
             <span className={s.brandName}>Shoku</span>
           </Link>
-          {ask && <AskShoku />}
+          {ask && <AskShoku options={ask} />}
           <nav className={s.topLinks} aria-label="Main">
             {nav.map(n => (
               <Link key={n.href} href={n.href} aria-current={isActive(pathname, n.href) ? 'page' : undefined}>{n.label}</Link>
