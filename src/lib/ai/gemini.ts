@@ -1,5 +1,5 @@
 import 'server-only';
-import { ApiError, GoogleGenAI, type Part } from '@google/genai';
+import { ApiError, GoogleGenAI, ThinkingLevel, type Part } from '@google/genai';
 import { z } from 'zod';
 
 // Server-only Gemini access for AI Assist. The key never leaves the server and is never logged.
@@ -35,6 +35,18 @@ export function aiModel(): string {
   return process.env.GEMINI_MODEL || 'gemini-flash-latest';
 }
 
+/**
+ * Models to try in order. The main Flash model is often "experiencing high demand" (503); Flash-Lite is fast and
+ * rarely overloaded, so it is the fallback. Override the fallback with GEMINI_FALLBACK_MODEL (empty = none).
+ */
+export function aiModels(): string[] {
+  const fallback = process.env.GEMINI_FALLBACK_MODEL ?? 'gemini-flash-lite-latest';
+  return [...new Set([aiModel(), fallback].filter(Boolean))];
+}
+
+/** Statuses where another model (or a moment later) may succeed. */
+const RETRYABLE = new Set([429, 500, 503, 504]);
+
 export function isAiConfigured(): boolean {
   return !!process.env.GEMINI_API_KEY;
 }
@@ -63,32 +75,50 @@ export async function generateJson<T>(
   const started = Date.now();
   const responseJsonSchema = jsonSchemaFor(schema);
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    let text: string | undefined;
-    try {
-      const res = await ai.models.generateContent({
-        model: aiModel(),
-        contents: [{ role: 'user', parts: opts.parts }],
-        config: {
-          systemInstruction: opts.system,
-          responseMimeType: 'application/json',
-          responseJsonSchema,
-          temperature: opts.temperature ?? 0.2,
-          abortSignal: signal,
-        },
-      });
-      text = res.text;
-    } catch (err) {
-      if (opts.signal?.aborted) throw new AiCancelled();
-      if (deadline.aborted || isAbort(err)) throw new AiTimeout();
-      if (err instanceof ApiError) throw new AiUpstream(err.status);
-      throw new AiUpstream(0);
+  const models = aiModels();
+  let lastUpstream: AiUpstream | null = null;
+  let thinking = true;
+
+  // Walk the model chain; each model gets one JSON-validation retry. Overload (503/429) moves to the next model.
+  for (let m = 0; m < models.length; m++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let text: string | undefined;
+      try {
+        const res = await ai.models.generateContent({
+          model: models[m],
+          contents: [{ role: 'user', parts: opts.parts }],
+          config: {
+            systemInstruction: opts.system,
+            responseMimeType: 'application/json',
+            responseJsonSchema,
+            temperature: opts.temperature ?? 0.2,
+            // Low thinking keeps answers in a few seconds instead of ~20s. Dropped if a model rejects it.
+            ...(thinking ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
+            abortSignal: signal,
+          },
+        });
+        text = res.text;
+      } catch (err) {
+        if (opts.signal?.aborted) throw new AiCancelled();
+        if (deadline.aborted || isAbort(err)) throw new AiTimeout();
+        const status = err instanceof ApiError ? err.status : 0;
+        if (status === 400 && thinking && /thinking/i.test(String((err as Error).message))) {
+          thinking = false;
+          attempt--;
+          continue;
+        }
+        lastUpstream = new AiUpstream(status);
+        console.error(`[ai] ${models[m]} upstream ${status}`);
+        if (RETRYABLE.has(status)) break; // next model
+        throw lastUpstream;
+      }
+      const parsed = parseJson(text, schema);
+      if (parsed.ok) return parsed.data;
+      // Only retry while there is a realistic amount of time left.
+      if (Date.now() - started > timeoutMs - 6_000) throw new AiBadResponse();
     }
-    const parsed = parseJson(text, schema);
-    if (parsed.ok) return parsed.data;
-    // Only retry while there is a realistic amount of time left.
-    if (Date.now() - started > timeoutMs - 6_000) break;
   }
+  if (lastUpstream) throw lastUpstream;
   throw new AiBadResponse();
 }
 

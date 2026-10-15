@@ -159,13 +159,17 @@ export type Suggestion = { foodId: string; name: string; unit: string; icon: str
  * Up to `max` one-tap suggestions that fill missing "at least" food groups using what is still left in the plan.
  * Skips foods that would push a "limit" group (cereals, oils) further over, and foods already suggested.
  */
-export function nextUp(plan: Plan, entries: Entry[], statuses: GroupStatus[], foodsById: Map<string, Food>, max = 3): Suggestion[] {
+export function nextUp(plan: Plan, entries: Entry[], statuses: GroupStatus[], foodsById: Map<string, Food>, max = 3, fromMeal?: Meal): Suggestion[] {
   const over = new Set(statuses.filter(s => s.status === 'over').map(s => s.key));
   const gaps = statuses
     .filter(s => s.kind === 'atleast' && s.status !== 'hit' && s.target > 0)
     .sort((a, b) => a.eaten / a.target - b.eaten / b.target);
   const check = planCheck(plan, entries, foodsById);
-  const open = check.rows.flatMap(r => r.items.filter(i => i.left > 0 && i.food).map(i => ({ ...i, meal: r.meal })));
+  const all = check.rows.flatMap(r => r.items.filter(i => i.left > 0 && i.food).map(i => ({ ...i, meal: r.meal })));
+  // On an open day, suggest from the meal that's next by the clock onwards (no snacks at 8am), unless nothing is left there.
+  const from = fromMeal ? MEALS.indexOf(fromMeal) : 0;
+  const upcoming = all.filter(i => MEALS.indexOf(i.meal) >= from);
+  const open = upcoming.length ? upcoming : all;
   const out: Suggestion[] = [];
   const used = new Set<string>();
   for (const gap of gaps) {
@@ -181,6 +185,13 @@ export function nextUp(plan: Plan, entries: Entry[], statuses: GroupStatus[], fo
     });
   }
   return out;
+}
+
+const PLURAL: Record<string, string> = { bowl: 'bowls', katori: 'katoris', roti: 'rotis', cup: 'cups', glass: 'glasses', piece: 'pieces', slice: 'slices', handful: 'handfuls', plate: 'plates', egg: 'eggs', spoon: 'spoons', tbsp: 'tbsp', tsp: 'tsp' };
+
+/** "2 bowls", "1 bowl", "0.5 bowl". Only pluralises unit words it knows; anything else is left as is. */
+export function unitFor(quantity: number, unit: string): string {
+  return quantity > 1 && PLURAL[unit] ? PLURAL[unit] : unit;
 }
 
 /** Per food group, which foods filled it (grams or ml), biggest first. Same food logged twice is merged. */

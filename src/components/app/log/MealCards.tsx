@@ -57,7 +57,7 @@ function MealCard({ meal, full }: { meal: Meal; full: boolean }) {
             <p>{summary(entries)}</p>
           </button>
         )}
-        <span className={s.mealTotal}>{entries.length ? fmt(total.kcal) : '—'} <span>kcal</span></span>
+        <span className={s.mealTotal}>{fmt(total.kcal)} <span>kcal</span></span>
         <button type="button" className="btn-add" data-focus={`add-${meal}`} aria-label={`Add food to ${meal}`} onClick={() => openSearch(meal)}>
           <Icon name="plus" size="sm" />
         </button>

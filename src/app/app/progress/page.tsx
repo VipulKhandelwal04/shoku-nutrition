@@ -56,7 +56,6 @@ export default async function ProgressPage({ searchParams }: PageProps<'/app/pro
           <section className={`panel ${s.welcome}`} aria-labelledby="first-week">
             <Image src="/img/breakfast.webp" alt="" fill sizes="(max-width: 760px) 100vw, 1180px" className={s.welcomeImg} />
             <div className={s.welcomeBody}>
-              <p className={ins.eyebrow}>Week one starts now</p>
               <h2 id="first-week">Your first streak is three meals away.</h2>
               <p>Log breakfast, lunch and dinner today and you’re on the board. Your week chart, averages and badges fill in from here.</p>
               <Link href="/app" className="btn accent">Log a meal <Icon name="arrow" size="sm" /></Link>

@@ -13,7 +13,8 @@ export type BodyValues = { goal: Goal; sex: Sex | null; age: string; height: str
 
 const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
-export function BodyForm({ initial }: { initial: BodyValues }) {
+/** `bare` renders the form without its panel and heading, for use inside a Sheet that already titles it. */
+export function BodyForm({ initial, bare = false }: { initial: BodyValues; bare?: boolean }) {
   const toast = useToast();
   const [v, setV] = useState(initial);
   const [errors, setErrors] = useState<Partial<Record<'sex' | 'age' | 'height' | 'weight' | 'activity' | 'form', string>>>({});
@@ -55,8 +56,8 @@ export function BodyForm({ initial }: { initial: BodyValues }) {
   });
 
   return (
-    <form onSubmit={submit} noValidate aria-labelledby="body-title" className={`panel panel-pad ${s.card}`}>
-      <h2 id="body-title">Goal and body</h2>
+    <form onSubmit={submit} noValidate aria-labelledby={bare ? undefined : 'body-title'} className={bare ? s.bare : `panel panel-pad ${s.card}`}>
+      {!bare && <h2 id="body-title">Goal and body</h2>}
       <p className={s.sub}>We use these to estimate your targets. Change them any time.</p>
 
       <fieldset className={s.fieldset}>
@@ -131,7 +132,7 @@ export function BodyForm({ initial }: { initial: BodyValues }) {
       </fieldset>
 
       <p className="error-text" role="alert">{errors.form}</p>
-      <button type="submit" className="btn accent" disabled={pending} aria-busy={pending || undefined}>{pending ? 'Saving…' : 'Save profile'}</button>
+      <button type="submit" className={`btn accent ${bare ? 'full' : ''}`} disabled={pending} aria-busy={pending || undefined}>{pending ? 'Saving…' : 'Save profile'}</button>
 
       {offer && (
         <div className={s.offer} role="region" aria-label="New recommendation">
@@ -146,7 +147,7 @@ export function BodyForm({ initial }: { initial: BodyValues }) {
   );
 }
 
-export function TargetsForm({ initial, recommended }: { initial: Targets; recommended: Targets | null }) {
+export function TargetsForm({ initial, recommended, bare = false }: { initial: Targets; recommended: Targets | null; bare?: boolean }) {
   const toast = useToast();
   const toStrings = (t: Targets) => Object.fromEntries(TARGET_KEYS.map(k => [k, String(t[k])])) as Record<TargetKey, string>;
   const [v, setV] = useState(() => toStrings(initial));
@@ -169,8 +170,8 @@ export function TargetsForm({ initial, recommended }: { initial: Targets; recomm
   }
 
   return (
-    <form id="targets" onSubmit={submit} noValidate aria-labelledby="targets-title" className={`panel panel-pad ${s.card}`}>
-      <h2 id="targets-title">Daily targets</h2>
+    <form id="targets" onSubmit={submit} noValidate aria-labelledby={bare ? undefined : 'targets-title'} className={bare ? s.bare : `panel panel-pad ${s.card}`}>
+      {!bare && <h2 id="targets-title">Daily targets</h2>}
       <p className={s.sub}>Set your own numbers, or start from the recommendation. These are not a prescribed diet.</p>
       <div className={s.gridTargets}>
         {TARGET_KEYS.map(k => {

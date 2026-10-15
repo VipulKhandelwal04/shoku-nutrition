@@ -11,7 +11,6 @@
 .navLink { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 12px; color: var(--text-2); font-size: 14px; font-weight: 600; transition: background .15s, color .15s; }
 .navLink:hover { background: var(--surface-2); color: var(--text); }
 .navLink[aria-current='page'] { background: var(--surface-2); color: var(--text); }
-.navLink[aria-current='page']::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: var(--accent); }
 .navLink[aria-current='page'] :global(.icon) { color: var(--accent); }
 .sideFoot { margin-top: auto; display: grid; gap: 4px; padding: 0 2px; }
 .who { padding: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
@@ -59,7 +58,7 @@
 .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; align-self: center; }
 
 /* ---------- Tables ---------- */
-.tableWrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); overscroll-behavior-x: contain; }
+.tableWrap { position: relative; /* contains sr-only labels so they can't widen the page */ overflow-x: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); overscroll-behavior-x: contain; }
 .table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 .table caption { text-align: left; padding: 14px 16px 0; font-size: 12px; color: var(--muted); caption-side: top; }
 .table th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface); }
@@ -212,13 +211,12 @@
 @media (max-width: 860px) {
   .shell { grid-template-columns: minmax(0, 1fr); }
   .side { display: none; }
-  .mobileTop { display: block; position: sticky; top: 0; z-index: 10; background: rgba(5, 5, 6, .94); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .mobileTop { display: block; position: sticky; top: 0; z-index: 10; background: rgba(8, 8, 10, .55); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border-bottom: 1px solid var(--line); }
   .mobileBar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px 0; }
   .mobileTabs { display: flex; gap: 4px; overflow-x: auto; padding: 6px 12px 8px; scrollbar-width: none; }
   .mobileTabs::-webkit-scrollbar { display: none; }
   .mobileTabs .navLink { flex-shrink: 0; padding: 0 14px; border-radius: 999px; }
   .mobileTabs .navLink[aria-current='page'] { background: var(--text); color: var(--accent-ink); }
-  .mobileTabs .navLink[aria-current='page']::before { display: none; }
   .mobileTabs .navLink[aria-current='page'] :global(.icon) { color: var(--accent-ink); }
   .main { padding: 20px 16px 72px; }
   .hero, .settingCard { grid-template-columns: minmax(0, 1fr); padding: 20px; }

@@ -22,7 +22,8 @@ const paths = {
   download: 'M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5', upload: 'M12 15V3m-5 5 5-5 5 5M4 16v5h16v-5',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7', info: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M12 11v6m0-10v.1',
   arrow: 'M5 12h14m-6-6 6 6-6 6', bolt: 'm13 2-9 12h7l-1 8 10-12h-7z', heart: 'M12 21S2 14 2 8a5 5 0 0 1 10-2 5 5 0 0 1 10 2c0 6-10 13-10 13z',
-  type: 'M4 7V4h16v3M9 20h6M12 4v16', logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11', google: '',
+  type: 'M4 7V4h16v3M9 20h6M12 4v16', flame: 'M12 22c4.4 0 7-3 7-7 0-4.5-4-6.5-3.5-12-4 2-7 5.5-6.5 10-1.6-.8-2.3-2.4-2.4-3.8C4.8 11 5 13 5 15c0 4 2.6 7 7 7z',
+  lock: 'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3', file: 'M6 3h9l4 4v14H6zM14 3v5h5', logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11', google: '',
 } as const;
 
 export type IconName = keyof typeof paths;

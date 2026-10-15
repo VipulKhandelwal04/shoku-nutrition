@@ -34,7 +34,9 @@ export function errorResponse(err: unknown, feature: string) {
   if (err instanceof AiBadResponse) return fail(502, MSG.bad);
   if (err instanceof AiUpstream) {
     console.error(`[ai:${feature}] upstream ${err.status}`);
-    return fail(err.status === 429 ? 503 : 502, err.status === 429 ? MSG.busy : MSG.bad);
+    // Overload and outages are "busy", not the user's input: say so, so people retry instead of rewording.
+    const busy = err.status === 429 || err.status >= 500 || err.status === 0;
+    return fail(502, busy ? MSG.busy : MSG.bad); // 502 stays retryable in the UI (503 means "not set up")
   }
   console.error(`[ai:${feature}] ${err instanceof Error ? err.name : 'unknown error'}`);
   return fail(500, 'Something went wrong with AI Assist. Try again.');

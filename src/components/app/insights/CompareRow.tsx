@@ -21,7 +21,7 @@ export function CompareRow({ label, eaten, target, unit, kind, status }: {
         <StatusChip status={status} />
       </div>
       <div className={s.bar} role="img" aria-label={`${label}: ${fmt(eaten)} ${unit} eaten, ${prefix.toLowerCase()}${fmt(target)} ${unit} target. ${CHIP[status].label}.`}>
-        <div className={s.fill} data-status={status} style={{ width: `${Math.min((eaten / scale) * 100, 100)}%` }} />
+        <div className={s.barClip}><div className={s.fill} data-status={status} style={{ transform: `scaleX(${Math.min(eaten / scale, 1)})` }} /></div>
         <div className={s.mark} style={{ left: `${(target / scale) * 100}%` }} />
       </div>
       <div className={s.nums} aria-hidden="true">

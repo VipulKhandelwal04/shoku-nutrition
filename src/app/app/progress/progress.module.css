@@ -51,6 +51,9 @@
 
 @media (max-width: 760px) {
   .welcome { padding: 24px; min-height: 380px; }
+  /* Phones: fade top-down so the photo fills the top instead of reading as an empty block. */
+  .welcome::before { background: linear-gradient(180deg, rgba(var(--scrim), .1) 0%, rgba(var(--scrim), .7) 34%, rgba(var(--scrim), .96) 58%); }
+  .welcomeImg { object-position: center 20%; }
   .streak { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 20px; }
   .streakNum { font-size: 84px; }
   .badges { grid-template-columns: repeat(2, minmax(0, 1fr)); }

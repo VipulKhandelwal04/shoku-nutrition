@@ -47,7 +47,7 @@ export function isUnsafeLine(s: string): boolean {
 
 /** Deterministic, never-shaming line used for empty days and when the model's line fails the safety pass. */
 export function fallbackLine(summary: Pick<CoachSummary, 'mealsLogged' | 'mealsMissing' | 'dayOpen'>): string {
-  if (!summary.mealsLogged.length) return 'Fresh day. Log your first meal and AI Assist will cheer you on.';
+  if (!summary.mealsLogged.length) return 'Nothing logged yet. After your first meal, this line suggests what the day still needs.';
   if (summary.dayOpen && summary.mealsMissing.length) return `${summary.mealsLogged.length} meal${summary.mealsLogged.length > 1 ? 's' : ''} in. Keep stacking: ${summary.mealsMissing[0].toLowerCase()} is next.`;
   return 'Every logged meal is a rep. Nice work showing up today.';
 }

@@ -8,7 +8,7 @@ import { DeviceTimeZone } from '@/components/app/insights/DeviceTimeZone';
 import { LogButton } from '@/components/app/insights/LogButton';
 import {
   averageDay, bmiBand, groupContributions, bodyOf, energySplit, filterPlan, friendlyDay, groupsOnTrack, nextUp, nutrientStatus,
-  parseDayParam, parseStoredPlan, pickTargets, summariseDays, toEntries, weekKeys,
+  parseDayParam, parseStoredPlan, pickTargets, summariseDays, toEntries, unitFor, weekKeys,
 } from '@/components/app/insights/insights';
 import { getStoredPlan, userToday } from '@/components/app/insights/server';
 import ins from '@/components/app/insights/insights.module.css';
@@ -67,7 +67,9 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
   const saved = parseStoredPlan(storedPlan, foodsById);
   const plan = filterPlan(saved ?? buildPlan(targets, goal, profile.diet, foodsById), foodsById, profile.diet, profile.restrictions ?? []);
   const check = planCheck(plan, dayEntries, foodsById);
-  const suggestions = period === 'day' ? nextUp(plan, dayEntries, groupStatus(dayEntries, targets.kcal, dayOpen), foodsById) : [];
+  const hourNow = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone: tz ?? 'Asia/Kolkata' }).format(new Date()));
+  const mealNow = hourNow < 11 ? 'Breakfast' : hourNow < 16 ? 'Lunch' : hourNow < 19 ? 'Snacks' : 'Dinner';
+  const suggestions = period === 'day' ? nextUp(plan, dayEntries, groupStatus(dayEntries, targets.kcal, dayOpen), foodsById, 3, dayOpen ? mealNow : undefined) : [];
 
   const dayLabel = friendlyDay(day, today);
   const plateTitle = period === 'week' ? 'Your average plate' : day === today ? 'Today’s plate' : `${dayLabel}’s plate`;
@@ -154,12 +156,12 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
                 <FoodTile icon={i.food.icon} />
                 <div className={s.planText}>
                   <strong>{i.food.name}</strong>
-                  <small>{qty(i.q)} {i.food.unit} · {fmt(i.food.kcal * i.q)} kcal{i.eaten > 0 ? ` · ${qty(i.eaten)} logged` : ''}</small>
+                  <small>{qty(i.q)} {unitFor(i.q, i.food.unit)} · {fmt(i.food.kcal * i.q)} kcal{i.eaten > 0 ? ` · ${qty(i.eaten)} logged` : ''}</small>
                 </div>
                 <span className={`chip ${PLAN_CHIP[i.status].tone}`}>{PLAN_CHIP[i.status].label}</span>
                 {i.left > 0 ? (
                   <LogButton day={day} items={[{ meal: row.meal, foodId: i.foodId, quantity: i.left }]}
-                    label={`Log ${qty(i.left)} ${i.food.unit} ${i.food.name} to ${row.meal}`} done={`${i.food.name} logged to ${row.meal}.`} />
+                    label={`Log ${qty(i.left)} ${unitFor(i.left, i.food.unit)} ${i.food.name} to ${row.meal}`} done={`${i.food.name} logged to ${row.meal}.`} />
                 ) : <span className={s.addSpacer} aria-hidden="true" />}
               </li>
             ))}
@@ -228,10 +230,10 @@ export default async function ComparePage({ searchParams }: PageProps<'/app/comp
                         <FoodTile icon={x.icon} />
                         <div className={ins.suggestText}>
                           <strong>{x.name}</strong>
-                          <small>{qty(x.quantity)} {x.unit} · {fmt(x.kcal)} kcal · {x.meal} · fills {x.fillsLabel.toLowerCase()}</small>
+                          <small>{qty(x.quantity)} {unitFor(x.quantity, x.unit)} · {fmt(x.kcal)} kcal · {x.meal} · fills {x.fillsLabel.toLowerCase()}</small>
                         </div>
                         <LogButton day={day} items={[{ meal: x.meal, foodId: x.foodId, quantity: x.quantity }]}
-                          label={`Log ${qty(x.quantity)} ${x.unit} ${x.name} to ${x.meal}`} done={`${x.name} logged to ${x.meal}.`} />
+                          label={`Log ${qty(x.quantity)} ${unitFor(x.quantity, x.unit)} ${x.name} to ${x.meal}`} done={`${x.name} logged to ${x.meal}.`} />
                       </li>
                     ))}
                   </ul>
