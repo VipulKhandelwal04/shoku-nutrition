@@ -2,14 +2,14 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { disconnect } from '@/lib/strava';
-import { createClient } from '@/lib/supabase/server';
+import { actionUser } from '@/lib/auth';
 
 export async function POST() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.json({ ok: false, error: 'Sign in again.' }, { status: 401 });
+  const session = await actionUser();
+  if (!session) return NextResponse.json({ ok: false, error: 'Sign in again.' }, { status: 401 });
+  const { supabase, user } = session;
   try {
-    await disconnect(supabase);
+    await disconnect(supabase, user.id);
     revalidatePath('/app', 'layout');
     return NextResponse.json({ ok: true });
   } catch {

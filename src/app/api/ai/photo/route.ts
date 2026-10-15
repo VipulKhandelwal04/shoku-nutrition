@@ -1,5 +1,5 @@
 import { DAY, IMAGE_TYPES, MAX_IMAGE_BYTES, MEAL } from '@/lib/ai/contracts';
-import { guardAi } from '@/lib/ai/guard';
+import { guardAi, reserveAi } from '@/lib/ai/guard';
 import { fail } from '@/lib/ai/http';
 import { PHOTO_SYSTEM } from '@/lib/ai/prompts';
 import { suggestFoods } from '@/lib/ai/suggest';
@@ -30,9 +30,13 @@ export async function POST(request: Request) {
   if (image.size > MAX_IMAGE_BYTES) return fail(413, 'That photo is over 4 MB. Try a smaller one.');
 
   const data = Buffer.from(await image.arrayBuffer()).toString('base64');
+  const reservation = await reserveAi(guard.supabase, 'photo', guard.settings.daily_quota);
+  if (!reservation.ok) return reservation.response;
+
   return suggestFoods({
     feature: 'photo',
     supabase: guard.supabase,
+    usageId: reservation.usageId,
     system: PHOTO_SYSTEM,
     input: { inlineData: { mimeType: image.type, data } },
     meal: meal.data,

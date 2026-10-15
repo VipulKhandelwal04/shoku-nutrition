@@ -1,7 +1,7 @@
 import { coachOutput, coachRequest, type CoachResponse } from '@/lib/ai/contracts';
 import { coachSummary, fallbackLine, isUnsafeLine, tidyLine } from '@/lib/ai/coach';
 import { generateJson } from '@/lib/ai/gemini';
-import { guardAi, recordUsage } from '@/lib/ai/guard';
+import { guardAi, recordUsage, reserveAi } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson, todayIst } from '@/lib/ai/http';
 import { COACH_SYSTEM } from '@/lib/ai/prompts';
 import type { EntryRow, Profile } from '@/lib/types';
@@ -31,6 +31,9 @@ export async function POST(request: Request) {
   const summary = coachSummary((entries ?? []) as Pick<EntryRow, 'meal' | 'food' | 'quantity'>[], profile.targets, dayOpen);
   if (!summary.mealsLogged.length) return ok<CoachResponse>({ line: fallbackLine(summary), ai: false });
 
+  const reservation = await reserveAi(guard.supabase, 'coach', guard.settings.daily_quota);
+  if (!reservation.ok) return reservation.response;
+
   let success = false;
   try {
     const out = await generateJson(coachOutput, {
@@ -47,6 +50,6 @@ export async function POST(request: Request) {
   } catch (err) {
     return errorResponse(err, 'coach');
   } finally {
-    await recordUsage(guard.supabase, 'coach', success);
+    await recordUsage(guard.supabase, 'coach', success, reservation.usageId);
   }
 }

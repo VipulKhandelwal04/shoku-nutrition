@@ -1,6 +1,6 @@
 import { planOutput, planRequest, type PlanResponse } from '@/lib/ai/contracts';
 import { generateJson } from '@/lib/ai/gemini';
-import { guardAi, recordUsage } from '@/lib/ai/guard';
+import { guardAi, recordUsage, reserveAi } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson } from '@/lib/ai/http';
 import { candidateLines, recipeLines } from '@/lib/ai/candidates';
 import { memberSuggestions } from '@/lib/ai/member';
@@ -39,6 +39,9 @@ export async function POST(request: Request) {
     targets: { kcal: targets.kcal, protein_g: targets.p, carbs_g: targets.c, fat_g: targets.f },
   };
 
+  const reservation = await reserveAi(guard.supabase, 'plan', guard.settings.daily_quota);
+  if (!reservation.ok) return reservation.response;
+
   let success = false;
   try {
     let result: RepairResult | null = null;
@@ -70,6 +73,6 @@ export async function POST(request: Request) {
   } catch (err) {
     return errorResponse(err, 'plan');
   } finally {
-    await recordUsage(guard.supabase, 'plan', success);
+    await recordUsage(guard.supabase, 'plan', success, reservation.usageId);
   }
 }

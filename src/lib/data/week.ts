@@ -8,7 +8,7 @@ import { memberSuggestions, trainingDaysFor } from '../ai/member';
 import { fitDay, toProposal } from '../ai/plan';
 import { SESSION_ENDED, actionUser } from '../auth';
 import { FLAG_OFF, isOn } from '../flags';
-import type { Plan } from '../nutrition';
+import { MEALS, type Plan } from '../nutrition';
 import type { Profile } from '../types';
 import type { ActionResult } from './diary';
 import { getFlags } from './queries';
@@ -92,17 +92,22 @@ export async function restoreWeekDay(input: { weekday: number; previous: Plan | 
 
 /** Undo for saveAiWeek: the saved days go back to exactly what was there before. */
 export async function restoreWeekPlans(previous: SavedWeekDay[]): Promise<ActionResult> {
-  const parsed = z.array(z.object({ weekday, plan: z.record(z.string(), z.unknown()) })).max(7).safeParse(previous);
-  if (!parsed.success) return { ok: false, error: 'Couldn’t undo that.' };
+  const parsed = z.array(z.object({ weekday, plan: planSchema })).max(7).safeParse(previous);
+  if (!parsed.success || new Set(parsed.data.map(d => d.weekday)).size !== parsed.data.length) return { ok: false, error: 'Couldn’t undo that.' };
+  if (parsed.data.length && !isOn(await getFlags(), 'week', 'ai')) return { ok: false, error: FLAG_OFF };
   const session = await actionUser();
   if (!session) return { ok: false, error: SESSION_ENDED };
   const { supabase, user } = session;
-  const { error: delErr } = await supabase.from('week_plans').delete().eq('user_id', user.id);
-  if (delErr) return { ok: false, error: 'Couldn’t undo that. Try again.' };
   if (parsed.data.length) {
-    const { error } = await supabase.from('week_plans').insert(parsed.data.map(d => ({ user_id: user.id, weekday: d.weekday, plan: d.plan })));
-    if (error) return { ok: false, error: 'Couldn’t undo that. Try again.' };
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<Profile>();
+    if (!profile) return { ok: false, error: SESSION_ENDED };
+    const { set } = await memberSuggestions(profile);
+    if (!parsed.data.every(d => MEALS.every(m => d.plan[m].every(i => set.eligible.has(i.foodId))))) {
+      return { ok: false, error: 'Some foods in the previous week no longer fit your food style.' };
+    }
   }
+  const { error } = await supabase.rpc('restore_week_plans', { p_days: parsed.data });
+  if (error) return { ok: false, error: 'Couldn’t undo that. Try again.' };
   revalidatePath('/app/compare');
   return { ok: true, data: undefined };
 }

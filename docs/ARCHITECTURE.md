@@ -19,7 +19,9 @@ three-beat slogans ("Show up. Stack days."); no eyebrow label over every heading
   (`cookies()`/`params`/`searchParams` are async, `proxy.ts`, `LayoutProps<'/route'>`/`PageProps<'/route'>` globals).
 - **Supabase**: Google OAuth, Postgres with RLS on every table, private `meal-photos` storage bucket.
   Schema: `supabase/migrations/`. Server code uses `createClient()` from `@/lib/supabase/server` (runs as the user).
-  There is **no service-role key** in the app; admin powers come from RLS `is_admin()` and `admin_*` SQL functions.
+  Admin powers come from RLS `is_admin()` and `admin_*` SQL functions. Strava token access is the sole
+  service-role exception: `supabase/strava-admin.ts` uses `SUPABASE_SERVICE_ROLE_KEY` for narrowly scoped token
+  RPCs after the route verifies an active member. Diary and profile queries still run as the member under RLS.
 - **AI Assist** = Gemini via `@google/genai`, server-side only (`GEMINI_API_KEY`, model from `GEMINI_MODEL`, default
   `gemini-flash-latest`). Structured JSON output; results are matched to the food catalogue and confirmed by the user.
   AI Assist is a **feature flag**: `app_settings.ai.enabled` is the master switch admins toggle in `/admin/ai`;

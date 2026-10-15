@@ -4,14 +4,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getFlags, isStravaConfigured } from '@/lib/data/queries';
 import { isOn } from '@/lib/flags';
 import { STATE_COOKIE, authorizeUrl } from '@/lib/strava';
-import { createClient } from '@/lib/supabase/server';
+import { actionUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin;
   if (!isStravaConfigured() || !isOn(await getFlags(), 'apps', 'strava')) return NextResponse.redirect(new URL('/app/profile?strava=unavailable', origin));
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.redirect(new URL('/login?next=/app/profile', origin));
+  const session = await actionUser();
+  if (!session) return NextResponse.redirect(new URL('/login?next=/app/profile', origin));
 
   const state = randomBytes(16).toString('hex');
   const res = NextResponse.redirect(authorizeUrl(origin, state));

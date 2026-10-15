@@ -59,7 +59,7 @@ export async function getConnections(): Promise<ConnectionStatus[]> {
 
 /** Strava is offered only when the deployment has its OAuth app configured. */
 export function isStravaConfigured(): boolean {
-  return !!(process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET);
+  return !!(process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 export async function getEarnedBadges(): Promise<string[]> {

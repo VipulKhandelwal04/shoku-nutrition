@@ -1,7 +1,7 @@
 import { MAX_IDEAS, hourIst, nextMeal, repairIdeas } from '@/lib/ai/ask';
 import { askOutput, askRequest, type AskContext, type AskResponse } from '@/lib/ai/contracts';
 import { generateJson } from '@/lib/ai/gemini';
-import { guardAi, recordUsage } from '@/lib/ai/guard';
+import { guardAi, recordUsage, reserveAi } from '@/lib/ai/guard';
 import { errorResponse, fail, ok, readJson, todayIst } from '@/lib/ai/http';
 import { candidateLines, matchRecipe, recipeCard, recipeLines } from '@/lib/ai/candidates';
 import { memberSuggestions } from '@/lib/ai/member';
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
   const dayEntries = (entries ?? []) as Pick<EntryRow, 'meal' | 'food' | 'quantity'>[];
   const workoutsUse: AskContext['workoutsUse'] =
-    profile.use_workouts === false ? 'off' : profile.ask_workouts && useWorkouts === false ? 'skipped' : 'used';
+    profile.use_workouts === false ? 'off' : profile.ask_workouts && useWorkouts !== true ? 'skipped' : 'used';
   const dayWorkouts = workoutsUse === 'used' ? ((workouts ?? []) as Pick<WorkoutRow, 'label' | 'kind' | 'minutes' | 'kcal' | 'source'>[]) : [];
   const eaten = totals(dayEntries);
   const logged = MEALS.filter(m => dayEntries.some(e => e.meal === m));
@@ -72,6 +72,9 @@ export async function POST(request: Request) {
   };
   const catalogue = candidateLines(set);
 
+  const reservation = await reserveAi(guard.supabase, 'ask', guard.settings.daily_quota);
+  if (!reservation.ok) return reservation.response;
+
   let success = false;
   try {
     const out = await generateJson(askOutput, {
@@ -96,6 +99,6 @@ export async function POST(request: Request) {
   } catch (err) {
     return errorResponse(err, 'ask');
   } finally {
-    await recordUsage(guard.supabase, 'ask', success);
+    await recordUsage(guard.supabase, 'ask', success, reservation.usageId);
   }
 }
