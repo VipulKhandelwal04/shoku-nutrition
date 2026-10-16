@@ -285,14 +285,14 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
                 return (
                   <div className="field" key={k}>
                     <label htmlFor={`ob-t-${k}`}>{r.label} <span className="muted">({r.unit})</span></label>
-                    <input id={`ob-t-${k}`} type="number" inputMode="numeric" min={r.min} max={r.max} step={1} value={d.targets![k]}
+                    <input id={`ob-t-${k}`} type="number" inputMode="numeric" min={r.min} max={r.max ?? undefined} step={1} value={d.targets![k]}
                       aria-invalid={!!err || undefined} aria-describedby={`ob-t-${k}-help`}
                       onChange={e => {
                         const v = e.target.value;
                         setD(prev => ({ ...prev, targets: { ...prev.targets!, [k]: v } }));
                         setErrors(x => ({ ...x, [`t-${k}`]: rangeError(v, r.min, r.max, r.label, r.unit, { int: true }) }));
                       }} />
-                    <p className={err ? 'error-text' : 'field-help'} id={`ob-t-${k}-help`}>{err || `${r.min}–${r.max} ${r.unit}`}</p>
+                    <p className={err ? 'error-text' : 'field-help'} id={`ob-t-${k}-help`}>{err || `${r.max === null ? `At least ${r.min}` : `${r.min}–${r.max}`} ${r.unit}`}</p>
                   </div>
                 );
               })}

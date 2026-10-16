@@ -181,11 +181,11 @@ export function TargetsForm({ initial, recommended, bare = false }: { initial: T
           return (
             <div className="field" key={k}>
               <label htmlFor={`tg-${k}`}>{r.label} <span className="muted">({r.unit})</span></label>
-              <input id={`tg-${k}`} type="number" inputMode="numeric" min={r.min} max={r.max} step={1} value={v[k]}
+              <input id={`tg-${k}`} type="number" inputMode="numeric" min={r.min} max={r.max ?? undefined} step={1} value={v[k]}
                 aria-invalid={!!e || undefined} aria-describedby={`tg-${k}-help`}
                 onChange={ev => { const x = ev.target.value; setV(p => ({ ...p, [k]: x })); setErrors(p => ({ ...p, [k]: err(k, x) })); }} />
               <p className={e ? 'error-text' : 'field-help'} id={`tg-${k}-help`}>
-                {e || `${r.min}–${r.max}${recommended ? ` · rec. ${fmt(recommended[k])}` : ''}`}
+                {e || `${r.max === null ? `At least ${r.min}` : `${r.min}–${r.max}`}${recommended ? ` · rec. ${fmt(recommended[k])}` : ''}`}
               </p>
             </div>
           );

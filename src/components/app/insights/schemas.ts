@@ -7,7 +7,7 @@ export const TARGET_RANGES = {
   p: { min: 10, max: 400, unit: 'g', label: 'Protein' },
   c: { min: 0, max: 900, unit: 'g', label: 'Carbs' },
   f: { min: 10, max: 300, unit: 'g', label: 'Fat' },
-  water: { min: 500, max: 6000, unit: 'ml', label: 'Water' },
+  water: { min: 500, max: null, unit: 'ml', label: 'Water' },
 } as const;
 export type TargetKey = keyof typeof TARGET_RANGES;
 export const TARGET_KEYS = Object.keys(TARGET_RANGES) as TargetKey[];
@@ -21,8 +21,10 @@ export const BODY_RANGES = {
 const ranged = (k: TargetKey) =>
   z.number({ error: `Enter ${TARGET_RANGES[k].label.toLowerCase()}` })
     .int(`${TARGET_RANGES[k].label}: use a whole number`)
-    .min(TARGET_RANGES[k].min, `${TARGET_RANGES[k].label}: ${TARGET_RANGES[k].min}–${TARGET_RANGES[k].max} ${TARGET_RANGES[k].unit}`)
-    .max(TARGET_RANGES[k].max, `${TARGET_RANGES[k].label}: ${TARGET_RANGES[k].min}–${TARGET_RANGES[k].max} ${TARGET_RANGES[k].unit}`);
+    .min(TARGET_RANGES[k].min, `${TARGET_RANGES[k].label}: minimum ${TARGET_RANGES[k].min} ${TARGET_RANGES[k].unit}`)
+    .refine(value => TARGET_RANGES[k].max === null || value <= TARGET_RANGES[k].max, {
+      message: `${TARGET_RANGES[k].label}: ${TARGET_RANGES[k].min}–${TARGET_RANGES[k].max} ${TARGET_RANGES[k].unit}`,
+    });
 
 export const targetsSchema = z.object({ kcal: ranged('kcal'), p: ranged('p'), c: ranged('c'), f: ranged('f'), water: ranged('water') });
 
@@ -43,12 +45,12 @@ export type BodyInput = z.input<typeof bodySchema>;
 export type OnboardingInput = z.input<typeof onboardingSchema>;
 
 /** Inline validation for a single numeric field, matching the schema ranges. Empty string means "no error yet". */
-export function rangeError(value: string, min: number, max: number, label: string, unit: string, opts: { int?: boolean } = {}): string {
+export function rangeError(value: string, min: number, max: number | null, label: string, unit: string, opts: { int?: boolean } = {}): string {
   if (value.trim() === '') return `Enter ${label.toLowerCase()}`;
   const n = Number(value);
   if (!Number.isFinite(n)) return `${label}: numbers only`;
   if (opts.int && !Number.isInteger(n)) return `${label}: use a whole number`;
-  if (n < min || n > max) return `${label}: ${min}–${max} ${unit}`;
+  if (n < min || (max !== null && n > max)) return max === null ? `${label}: at least ${min} ${unit}` : `${label}: ${min}–${max} ${unit}`;
   return '';
 }
 
