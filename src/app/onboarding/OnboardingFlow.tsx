@@ -20,6 +20,14 @@ export type Draft = {
 
 const STEPS = ['welcome', 'goal', 'body', 'activity', 'food', 'targets'] as const;
 type Step = (typeof STEPS)[number];
+const CUISINES: Record<Step, { image: string; label: string }> = {
+  welcome: { image: 'indian', label: 'Indian · A little of everything' },
+  goal: { image: 'japanese', label: 'Japanese · Balance in a bowl' },
+  body: { image: 'mediterranean', label: 'Mediterranean · Fresh and familiar' },
+  activity: { image: 'mexican', label: 'Mexican · Full of colour' },
+  food: { image: 'thai', label: 'Thai · Find your flavour' },
+  targets: { image: 'italian', label: 'Italian · Make it your own' },
+};
 const TITLES: Record<Step, string> = { welcome: 'Welcome', goal: 'Your goal', body: 'Your body', activity: 'How you move', food: 'How you eat', targets: 'Your targets' };
 
 type BodyField = 'age' | 'height' | 'weight';
@@ -123,12 +131,11 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
   };
 
   return (
-    <main className={`${s.shell} ${current === 'welcome' ? s.welcomeShell : ''}`}>
-      {current === 'welcome' && (
-        <div className={s.photo} aria-hidden="true">
-          <Image src="/img/hero.webp" alt="" fill priority sizes="100vw" />
-        </div>
-      )}
+    <main className={s.shell} data-opaque-page data-cuisine={CUISINES[current].image}>
+      <div className={s.photo} aria-hidden="true">
+        <Image key={current} src={`/img/onboarding/${CUISINES[current].image}.webp`} alt="" fill loading="eager" sizes="(max-aspect-ratio: 3/2) 150vh, 100vw" />
+      </div>
+      <p className={s.cuisine} aria-hidden="true">{CUISINES[current].label}</p>
       <div className={s.top}>
         <button type="button" className="btn-icon" onClick={back} aria-label="Back to the previous step" hidden={step === 0}>
           <Icon name="back" />
@@ -144,7 +151,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
 
       <form className={s.card} onSubmit={next} noValidate aria-labelledby="ob-title">
         {current === 'welcome' && (
-          <StepBody eyebrow="Let’s set you up" title={`Hi ${firstName ?? 'there'}. Let’s set up your meals.`} headingRef={heading}>
+          <StepBody title={`Hi ${firstName ?? 'there'}. Let’s set up your meals.`} headingRef={heading}>
             <ul className={s.promises}>
               <li><Icon name="bolt" /><span><strong>Log Indian plates in seconds.</strong> Roti, dal, poha and biryani are already in the food list.</span></li>
               <li><Icon name="plate" /><span><strong>See what your day still needs.</strong> Food groups and targets scaled to you.</span></li>
@@ -155,7 +162,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
         )}
 
         {current === 'goal' && (
-          <StepBody eyebrow="Step 2 · Goal" title="What are you training for?" headingRef={heading} sub="This sets your calories and protein. Switch any time.">
+          <StepBody title="What are you training for?" headingRef={heading} sub="This sets your calories and protein. Switch any time.">
             <div className={s.bigChoices} role="group" aria-label="Goal" id="ob-goal" tabIndex={-1} aria-describedby={errors.goal ? 'ob-goal-err' : undefined}>
               {(Object.keys(GOALS) as Goal[]).map(g => (
                 <button key={g} type="button" className={s.bigChoice} aria-pressed={d.goal === g} onClick={() => { patch({ goal: g }); setErrors(e => ({ ...e, goal: '' })); }}>
@@ -169,7 +176,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
         )}
 
         {current === 'body' && (
-          <StepBody eyebrow="Step 3 · Body" title="The basics" headingRef={heading} sub="Used only to estimate what your body needs. Never shared.">
+          <StepBody title="The basics" headingRef={heading} sub="Used only to estimate what your body needs. Never shared.">
             <div className="field">
               <span className="field-label" id="ob-sex-label">Calculate my energy as</span>
               <div className={s.pills} role="group" aria-labelledby="ob-sex-label" id="ob-sex" tabIndex={-1}>
@@ -204,7 +211,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
         )}
 
         {current === 'activity' && (
-          <StepBody eyebrow="Step 4 · Activity" title="How active is a normal week?" headingRef={heading} sub="Count workouts, sport and active work. Be honest: you can change it later.">
+          <StepBody title="How active is a normal week?" headingRef={heading} sub="Count workouts, sport and active work. Be honest: you can change it later.">
             <div className={s.listChoices} role="group" aria-label="Activity level" id="ob-activity" tabIndex={-1}>
               {(Object.keys(ACTIVITY) as Activity[]).map(a => {
                 const [title, detail] = ACTIVITY[a].label.split(' · ');
@@ -221,7 +228,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
         )}
 
         {current === 'food' && (
-          <StepBody eyebrow="Step 5 · Food style" title="What’s on your plate?" headingRef={heading} sub="We use this to suggest foods and build your plan.">
+          <StepBody title="What’s on your plate?" headingRef={heading} sub="We use this to suggest foods and build your plan.">
             <div className={s.bigChoices} role="group" aria-label="Food style">
               {DIETS.map(x => (
                 <button key={x.key} type="button" className={s.bigChoice} aria-pressed={d.diet === x.key} onClick={() => patch({ diet: x.key })}>
@@ -249,7 +256,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
         )}
 
         {current === 'targets' && rec && d.targets && (
-          <StepBody eyebrow="Step 6 · Targets" title="Your daily targets" headingRef={heading} sub={`Built for ${GOALS[d.goal ?? 'fit'].label.toLowerCase()}. ${GOALS[d.goal ?? 'fit'].blurb}`}>
+          <StepBody title="Your daily targets" headingRef={heading} sub={`Built for ${GOALS[d.goal ?? 'fit'].label.toLowerCase()}. ${GOALS[d.goal ?? 'fit'].blurb}`}>
             <div className={s.kcal}>
               <span className="display">{Number(d.targets.kcal).toLocaleString('en-IN')}</span>
               <span className={s.kcalUnit}>kcal a day</span>
@@ -321,10 +328,9 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
   );
 }
 
-function StepBody({ eyebrow, title, sub, headingRef, children }: { eyebrow: string; title: string; sub?: string; headingRef: RefObject<HTMLHeadingElement | null>; children: ReactNode }) {
+function StepBody({ title, sub, headingRef, children }: { title: string; sub?: string; headingRef: RefObject<HTMLHeadingElement | null>; children: ReactNode }) {
   return (
     <>
-      <p className={s.eyebrow}>{eyebrow}</p>
       <h1 id="ob-title" ref={headingRef} tabIndex={-1}>{title}</h1>
       {sub && <p className={s.sub}>{sub}</p>}
       <div className={s.content}>{children}</div>
