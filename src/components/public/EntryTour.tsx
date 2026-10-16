@@ -34,7 +34,7 @@ export function EntryTour({ slides, next, error, signedIn = false }: { slides: S
     <main className={s.page} data-opaque-page data-opening-google={openingGoogle || undefined}>
       <div className={s.photo} aria-hidden="true">
         {image.startsWith('/') && !image.startsWith('//') ? (
-          <Image key={image} src={image} alt="" fill loading="eager" sizes="(max-aspect-ratio: 3/2) 150vh, 100vw" className={s.img} />
+          <Image key={image} src={image} alt="" fill loading="eager" quality={60} sizes="(max-aspect-ratio: 3/2) 150vh, 100vw" className={s.img} />
         ) : (
           // Admin-supplied images may come from hosts outside next/image's allowlist.
           // eslint-disable-next-line @next/next/no-img-element

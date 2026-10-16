@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, useState, useTransition, type FormEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { ACTIVITY, GOALS, recommend, type Activity, type Diet, type Goal, type Sex } from '@/lib/nutrition';
 import { Icon } from '@/components/ui/Icon';
 import { DIETS, bmiBand } from '@/components/app/insights/insights';
@@ -45,11 +45,16 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
   const [serverError, setServerError] = useState('');
   const [pending, start] = useTransition();
   const heading = useRef<HTMLHeadingElement>(null);
-  const firstRender = useRef(true);
+  const focusedStep = useRef(step);
   const current = STEPS[step];
 
+  // Move focus to the heading when the step actually changes, for screen readers.
+  // Comparing against the last focused step (not a first-render flag) keeps the
+  // initial step from being focused under React Strict Mode's double-mount, which
+  // would otherwise draw a focus ring on the welcome heading at load.
   useEffect(() => {
-    if (firstRender.current) { firstRender.current = false; return; }
+    if (focusedStep.current === step) return;
+    focusedStep.current = step;
     heading.current?.focus();
   }, [step]);
 
@@ -133,7 +138,7 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
   return (
     <main className={s.shell} data-opaque-page data-cuisine={CUISINES[current].image}>
       <div className={s.photo} aria-hidden="true">
-        <Image key={current} src={`/img/onboarding/${CUISINES[current].image}.webp`} alt="" fill loading="eager" sizes="(max-aspect-ratio: 3/2) 150vh, 100vw" />
+        <Image key={current} src={`/img/onboarding/${CUISINES[current].image}.webp`} alt="" fill loading="eager" quality={60} sizes="(max-aspect-ratio: 3/2) 150vh, 100vw" />
       </div>
       <p className={s.cuisine} aria-hidden="true">{CUISINES[current].label}</p>
       <div className={s.top}>
@@ -163,14 +168,11 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
 
         {current === 'goal' && (
           <StepBody title="What are you training for?" headingRef={heading} sub="This sets your calories and protein. Switch any time.">
-            <div className={s.bigChoices} role="group" aria-label="Goal" id="ob-goal" tabIndex={-1} aria-describedby={errors.goal ? 'ob-goal-err' : undefined}>
-              {(Object.keys(GOALS) as Goal[]).map(g => (
-                <button key={g} type="button" className={s.bigChoice} aria-pressed={d.goal === g} onClick={() => { patch({ goal: g }); setErrors(e => ({ ...e, goal: '' })); }}>
-                  <strong>{GOALS[g].label}</strong>
-                  <span>{GOALS[g].blurb}</span>
-                </button>
-              ))}
-            </div>
+            <ChoiceGroup<Goal> value={d.goal} options={Object.keys(GOALS) as Goal[]}
+              onChange={g => { patch({ goal: g }); setErrors(e => ({ ...e, goal: '' })); }}
+              groupClass={s.bigChoices} optionClass={s.bigChoice} label="Goal" id="ob-goal"
+              describedBy={errors.goal ? 'ob-goal-err' : undefined}
+              render={g => <><strong>{GOALS[g].label}</strong><span>{GOALS[g].blurb}</span></>} />
             <p className="error-text" id="ob-goal-err" role="alert">{errors.goal}</p>
           </StepBody>
         )}
@@ -179,13 +181,10 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
           <StepBody title="The basics" headingRef={heading} sub="Used only to estimate what your body needs. Never shared.">
             <div className="field">
               <span className="field-label" id="ob-sex-label">Calculate my energy as</span>
-              <div className={s.pills} role="group" aria-labelledby="ob-sex-label" id="ob-sex" tabIndex={-1}>
-                {(['female', 'male'] as Sex[]).map(x => (
-                  <button key={x} type="button" className="pill-choice" aria-pressed={d.sex === x} onClick={() => { patch({ sex: x }); setErrors(e => ({ ...e, sex: '' })); }}>
-                    {x === 'female' ? 'Female' : 'Male'}
-                  </button>
-                ))}
-              </div>
+              <ChoiceGroup<Sex> value={d.sex} options={['female', 'male'] as Sex[]}
+                onChange={x => { patch({ sex: x }); setErrors(e => ({ ...e, sex: '' })); }}
+                groupClass={s.pills} optionClass="pill-choice" labelId="ob-sex-label" id="ob-sex"
+                render={x => (x === 'female' ? 'Female' : 'Male')} />
               <p className="error-text" role="alert">{errors.sex}</p>
             </div>
             <div className={s.bodyGrid}>
@@ -212,31 +211,20 @@ export function OnboardingFlow({ firstName, initial }: { firstName: string | nul
 
         {current === 'activity' && (
           <StepBody title="How active is a normal week?" headingRef={heading} sub="Count workouts, sport and active work. Be honest: you can change it later.">
-            <div className={s.listChoices} role="group" aria-label="Activity level" id="ob-activity" tabIndex={-1}>
-              {(Object.keys(ACTIVITY) as Activity[]).map(a => {
-                const [title, detail] = ACTIVITY[a].label.split(' · ');
-                return (
-                  <button key={a} type="button" className={s.bigChoice} aria-pressed={d.activity === a} onClick={() => { patch({ activity: a }); setErrors(e => ({ ...e, activity: '' })); }}>
-                    <strong>{title}</strong>
-                    {detail && <span>{detail}</span>}
-                  </button>
-                );
-              })}
-            </div>
+            <ChoiceGroup<Activity> value={d.activity} options={Object.keys(ACTIVITY) as Activity[]}
+              onChange={a => { patch({ activity: a }); setErrors(e => ({ ...e, activity: '' })); }}
+              groupClass={s.listChoices} optionClass={s.bigChoice} label="Activity level" id="ob-activity"
+              render={a => { const [title, detail] = ACTIVITY[a].label.split(' · '); return <><strong>{title}</strong>{detail && <span>{detail}</span>}</>; }} />
             <p className="error-text" role="alert">{errors.activity}</p>
           </StepBody>
         )}
 
         {current === 'food' && (
           <StepBody title="What’s on your plate?" headingRef={heading} sub="We use this to suggest foods and build your plan.">
-            <div className={s.bigChoices} role="group" aria-label="Food style">
-              {DIETS.map(x => (
-                <button key={x.key} type="button" className={s.bigChoice} aria-pressed={d.diet === x.key} onClick={() => patch({ diet: x.key })}>
-                  <strong>{x.label}</strong>
-                  <span>{x.blurb}</span>
-                </button>
-              ))}
-            </div>
+            <ChoiceGroup<Diet> value={d.diet} options={DIETS.map(x => x.key)}
+              onChange={k => patch({ diet: k })}
+              groupClass={s.bigChoices} optionClass={s.bigChoice} label="Food style"
+              render={k => { const x = DIETS.find(o => o.key === k)!; return <><strong>{x.label}</strong><span>{x.blurb}</span></>; }} />
             <div className="field" style={{ marginTop: 24 }}>
               <span className="field-label" id="ob-restr-label">Anything to skip? <span className="muted">(optional, pick any)</span></span>
               <div className={s.pills} role="group" aria-labelledby="ob-restr-label">
@@ -335,5 +323,33 @@ function StepBody({ title, sub, headingRef, children }: { title: string; sub?: s
       {sub && <p className={s.sub}>{sub}</p>}
       <div className={s.content}>{children}</div>
     </>
+  );
+}
+
+/** One-of-N choice as a real ARIA radiogroup: roving tab stop, arrow/Home/End selection, Tab enters at the chosen option. */
+function ChoiceGroup<T extends string>({ value, options, onChange, groupClass, optionClass, label, labelId, id, describedBy, render }: {
+  value: T | null; options: readonly T[]; onChange: (v: T) => void;
+  groupClass: string; optionClass: string; label?: string; labelId?: string; id?: string; describedBy?: string;
+  render: (v: T) => ReactNode;
+}) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const selected = value ? options.indexOf(value) : -1;
+  const pick = (i: number) => { const n = (i + options.length) % options.length; onChange(options[n]); refs.current[n]?.focus(); };
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); pick(i + 1); }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); pick(i - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); pick(0); }
+    else if (e.key === 'End') { e.preventDefault(); pick(options.length - 1); }
+  };
+  return (
+    <div className={groupClass} role="radiogroup" aria-label={label} aria-labelledby={labelId} id={id} aria-describedby={describedBy} tabIndex={-1}>
+      {options.map((v, i) => (
+        <button key={v} ref={el => { refs.current[i] = el; }} type="button" role="radio" aria-checked={value === v}
+          tabIndex={value === v || (selected === -1 && i === 0) ? 0 : -1} className={optionClass}
+          onClick={() => onChange(v)} onKeyDown={e => onKeyDown(e, i)}>
+          {render(v)}
+        </button>
+      ))}
+    </div>
   );
 }
