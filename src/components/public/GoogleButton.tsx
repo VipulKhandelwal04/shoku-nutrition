@@ -5,13 +5,12 @@ import { Icon } from '@/components/ui/Icon';
 import { safeNext } from './content';
 import styles from './Login.module.css';
 
-export function GoogleButton({ next, onBusyChange }: { next: string; onBusyChange?: (busy: boolean) => void }) {
+export function GoogleButton({ next }: { next: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   async function signIn() {
     setBusy(true);
-    onBusyChange?.(true);
     setError('');
     try {
       const supabase = createClient();
@@ -24,7 +23,6 @@ export function GoogleButton({ next, onBusyChange }: { next: string; onBusyChang
       // On success the browser navigates to Google; keep the button disabled until it does.
     } catch {
       setBusy(false);
-      onBusyChange?.(false);
       setError('Couldn’t reach Google sign-in. Check your connection and try again.');
     }
   }
