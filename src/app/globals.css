@@ -21,6 +21,13 @@
   --danger: #ff8a8a;
   --protein: var(--accent); --carbs: #f4f4f7; --fat: #7b7b87;
   --scrim: 11, 11, 13; /* rgb triplet for photo scrims: rgba(var(--scrim), .8) */
+  /* Entry surfaces (welcome, tour/sign-in, onboarding): a petrol-teal sub-palette over full-bleed cuisine photography.
+     Teals are rgb triplets so solid rgb() and translucent rgba() draw from one source; the scrim is the legibility-gradient base. */
+  --entry-welcome-bg: #031c27; /* welcome canvas (solid) */
+  --entry-photo: 7, 20, 27; /* photo fallback + translucent chips: rgb(var(--entry-photo)) / rgba(var(--entry-photo), x) */
+  --entry-scrim: 3, 13, 18; /* text-legibility gradients over photos: rgba(var(--entry-scrim), x) */
+  --entry-text: #e1e7ea; --entry-muted: #bdcbd2; /* supporting + muted text on entry surfaces */
+  --entry-form-surface: rgba(9, 22, 29, .82); --entry-form-surface-2: rgba(9, 22, 29, .84);
   --display: var(--font-display), 'Arial Narrow', sans-serif;
   --body: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --radius: 22px; --radius-lg: 28px;
