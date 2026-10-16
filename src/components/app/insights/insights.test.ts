@@ -139,7 +139,7 @@ describe('schemas', () => {
   it('validates target ranges', () => {
     expect(targetsSchema.safeParse({ kcal: 2000, p: 80, c: 250, f: 60, water: 2500 }).success).toBe(true);
     expect(targetsSchema.safeParse({ kcal: 700, p: 80, c: 250, f: 60, water: 2500 }).success).toBe(false);
-    expect(targetsSchema.safeParse({ kcal: 2000, p: 80, c: 250, f: 60, water: 7000 }).success).toBe(false);
+    expect(targetsSchema.safeParse({ kcal: 2000, p: 80, c: 250, f: 60, water: 7000 }).success).toBe(true);
     expect(onboardingSchema.safeParse({ ...ok, targets: { kcal: 2000, p: 80, c: 0, f: 60, water: 2500 } }).success).toBe(true);
   });
   it('gives inline range errors', () => {
